@@ -16,6 +16,13 @@ export async function searchBooks(query, { maxResults = 20 } = {}) {
   if (apiKey) params.set('key', apiKey);
 
   const res = await fetch(`${BASE}/volumes?${params}`);
+  if (res.status === 429 || res.status === 403) {
+    throw new Error(
+      apiKey
+        ? 'Google Books rate limit hit. Wait a moment, or check your key’s daily quota.'
+        : 'Google Books rate limit hit. Add a Google Books API key in Settings to lift the anonymous quota.'
+    );
+  }
   if (!res.ok) {
     throw new Error(`Google Books search failed (${res.status})`);
   }
