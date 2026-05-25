@@ -1,97 +1,80 @@
-import { el, clear, segmented } from './components.js';
+import { el, clear, segmented, selectWrap } from './components.js';
 import { listEntries, thumbnailUrl } from '../db/database.js';
 import { openEntry } from './detail-modal.js';
 import { saveAndShareMarkdown } from '../export/markdown.js';
 import { icons } from '../util/icons.js';
 
-const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV' };
+const TYPE_OPTS = [
+  { value: 'all',   label: 'All'    },
+  { value: 'book',  label: 'Books'  },
+  { value: 'movie', label: 'Movies' },
+  { value: 'tv',    label: 'TV'     }
+];
 
-const state = {
-  type: 'all',
-  sort: 'dateAdded',
-  query: ''
-};
+const SORT_OPTS = [
+  { v: 'dateAdded', l: 'Recently added' },
+  { v: 'rating',    l: 'Highest rated'  },
+  { v: 'title',     l: 'Title (A–Z)'    },
+  { v: 'year',      l: 'Year (newest)'  }
+];
+
+const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv' };
+
+const state = { type: 'all', sort: 'dateAdded', query: '' };
 
 export function renderLibrary(container, { onChanged }) {
   clear(container);
 
-  const toolbar = el('div', { class: 'library-toolbar' });
+  // ── Toolbar ────────────────────────────────────────────────────
 
-  const left = el(
-    'div',
-    { class: 'left' },
-    segmented(
-      [
-        { value: 'all', label: 'All' },
-        { value: 'book', label: 'Books' },
-        { value: 'movie', label: 'Movies' },
-        { value: 'tv', label: 'TV' }
-      ],
-      state.type,
-      (v) => {
-        state.type = v;
-        refresh();
-      }
-    )
-  );
+  const libHeader = el('div', { class: 'lib-header' });
+  const libLeft   = el('div', { class: 'lib-header-left' });
+  const countEl   = el('div', { class: 'lib-count' }, '');
+  libLeft.appendChild(segmented(TYPE_OPTS, state.type, (v) => { state.type = v; refresh(); }));
+  libLeft.appendChild(countEl);
 
-  const sortSelect = el('select', { class: 'select', 'aria-label': 'Sort' });
-  for (const opt of [
-    { v: 'dateAdded', l: 'Recently added' },
-    { v: 'rating', l: 'Highest rated' },
-    { v: 'title', l: 'Title (A–Z)' },
-    { v: 'year', l: 'Year (newest)' }
-  ]) {
-    const o = el('option', { value: opt.v }, opt.l);
-    if (state.sort === opt.v) o.setAttribute('selected', '');
-    sortSelect.appendChild(o);
-  }
-  sortSelect.style.maxWidth = '180px';
-  sortSelect.addEventListener('change', () => {
-    state.sort = sortSelect.value;
-    refresh();
-  });
-
-  const searchInput = el('input', {
+  const filterInput = el('input', {
     type: 'search',
-    class: 'input',
+    class: 'input filter-input',
     placeholder: 'Filter…',
     value: state.query,
     'aria-label': 'Filter library'
   });
-  searchInput.style.maxWidth = '180px';
-  searchInput.addEventListener('input', () => {
-    state.query = searchInput.value;
-    refresh();
-  });
+  filterInput.addEventListener('input', () => { state.query = filterInput.value; refresh(); });
 
-  const exportBtn = el(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-muted',
-      title: 'Export as Markdown',
-      onClick: async () => {
-        exportBtn.setAttribute('disabled', '');
-        try {
-          await saveAndShareMarkdown();
-        } finally {
-          exportBtn.removeAttribute('disabled');
-        }
-      }
+  const sortSel = el('select', { class: 'select select-sm', 'aria-label': 'Sort by' });
+  for (const opt of SORT_OPTS) {
+    const o = el('option', { value: opt.v }, opt.l);
+    if (state.sort === opt.v) o.setAttribute('selected', '');
+    sortSel.appendChild(o);
+  }
+  sortSel.addEventListener('change', () => { state.sort = sortSel.value; refresh(); });
+
+  const exportBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-muted',
+    title: 'Export catalog as Markdown',
+    onClick: async () => {
+      exportBtn.setAttribute('disabled', '');
+      try { await saveAndShareMarkdown(); }
+      finally { exportBtn.removeAttribute('disabled'); }
     }
+  });
+  exportBtn.innerHTML = `${icons.download()} Export`;
+
+  const libRight = el('div', { class: 'lib-header-right' },
+    filterInput,
+    selectWrap(sortSel, true),
+    exportBtn
   );
-  exportBtn.innerHTML = `${icons.download()} <span>Export</span>`;
-  exportBtn.style.display = 'inline-flex';
-  exportBtn.style.gap = '0.4rem';
-  exportBtn.style.alignItems = 'center';
 
-  const right = el('div', { class: 'right' }, searchInput, sortSelect, exportBtn);
-  toolbar.appendChild(left);
-  toolbar.appendChild(right);
-  container.appendChild(toolbar);
+  libHeader.appendChild(libLeft);
+  libHeader.appendChild(libRight);
+  container.appendChild(libHeader);
 
-  const grid = el('div', { class: 'library-grid' });
+  // ── Grid ───────────────────────────────────────────────────────
+
+  const grid = el('div', { class: 'entry-grid' });
   container.appendChild(grid);
 
   async function refresh() {
@@ -100,40 +83,42 @@ export function renderLibrary(container, { onChanged }) {
     const q = state.query.trim().toLowerCase();
     if (q) {
       entries = entries.filter((e) => {
-        const hay = `${e.title} ${(e.creators || []).join(' ')} ${(e.genres || []).join(' ')}`.toLowerCase();
+        const hay = [e.title, ...(e.creators || []), ...(e.genres || [])].join(' ').toLowerCase();
         return hay.includes(q);
       });
     }
     entries.sort(sorter(state.sort));
 
+    countEl.textContent = entries.length
+      ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
+      : '';
+
     clear(grid);
     if (!entries.length) {
       grid.appendChild(emptyState(state.type, state.query));
-      grid.style.gridTemplateColumns = '1fr';
       return;
     }
-    grid.style.gridTemplateColumns = '';
-    for (const entry of entries) grid.appendChild(card(entry, onChanged));
+    for (const entry of entries) grid.appendChild(entryCard(entry, onChanged));
   }
 
   refresh();
 }
 
 function sorter(key) {
-  if (key === 'rating') {
-    return (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.title.localeCompare(b.title);
-  }
-  if (key === 'title') return (a, b) => a.title.localeCompare(b.title);
-  if (key === 'year') return (a, b) => (b.year ?? 0) - (a.year ?? 0) || a.title.localeCompare(b.title);
+  if (key === 'rating') return (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.title.localeCompare(b.title);
+  if (key === 'title')  return (a, b) => a.title.localeCompare(b.title);
+  if (key === 'year')   return (a, b) => (b.year ?? 0) - (a.year ?? 0) || a.title.localeCompare(b.title);
   return (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || '');
 }
 
-function card(entry, onChanged) {
+export function entryCard(entry, onChanged) {
   const node = el('button', {
     type: 'button',
     class: 'entry-card',
     onClick: () => openEntry(entry.id, { onChanged })
   });
+
+  // Thumbnail
   const thumb = el('div', { class: 'entry-thumb' });
   const blobUrl = thumbnailUrl(entry);
   const src = blobUrl || entry.thumbnailUrl;
@@ -141,50 +126,66 @@ function card(entry, onChanged) {
     const img = el('img', { src, alt: '', loading: 'lazy' });
     img.addEventListener('error', () => {
       img.remove();
-      thumb.appendChild(el('div', { class: 'placeholder', html: `<em>${escapeHtml(entry.title)}</em>` }));
+      thumb.appendChild(thumbPlaceholder(entry));
     });
     thumb.appendChild(img);
   } else {
-    thumb.appendChild(el('div', { class: 'placeholder', html: `<em>${escapeHtml(entry.title)}</em>` }));
+    thumb.appendChild(thumbPlaceholder(entry));
   }
   node.appendChild(thumb);
 
+  // Meta
   const meta = el('div', { class: 'entry-meta' });
-  meta.appendChild(el('div', { class: 'entry-type' }, TYPE_LABEL[entry.type] || entry.type));
+  meta.appendChild(el('div', { class: 'entry-type-label' }, typeLabel(entry.type)));
   meta.appendChild(el('div', { class: 'entry-title' }, entry.title));
-  const subParts = [];
-  if (entry.creators?.length) subParts.push(entry.creators.slice(0, 2).join(', '));
-  if (entry.year) subParts.push(entry.year);
-  meta.appendChild(el('div', { class: 'entry-sub' }, subParts.join(' · ') || ' '));
+
+  const creators = (entry.creators || []).slice(0, 2);
+  if (creators.length) meta.appendChild(el('div', { class: 'entry-creator' }, creators.join(', ')));
 
   if (entry.rating != null) {
-    meta.appendChild(
-      el('div', { class: 'entry-rating' }, `${'★'.repeat(entry.rating)}${'☆'.repeat(5 - entry.rating)}`)
-    );
+    meta.appendChild(el('div', { class: 'entry-rating-line' },
+      '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating)
+    ));
   } else {
-    meta.appendChild(el('div', { class: 'entry-rating empty' }, '— unrated'));
+    meta.appendChild(el('div', { class: 'entry-rating-line unrated' }, 'unrated'));
   }
-  node.appendChild(meta);
 
+  if (entry.status) {
+    const STATUS_LABEL = { want: 'Want', 'in-progress': 'Reading', finished: 'Finished' };
+    meta.appendChild(el('span', { class: 'entry-status-chip' }, STATUS_LABEL[entry.status] || entry.status));
+  }
+
+  node.appendChild(meta);
   return node;
+}
+
+function thumbPlaceholder(entry) {
+  const ph = el('div', { class: 'entry-thumb-placeholder' });
+  const iconKey = TYPE_ICON[entry.type] || 'book';
+  ph.innerHTML = `<span style="color:var(--text-faint);opacity:.45">${icons[iconKey]?.() || ''}</span>`;
+  ph.appendChild(el('span', {}, entry.title));
+  return ph;
+}
+
+function typeLabel(type) {
+  return { book: 'Book', movie: 'Movie', tv: 'TV Show' }[type] || type;
 }
 
 function emptyState(type, query) {
   const wrap = el('div', { class: 'empty-state' });
   if (query) {
-    wrap.appendChild(el('h3', {}, 'No matches.'));
-    wrap.appendChild(el('p', {}, 'Try a different filter, or clear the search.'));
+    wrap.innerHTML = icons.search();
+    wrap.appendChild(el('h3', {}, 'No matches'));
+    wrap.appendChild(el('p', {}, 'Try different words or clear the filter.'));
   } else if (type === 'all') {
-    wrap.appendChild(el('h3', {}, 'The shelf is empty.'));
-    wrap.appendChild(el('p', {}, 'Use Search to add your first book, film, or show.'));
+    wrap.innerHTML = icons.bookmark();
+    wrap.appendChild(el('h3', {}, 'The shelf is empty'));
+    wrap.appendChild(el('p', {}, 'Search for a book, film, or show to get started.'));
   } else {
-    const label = { book: 'books', movie: 'movies', tv: 'shows' }[type] || 'entries';
-    wrap.appendChild(el('h3', {}, `No ${label} yet.`));
-    wrap.appendChild(el('p', {}, `Add one from the Search tab.`));
+    const labels = { book: 'books', movie: 'movies', tv: 'shows' };
+    wrap.innerHTML = icons[TYPE_ICON[type]]?.() || icons.bookmark();
+    wrap.appendChild(el('h3', {}, `No ${labels[type] || 'entries'} yet`));
+    wrap.appendChild(el('p', {}, 'Add one from the Search tab.'));
   }
   return wrap;
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }

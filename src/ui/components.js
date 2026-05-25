@@ -1,17 +1,16 @@
-// Small DOM helpers used across screens.
+// Minimal DOM helpers used across all screens.
 
 export function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
-    if (k === 'class') node.className = v;
+    if (k === 'class')   node.className = v;
     else if (k === 'html') node.innerHTML = v;
     else if (k === 'dataset') Object.assign(node.dataset, v);
     else if (k.startsWith('on') && typeof v === 'function') {
       node.addEventListener(k.slice(2).toLowerCase(), v);
     } else if (v === true) node.setAttribute(k, '');
-    else if (v === false || v == null) {
-      /* skip */
-    } else node.setAttribute(k, v);
+    else if (v === false || v == null) { /* skip */ }
+    else node.setAttribute(k, v);
   }
   for (const child of children.flat()) {
     if (child == null || child === false) continue;
@@ -22,6 +21,13 @@ export function el(tag, props = {}, ...children) {
 
 export function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+// Wrap a <select> element with the custom-arrow container.
+export function selectWrap(selectEl, compact = false) {
+  const wrap = el('div', { class: compact ? 'select-wrap select-wrap-sm' : 'select-wrap' });
+  wrap.appendChild(selectEl);
+  return wrap;
 }
 
 export function segmented(options, currentValue, onChange) {
@@ -48,13 +54,13 @@ export function segmented(options, currentValue, onChange) {
 }
 
 export function loadingNode(label = 'Loading') {
-  return el('div', { class: 'loading' }, label);
+  return el('div', { class: 'loading-row' }, label);
 }
 
-export function notice(message) {
-  return el('div', { class: 'notice', html: message });
+export function noticeNode(html) {
+  return el('div', { class: 'notice', html });
 }
 
 export function errorNode(message) {
-  return el('div', { class: 'error' }, message);
+  return el('div', { class: 'msg-error' }, message);
 }

@@ -4,102 +4,99 @@ import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 export async function renderSettings(container) {
   clear(container);
 
-  const panel = el('div', { class: 'panel' });
+  // ── Intro ──────────────────────────────────────────────────────
 
-  panel.appendChild(el('div', { class: 'label-eyebrow' }, 'API access'));
-  panel.appendChild(
-    el(
-      'p',
-      {
-        style: 'font-family: \'Iowan Old Style\', Baskerville, Georgia, serif; font-style: italic; color: var(--text-dim); margin: 0.5rem 0 1.5rem;'
-      },
-      'Keys stay on this device. Only you run this app.'
+  container.appendChild(
+    el('p', { class: 'settings-intro' },
+      el('strong', {}, 'Keys stay on this device.'),
+      ' This is a personal app — nothing is sent to any server of ours. ' +
+      'API calls go directly from your browser to TheTVDB and Google.'
     )
   );
 
-  // TheTVDB key + PIN
-  panel.appendChild(
-    await fieldGroup({
-      label: 'TheTVDB API key',
-      hint: 'Project key from your account at thetvdb.com. Required for movies and TV.',
-      key: 'tvdb_api_key',
-      type: 'password'
-    })
-  );
-  panel.appendChild(
-    await fieldGroup({
-      label: 'TheTVDB subscriber PIN',
-      hint: 'Your personal subscriber PIN. Leave empty if your project key uses a negotiated license.',
-      key: 'tvdb_pin',
-      type: 'password'
-    })
-  );
+  // ── TheTVDB ────────────────────────────────────────────────────
 
-  // Google Books key (optional)
-  panel.appendChild(
-    await fieldGroup({
-      label: 'Google Books API key (optional)',
-      hint: 'Lifts the daily quota. Books search works without one, but may rate-limit.',
-      key: 'google_books_api_key',
-      type: 'password'
-    })
-  );
+  container.appendChild(sectionHeading('TheTVDB'));
 
-  // Cached token bookkeeping
+  container.appendChild(await fieldGroup({
+    label: 'API key',
+    hint:  'Project key from thetvdb.com — required for movie and TV search.',
+    key:   'tvdb_api_key',
+    type:  'password'
+  }));
+
+  container.appendChild(await fieldGroup({
+    label: 'Subscriber PIN',
+    hint:  'Your personal subscriber PIN. Leave blank if using a negotiated-license project key.',
+    key:   'tvdb_pin',
+    type:  'password'
+  }));
+
+  // Cached token status
   const tokenIssued = parseInt(await getSetting('tvdb_token_issued', '0'), 10);
   const issuedText = tokenIssued
     ? new Date(tokenIssued).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
-    : 'never';
-  const tokenInfo = el(
-    'div',
-    {
-      class: 'field-hint',
-      style: 'margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-faint);'
+    : 'not yet cached';
+
+  const tokenRow = el('div', { class: 'token-info-row' });
+  const tokenText = el('p', { class: 'token-info-text' });
+  tokenText.innerHTML = `Token last refreshed: <strong>${issuedText}</strong>`;
+  const clearTokenBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-muted',
+    onClick: async () => {
+      await removeSetting('tvdb_token');
+      await removeSetting('tvdb_token_issued');
+      renderSettings(container);
     }
-  );
-  tokenInfo.innerHTML = `<strong style="font-style: normal; color: var(--text-dim);">TVDB token cached:</strong> ${issuedText}`;
-  panel.appendChild(tokenInfo);
+  }, 'Clear cached token');
+  tokenRow.appendChild(tokenText);
+  tokenRow.appendChild(clearTokenBtn);
+  container.appendChild(tokenRow);
 
-  const clearTokenBtn = el(
-    'button',
-    {
-      type: 'button',
-      class: 'btn btn-muted',
-      style: 'margin-top: 0.75rem;',
-      onClick: async () => {
-        await removeSetting('tvdb_token');
-        await removeSetting('tvdb_token_issued');
-        renderSettings(container);
-      }
-    },
-    'Clear cached token'
-  );
-  panel.appendChild(clearTokenBtn);
+  container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
 
-  container.appendChild(panel);
+  // ── Google Books ───────────────────────────────────────────────
+
+  container.appendChild(sectionHeading('Google Books'));
+
+  container.appendChild(await fieldGroup({
+    label: 'API key (optional)',
+    hint:  'Raises the anonymous daily quota. Book search works without a key, but may rate-limit.',
+    key:   'google_books_api_key',
+    type:  'password'
+  }));
+}
+
+function sectionHeading(label) {
+  return el('div', { class: 'settings-section-heading' }, label);
 }
 
 async function fieldGroup({ label, hint, key, type = 'text' }) {
   const wrap = el('div', { class: 'field' });
-  wrap.appendChild(el('label', { class: 'label-field', for: `f-${key}` }, label));
+
+  const id = `setting-${key}`;
+  wrap.appendChild(el('label', { class: 'label-field', for: id }, label));
 
   const initial = await getSetting(key, '');
   const input = el('input', {
-    id: `f-${key}`,
+    id,
     type,
     class: 'input input-mono',
     value: initial,
     autocomplete: 'off',
     spellcheck: 'false'
   });
+
   let timer;
   input.addEventListener('input', () => {
     clearTimeout(timer);
     timer = setTimeout(async () => {
       if (input.value) await setSetting(key, input.value);
       else await removeSetting(key);
-    }, 250);
+    }, 280);
   });
+
   wrap.appendChild(input);
   if (hint) wrap.appendChild(el('div', { class: 'field-hint' }, hint));
   return wrap;
