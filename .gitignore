@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+.vite/
+
+# Capacitor native projects (generated)
+android/
+ios/
+
+# IDE
+.vscode/
+.idea/
+*.swp
