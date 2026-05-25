@@ -1,18 +1,20 @@
-// Tiny settings layer. Uses @capacitor/preferences if available (native Android),
-// otherwise falls back to localStorage so the same code runs in the browser dev server.
+// Tiny settings layer. Uses @capacitor/preferences on native Android,
+// falls back to localStorage in the browser dev server.
+// We gate on isNativePlatform() so the web context never calls the native plugin —
+// Capacitor throws "not implemented on web" at runtime even if the import succeeds.
+
+function isNative() {
+  return typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.();
+}
 
 let preferencesPromise = null;
 
 async function getPreferences() {
+  if (!isNative()) return null;
   if (preferencesPromise) return preferencesPromise;
-  preferencesPromise = (async () => {
-    try {
-      const mod = await import('@capacitor/preferences');
-      return mod.Preferences;
-    } catch {
-      return null;
-    }
-  })();
+  preferencesPromise = import('@capacitor/preferences')
+    .then((mod) => mod.Preferences)
+    .catch(() => null);
   return preferencesPromise;
 }
 
