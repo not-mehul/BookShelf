@@ -50,6 +50,7 @@ export async function exportMarkdown() {
       const year = e.year ? ` (${e.year})` : '';
       const stars = e.rating != null ? ` — ${ratingStars(e.rating)} **${e.rating}/5**` : '';
       md += `### ${escapeMd(e.title)}${year}${stars}\n`;
+      if (e.thumbnailUrl) md += `![Poster](${e.thumbnailUrl})\n\n`;
       if (e.creators?.length) md += `*${escapeMd(e.creators.join(', '))}*\n\n`;
       else md += '\n';
       if (e.genres?.length) {

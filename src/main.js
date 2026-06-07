@@ -26,7 +26,7 @@ async function boot() {
     class: 'btn-icon',
     'aria-label': 'Settings',
     title: 'Settings',
-    onClick: () => openSettings()
+    onClick: () => openSettings({ onChanged })
   });
   settingsBtn.innerHTML = icons.settings();
 

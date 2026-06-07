@@ -3,9 +3,10 @@ import { icons } from '../util/icons.js';
 import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 import { openModal, closeModal } from './detail-modal.js';
 import { buildThemeToggle } from './theme.js';
+import { importMarkdown } from '../export/import.js';
 
 // Open Settings as a modal (the app no longer has a Settings tab).
-export function openSettings() {
+export function openSettings({ onChanged } = {}) {
   openModal((card) => {
     clear(card);
     const closeBtn = el('button', {
@@ -21,11 +22,11 @@ export function openSettings() {
 
     const body = el('div', { class: 'settings-modal-body' });
     card.appendChild(body);
-    renderSettings(body);
+    renderSettings(body, { onChanged });
   });
 }
 
-export async function renderSettings(container) {
+export async function renderSettings(container, { onChanged } = {}) {
   clear(container);
 
   // ── Appearance ─────────────────────────────────────────────────
@@ -94,6 +95,65 @@ export async function renderSettings(container) {
     key:   'google_books_api_key',
     type:  'password'
   }));
+
+  container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
+
+  // ── Data Management ──────────────────────────────────────────
+
+  container.appendChild(sectionHeading('Data Management'));
+
+  const dataRow = el('div', { class: 'token-info-row' });
+  const dataText = el('p', { class: 'token-info-text' }, 'Import entries from a previously exported Markdown file.');
+
+  const fileInput = el('input', { type: 'file', accept: '.md', style: 'display:none' });
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const importBtn = dataRow.querySelector('.btn-import');
+    const originalText = importBtn.textContent;
+    importBtn.textContent = 'Importing...';
+    importBtn.disabled = true;
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const count = await importMarkdown(reader.result);
+          alert(`Successfully imported ${count} entries.`);
+          onChanged?.();
+        } catch (err) {
+          alert('Import failed: ' + err.message);
+        } finally {
+          importBtn.textContent = originalText;
+          importBtn.disabled = false;
+          fileInput.value = '';
+        }
+      };
+      reader.onerror = () => {
+        alert('Failed to read file.');
+        importBtn.textContent = originalText;
+        importBtn.disabled = false;
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      console.error(err);
+      alert('Import failed: ' + err.message);
+      importBtn.textContent = originalText;
+      importBtn.disabled = false;
+    }
+  });
+
+  const importBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-primary btn-import',
+    onClick: () => fileInput.click()
+  }, 'Import Markdown');
+
+  dataRow.appendChild(dataText);
+  dataRow.appendChild(importBtn);
+  container.appendChild(fileInput);
+  container.appendChild(dataRow);
 }
 
 function sectionHeading(label) {
