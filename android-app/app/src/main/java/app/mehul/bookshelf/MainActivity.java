@@ -1,4 +1,4 @@
-package app.bookshelf.personal;
+package app.mehul.bookshelf;
 
 import android.app.Activity;
 import android.content.Intent;

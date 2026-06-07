@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'app.bookshelf.personal'
+    namespace 'app.mehul.bookshelf'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'app.bookshelf.personal'
+        applicationId 'app.mehul.bookshelf'
         minSdk 26
         targetSdk 34
         versionCode 1
