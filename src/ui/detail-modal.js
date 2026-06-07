@@ -182,16 +182,24 @@ function renderEntryView(card, entry, { onChanged }) {
 
   // Actions
   const actions = el('div', { class: 'modal-actions' });
-  const removeBtn = el('button', {
-    type: 'button',
-    class: 'btn btn-danger',
-    onClick: async () => {
-      if (!confirm(`Remove "${entry.title}" from your catalog?`)) return;
-      await deleteEntry(entry.id);
-      closeModal();
-      onChanged?.();
+  const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove from catalog');
+  let removeArmed = false;
+  let removeTimer = null;
+  removeBtn.addEventListener('click', async () => {
+    if (!removeArmed) {
+      removeArmed = true;
+      removeBtn.textContent = 'Tap again to confirm';
+      removeTimer = setTimeout(() => {
+        removeArmed = false;
+        removeBtn.textContent = 'Remove from catalog';
+      }, 3000);
+      return;
     }
-  }, 'Remove from catalog');
+    clearTimeout(removeTimer);
+    await deleteEntry(entry.id);
+    closeModal();
+    onChanged?.();
+  });
   actions.appendChild(removeBtn);
   card.appendChild(actions);
 }
@@ -248,15 +256,25 @@ function renderQuoteView(card, entry, { onChanged }) {
 
   // Actions
   const actions = el('div', { class: 'modal-actions' });
-  actions.appendChild(el('button', {
-    type: 'button', class: 'btn btn-danger',
-    onClick: async () => {
-      if (!confirm('Remove this quote from your catalog?')) return;
-      await deleteEntry(entry.id);
-      closeModal();
-      onChanged?.();
+  const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove quote');
+  let removeArmed = false;
+  let removeTimer = null;
+  removeBtn.addEventListener('click', async () => {
+    if (!removeArmed) {
+      removeArmed = true;
+      removeBtn.textContent = 'Tap again to confirm';
+      removeTimer = setTimeout(() => {
+        removeArmed = false;
+        removeBtn.textContent = 'Remove quote';
+      }, 3000);
+      return;
     }
-  }, 'Remove quote'));
+    clearTimeout(removeTimer);
+    await deleteEntry(entry.id);
+    closeModal();
+    onChanged?.();
+  });
+  actions.appendChild(removeBtn);
   card.appendChild(actions);
 }
 
