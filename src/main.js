@@ -1,5 +1,5 @@
 import './util/android-bridge.js'; // patches fetch inside the Android wrapper; no-op on web
-import { initTheme, buildThemeToggle } from './ui/theme.js';
+import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
 import { renderLibrary } from './ui/library.js';
@@ -30,7 +30,7 @@ async function boot() {
   });
   settingsBtn.innerHTML = icons.settings();
 
-  const controls = el('div', { class: 'header-controls' }, settingsBtn, buildThemeToggle());
+  const controls = el('div', { class: 'header-controls' }, settingsBtn);
 
   header.appendChild(titleBlock);
   header.appendChild(controls);
@@ -43,13 +43,6 @@ async function boot() {
   // ── Screen (Library) ──────────────────────────────────────────
   const screen = el('div', { id: 'screen' });
   app.appendChild(screen);
-
-  // ── Footer ────────────────────────────────────────────────────
-  const footnote = el('footer', { class: 'footnote' });
-  footnote.innerHTML =
-    '<strong>Private.</strong> Everything lives in your browser\'s local database. ' +
-    'Covers are cached offline. Export to Markdown to take your catalog anywhere.';
-  app.appendChild(footnote);
 
   // ── Floating add button (FAB) ─────────────────────────────────
   const fab = el('button', {

@@ -532,48 +532,47 @@ img { display: block; }
 
 .lib-header {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
-.lib-header-left { display: flex; flex-direction: column; gap: 0.4rem; }
+
+/* Row 1 — type filter, horizontally centered */
+.lib-types-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.lib-types-row .seg-scroll { max-width: 100%; }
+/* Compact buttons so the 5-option filter fits with room to centre on phones */
+.lib-types-row .segmented button { padding: 0.45rem 0.7rem; letter-spacing: 0.14em; }
+
 .lib-count {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 0.65rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-faint);
+  text-align: center;
 }
-.lib-header-right {
+
+/* Row 2 — tools */
+.lib-tools-row {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .filter-input {
+  flex: 1;
+  min-width: 0;
   padding: 0.55rem 0.875rem;
-  width: 160px;
   font-size: 0.8125rem;
 }
 
 @media (max-width: 640px) {
-  .lib-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.625rem;
-  }
-  .lib-header-right {
-    flex-wrap: nowrap;
-    gap: 0.4rem;
-  }
-  .filter-input {
-    flex: 1;
-    width: auto;
-    min-width: 0;
-  }
   /* Show export as icon-only on mobile to save toolbar space */
   .btn-label { display: none; }
 }
@@ -1482,6 +1481,26 @@ img { display: block; }
 .settings-modal-body .settings-intro {
   margin-bottom: 1.5rem;
   padding-bottom: 1.25rem;
+}
+
+/* Theme picker row inside settings */
+.theme-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.theme-setting-label {
+  font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+  font-size: 1rem;
+  color: var(--text-heading);
+}
+.theme-setting-sub {
+  font-family: 'Iowan Old Style', Baskerville, Georgia, serif;
+  font-style: italic;
+  font-size: 0.8125rem;
+  color: var(--text-dim);
+  margin-top: 0.15rem;
 }
 
 @media (max-width: 480px) {

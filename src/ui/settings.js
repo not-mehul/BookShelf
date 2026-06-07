@@ -2,6 +2,7 @@ import { el, clear } from './components.js';
 import { icons } from '../util/icons.js';
 import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 import { openModal, closeModal } from './detail-modal.js';
+import { buildThemeToggle } from './theme.js';
 
 // Open Settings as a modal (the app no longer has a Settings tab).
 export function openSettings() {
@@ -15,7 +16,7 @@ export function openSettings() {
 
     card.appendChild(el('div', { class: 'add-head' },
       el('div', { class: 'modal-eyebrow' }, 'Settings'),
-      el('h2', { class: 'add-title' }, 'API keys')
+      el('h2', { class: 'add-title' }, 'Preferences')
     ));
 
     const body = el('div', { class: 'settings-modal-body' });
@@ -27,15 +28,19 @@ export function openSettings() {
 export async function renderSettings(container) {
   clear(container);
 
-  // ── Intro ──────────────────────────────────────────────────────
+  // ── Appearance ─────────────────────────────────────────────────
 
-  container.appendChild(
-    el('p', { class: 'settings-intro' },
-      el('strong', {}, 'Keys stay on this device.'),
-      ' This is a personal app — nothing is sent to any server of ours. ' +
-      'API calls go directly from your browser to TheTVDB and Google.'
-    )
-  );
+  container.appendChild(sectionHeading('Appearance'));
+
+  const themeRow = el('div', { class: 'theme-setting-row' });
+  themeRow.appendChild(el('div', { class: 'theme-setting-text' },
+    el('div', { class: 'theme-setting-label' }, 'Theme'),
+    el('div', { class: 'theme-setting-sub' }, 'Dusk (dark) or Dawn (light)')
+  ));
+  themeRow.appendChild(buildThemeToggle());
+  container.appendChild(themeRow);
+
+  container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
 
   // ── TheTVDB ────────────────────────────────────────────────────
 

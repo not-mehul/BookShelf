@@ -29,10 +29,12 @@ export function renderLibrary(container, { onChanged }) {
   // ── Toolbar ────────────────────────────────────────────────────
 
   const libHeader = el('div', { class: 'lib-header' });
-  const libLeft   = el('div', { class: 'lib-header-left' });
+
+  // Row 1 — type filter, centered
+  const typesRow  = el('div', { class: 'lib-types-row' });
   const countEl   = el('div', { class: 'lib-count' }, '');
-  libLeft.appendChild(segmented(TYPE_OPTS, state.type, (v) => { state.type = v; refresh(); }));
-  libLeft.appendChild(countEl);
+  typesRow.appendChild(segmented(TYPE_OPTS, state.type, (v) => { state.type = v; refresh(); }));
+  typesRow.appendChild(countEl);
 
   const filterInput = el('input', {
     type: 'search',
@@ -63,14 +65,15 @@ export function renderLibrary(container, { onChanged }) {
   });
   exportBtn.innerHTML = `${icons.download()} <span class="btn-label">Export</span>`;
 
-  const libRight = el('div', { class: 'lib-header-right' },
+  // Row 2 — tools
+  const toolsRow = el('div', { class: 'lib-tools-row' },
     filterInput,
     selectWrap(sortSel, true),
     exportBtn
   );
 
-  libHeader.appendChild(libLeft);
-  libHeader.appendChild(libRight);
+  libHeader.appendChild(typesRow);
+  libHeader.appendChild(toolsRow);
   container.appendChild(libHeader);
 
   // ── Grid ───────────────────────────────────────────────────────
