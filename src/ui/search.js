@@ -3,7 +3,7 @@ import { icons } from '../util/icons.js';
 import { searchBooks } from '../api/books.js';
 import { searchTvdb } from '../api/tvdb.js';
 import { openSearchHit } from './detail-modal.js';
-import { findBySource } from '../db/database.js';
+import { findBySource, saveEntry, newEntryId } from '../db/database.js';
 import { getSetting } from '../util/settings.js';
 import { entryCard } from './library.js';
 
@@ -28,13 +28,26 @@ export function renderSearch(container, { onChanged, goToSettings }) {
         [
           { value: 'book',  label: 'Books'  },
           { value: 'movie', label: 'Movies' },
-          { value: 'tv',    label: 'TV'     }
+          { value: 'tv',    label: 'TV'     },
+          { value: 'quote', label: 'Quotes' }
         ],
         state.type,
-        (v) => { state.type = v; if (state.query.trim()) runSearch(); }
+        (v) => {
+          state.type = v;
+          state.query = '';
+          state.results = [];
+          renderSearch(container, { onChanged, goToSettings });
+        }
       )
     )
   );
+
+  // ── Quotes — manual add form ───────────────────────────────────
+
+  if (state.type === 'quote') {
+    renderQuoteAddSection(container, onChanged);
+    return;
+  }
 
   // ── Search form ────────────────────────────────────────────────
 
@@ -124,6 +137,87 @@ export function renderSearch(container, { onChanged, goToSettings }) {
     input.value = state.query;
     runSearch();
   }
+}
+
+function renderQuoteAddSection(container, onChanged) {
+  container.appendChild(
+    el('div', { class: 'results-eyebrow' }, 'Add a quote to your catalog')
+  );
+
+  const form = el('form', { class: 'quote-add-form' });
+
+  const textField = el('div', { class: 'field' });
+  textField.appendChild(el('label', { class: 'label-field', for: 'q-text' }, 'Quote text'));
+  const textArea = el('textarea', {
+    id: 'q-text', class: 'textarea', placeholder: 'The quote…', rows: '5'
+  });
+  textField.appendChild(textArea);
+  form.appendChild(textField);
+
+  const authorField = el('div', { class: 'field' });
+  authorField.appendChild(el('label', { class: 'label-field', for: 'q-author' }, 'Author'));
+  const authorInput = el('input', {
+    id: 'q-author', type: 'text', class: 'input', placeholder: 'e.g. George Orwell'
+  });
+  authorField.appendChild(authorInput);
+  form.appendChild(authorField);
+
+  const sourceField = el('div', { class: 'field' });
+  sourceField.appendChild(el('label', { class: 'label-field', for: 'q-source' }, 'Source / Work'));
+  const sourceInput = el('input', {
+    id: 'q-source', type: 'text', class: 'input',
+    placeholder: 'e.g. 1984, Hamlet, or the person\'s name'
+  });
+  sourceField.appendChild(sourceInput);
+  form.appendChild(sourceField);
+
+  const addBtn = el('button', { type: 'submit', class: 'btn btn-primary' });
+  addBtn.innerHTML = `${icons.plus()} Add to catalog`;
+  form.appendChild(addBtn);
+
+  const msgEl = el('div', { style: 'margin-top:1rem' });
+  form.appendChild(msgEl);
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const text = textArea.value.trim();
+    if (!text) { textArea.focus(); return; }
+
+    addBtn.disabled = true;
+    clear(msgEl);
+    try {
+      const entry = {
+        id: newEntryId(),
+        type: 'quote',
+        sourceId: null,
+        title: text.slice(0, 100),
+        quoteText: text,
+        creators: authorInput.value.trim() ? [authorInput.value.trim()] : [],
+        source: sourceInput.value.trim() || '',
+        year: null,
+        summary: '',
+        genres: [],
+        thumbnailUrl: null,
+        thumbnailBlob: null,
+        rating: null,
+        status: null,
+        notes: '',
+        dateAdded: new Date().toISOString(),
+        dateRated: null
+      };
+      await saveEntry(entry);
+      onChanged?.();
+      msgEl.appendChild(noticeNode('Quote added to your catalog.'));
+      textArea.value = '';
+      authorInput.value = '';
+      sourceInput.value = '';
+      textArea.focus();
+    } finally {
+      addBtn.disabled = false;
+    }
+  });
+
+  container.appendChild(form);
 }
 
 async function searchResultCard(hit, onChanged) {

@@ -7,8 +7,8 @@ import {
 } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
 
-const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show' };
-const TYPE_ICON  = { book: 'book', movie: 'film', tv: 'tv' };
+const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' };
+const TYPE_ICON  = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 const STATUS_OPTS = [
   { v: '',            l: '— none —'   },
   { v: 'want',        l: 'Want to read'  },
@@ -107,6 +107,7 @@ function posterPlaceholder(entry) {
 // ── Saved-entry view ───────────────────────────────────────────
 
 function renderEntryView(card, entry, { onChanged }) {
+  if (entry.type === 'quote') { renderQuoteView(card, entry, { onChanged }); return; }
   clear(card);
 
   const closeBtn = el('button', {
@@ -192,6 +193,70 @@ function renderEntryView(card, entry, { onChanged }) {
     }
   }, 'Remove from catalog');
   actions.appendChild(removeBtn);
+  card.appendChild(actions);
+}
+
+// ── Quote view ─────────────────────────────────────────────────
+
+function renderQuoteView(card, entry, { onChanged }) {
+  clear(card);
+
+  const closeBtn = el('button', {
+    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
+  });
+  closeBtn.innerHTML = icons.x();
+  card.appendChild(closeBtn);
+
+  // Quote display
+  const quoteBlock = el('div', { class: 'modal-quote-block' });
+  quoteBlock.appendChild(el('span', { class: 'modal-quote-glyph', 'aria-hidden': 'true' }, '“'));
+  quoteBlock.appendChild(el('blockquote', { class: 'modal-quote-text' }, entry.quoteText || entry.title));
+  const citeParts = [entry.creators?.[0], entry.source].filter(Boolean);
+  if (citeParts.length) {
+    quoteBlock.appendChild(el('div', { class: 'modal-quote-citation' }, '— ' + citeParts.join(', ')));
+  }
+  card.appendChild(quoteBlock);
+
+  // Rating
+  {
+    const sec = el('div', { class: 'modal-section' });
+    sec.appendChild(el('div', { class: 'modal-section-label' }, 'Rating'));
+    sec.appendChild(ratingControl(entry.rating, async (next) => {
+      entry.rating = next;
+      entry.dateRated = next != null ? new Date().toISOString() : null;
+      await saveEntry(entry);
+      onChanged?.();
+    }));
+    card.appendChild(sec);
+  }
+
+  // Notes
+  {
+    const sec = el('div', { class: 'modal-section' });
+    sec.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
+    const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…' });
+    notes.style.minHeight = '80px';
+    notes.value = entry.notes || '';
+    let t;
+    notes.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(async () => { entry.notes = notes.value; await saveEntry(entry); onChanged?.(); }, 300);
+    });
+    sec.appendChild(notes);
+    card.appendChild(sec);
+  }
+
+  // Actions
+  const actions = el('div', { class: 'modal-actions' });
+  actions.appendChild(el('button', {
+    type: 'button', class: 'btn btn-danger',
+    onClick: async () => {
+      if (!confirm('Remove this quote from your catalog?')) return;
+      await deleteEntry(entry.id);
+      closeModal();
+      onChanged?.();
+    }
+  }, 'Remove quote'));
   card.appendChild(actions);
 }
 

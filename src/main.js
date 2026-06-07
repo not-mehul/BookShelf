@@ -26,11 +26,7 @@ async function boot() {
   const titleBlock = el('div', { class: 'title-block' });
   const h1 = el('h1', { class: 'site-title' });
   h1.innerHTML = 'Book<em>Shelf</em>';
-  const tagline = el('p', { class: 'site-tagline' },
-    'A private catalog for books, films, and shows.'
-  );
   titleBlock.appendChild(h1);
-  titleBlock.appendChild(tagline);
 
   const controls = el('div', { class: 'header-controls' }, buildThemeToggle());
 
@@ -77,7 +73,7 @@ async function boot() {
 
   async function refreshStats() {
     const entries = await listEntries();
-    const counts = { book: 0, movie: 0, tv: 0 };
+    const counts = { book: 0, movie: 0, tv: 0, quote: 0 };
     for (const e of entries) if (counts[e.type] != null) counts[e.type]++;
     clear(statsBar);
     if (!entries.length) {
@@ -88,7 +84,8 @@ async function boot() {
     const parts = [
       counts.book  ? `${counts.book} ${counts.book  === 1 ? 'book'  : 'books' }` : null,
       counts.movie ? `${counts.movie} ${counts.movie === 1 ? 'movie' : 'movies'}` : null,
-      counts.tv    ? `${counts.tv} ${counts.tv === 1 ? 'show' : 'shows'}` : null
+      counts.tv    ? `${counts.tv} ${counts.tv === 1 ? 'show' : 'shows'}` : null,
+      counts.quote ? `${counts.quote} ${counts.quote === 1 ? 'quote' : 'quotes'}` : null
     ].filter(Boolean);
     for (const p of parts) {
       statsBar.appendChild(el('span', { class: 'stat-sep' }));

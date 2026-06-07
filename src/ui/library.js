@@ -8,7 +8,8 @@ const TYPE_OPTS = [
   { value: 'all',   label: 'All'    },
   { value: 'book',  label: 'Books'  },
   { value: 'movie', label: 'Movies' },
-  { value: 'tv',    label: 'TV'     }
+  { value: 'tv',    label: 'TV'     },
+  { value: 'quote', label: 'Quotes' }
 ];
 
 const SORT_OPTS = [
@@ -18,7 +19,7 @@ const SORT_OPTS = [
   { v: 'year',      l: 'Year (newest)'  }
 ];
 
-const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv' };
+const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 
 const state = { type: 'all', sort: 'dateAdded', query: '' };
 
@@ -83,11 +84,14 @@ export function renderLibrary(container, { onChanged }) {
     const q = state.query.trim().toLowerCase();
     if (q) {
       entries = entries.filter((e) => {
-        const hay = [e.title, ...(e.creators || []), ...(e.genres || [])].join(' ').toLowerCase();
+        const hay = [e.title, e.quoteText, ...(e.creators || []), ...(e.genres || []), e.source || '']
+          .filter(Boolean).join(' ').toLowerCase();
         return hay.includes(q);
       });
     }
     entries.sort(sorter(state.sort));
+
+    grid.className = `entry-grid${state.type === 'quote' ? ' quote-grid' : ''}`;
 
     countEl.textContent = entries.length
       ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
@@ -117,6 +121,25 @@ export function entryCard(entry, onChanged) {
     class: 'entry-card',
     onClick: () => openEntry(entry.id, { onChanged })
   });
+
+  // Quote entries render as text cards (no thumbnail)
+  if (entry.type === 'quote') {
+    node.classList.add('quote-card');
+    const body = el('div', { class: 'quote-card-body' });
+    body.appendChild(el('div', { class: 'quote-card-mark', 'aria-hidden': 'true' }, '“'));
+    body.appendChild(el('div', { class: 'quote-card-text' }, entry.quoteText || entry.title));
+    const attrParts = [entry.creators?.[0], entry.source].filter(Boolean);
+    if (attrParts.length) {
+      body.appendChild(el('div', { class: 'quote-card-author' }, '— ' + attrParts.join(', ')));
+    }
+    if (entry.rating != null) {
+      body.appendChild(el('div', { class: 'entry-rating-line' },
+        '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating)
+      ));
+    }
+    node.appendChild(body);
+    return node;
+  }
 
   // Thumbnail
   const thumb = el('div', { class: 'entry-thumb' });
@@ -168,7 +191,7 @@ function thumbPlaceholder(entry) {
 }
 
 function typeLabel(type) {
-  return { book: 'Book', movie: 'Movie', tv: 'TV Show' }[type] || type;
+  return { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' }[type] || type;
 }
 
 function emptyState(type, query) {
@@ -181,6 +204,10 @@ function emptyState(type, query) {
     wrap.innerHTML = icons.bookmark();
     wrap.appendChild(el('h3', {}, 'The shelf is empty'));
     wrap.appendChild(el('p', {}, 'Search for a book, film, or show to get started.'));
+  } else if (type === 'quote') {
+    wrap.innerHTML = icons.quote();
+    wrap.appendChild(el('h3', {}, 'No quotes yet'));
+    wrap.appendChild(el('p', {}, 'Add quotes from the Search tab.'));
   } else {
     const labels = { book: 'books', movie: 'movies', tv: 'shows' };
     wrap.innerHTML = icons[TYPE_ICON[type]]?.() || icons.bookmark();

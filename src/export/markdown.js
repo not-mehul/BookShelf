@@ -3,8 +3,8 @@
 import { listEntries } from '../db/database.js';
 import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
 
-const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV Shows' };
-const TYPE_ORDER = ['book', 'movie', 'tv'];
+const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV Shows', quote: 'Quotes' };
+const TYPE_ORDER = ['book', 'movie', 'tv', 'quote'];
 
 function ratingStars(value) {
   if (value == null) return '';
@@ -36,6 +36,17 @@ export async function exportMarkdown() {
     if (!slice.length) continue;
     md += `\n## ${TYPE_LABEL[type]} (${slice.length})\n\n`;
     for (const e of slice) {
+      if (type === 'quote') {
+        const qText = escapeMd(e.quoteText || e.title).replace(/\n/g, '\n> ');
+        md += `> ${qText}\n`;
+        const citeParts = [e.creators?.[0], e.source].filter(Boolean).map(escapeMd);
+        if (citeParts.length) md += `>\n> — ${citeParts.join(', ')}\n\n`;
+        else md += '\n';
+        if (e.rating != null) md += `${ratingStars(e.rating)} **${e.rating}/5**\n\n`;
+        if (e.notes?.trim()) md += `_${escapeMd(e.notes.trim())}_\n\n`;
+        md += `_Added ${formatDate(e.dateAdded)}_\n\n---\n\n`;
+        continue;
+      }
       const year = e.year ? ` (${e.year})` : '';
       const stars = e.rating != null ? ` — ${ratingStars(e.rating)} **${e.rating}/5**` : '';
       md += `### ${escapeMd(e.title)}${year}${stars}\n`;
