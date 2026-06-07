@@ -541,12 +541,13 @@ img { display: block; }
 .lib-types-row {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
 }
 .lib-types-row .seg-scroll { max-width: 100%; }
 /* Compact buttons so the 5-option filter fits with room to centre on phones */
-.lib-types-row .segmented button { padding: 0.45rem 0.7rem; letter-spacing: 0.14em; }
+.lib-types-row .segmented { display: flex; }
+.lib-types-row .segmented button { flex: 1; padding: 0.45rem 0.7rem; letter-spacing: 0.14em; }
 
 .lib-count {
   font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
@@ -1009,6 +1010,7 @@ img { display: block; }
   padding: 1.25rem 2rem 1.75rem;
   border-top: 1px solid var(--border-faint);
   display: flex;
+  justify-content: center;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
