@@ -1,6 +1,6 @@
 # BookShelf
 
-A personal catalog for books, films, and TV shows — searchable, ratable, exportable. Designed for offline use on Android, packaged from a web app via Capacitor. Styled with *Editorial Dusk & Dawn* — a warm, two-theme editorial aesthetic.
+A personal catalog for books, films, and TV shows — searchable, ratable, exportable. A web app that also ships as a native Android application via a thin WebView shell (no Capacitor). Styled with *Editorial Dusk & Dawn* — a warm, two-theme editorial aesthetic.
 
 - **Books** — Google Books search
 - **Movies & TV** — TheTVDB v4
@@ -23,23 +23,22 @@ Open the shown localhost URL. Visit **Settings** and paste:
 
 Keys are stored locally. They never leave the device.
 
-## Build for Android
+## Android
 
-Requires Android Studio + the Android SDK on the build machine.
+The native Android project lives in [`android-app/`](./android-app) — a standalone
+Android Studio project that bundles the web build inside a `WebView`. See
+[`android-app/README.md`](./android-app/README.md) for how to open, run, and
+build an APK.
+
+After changing the web app, refresh the bundled copy:
 
 ```bash
-# One-time: add the native Android project
-npm install
-npx cap add android
-
-# Each time you change the web app:
-npm run android:build   # vite build + cap sync
-npx cap open android    # opens Android Studio — build & run from there
+npm run android:assets   # vite build, then copy dist/ into android-app assets
 ```
 
-`CapacitorHttp` is enabled in `capacitor.config.ts` — fetch calls route through native HTTP and bypass WebView CORS. Required for TheTVDB.
-
-To produce a signed `.aab` / `.apk` for sideloading: use Android Studio's *Build → Generate Signed Bundle / APK* flow.
+The shell provides two native bridges (`src/util/android-bridge.js` wires them up):
+native HTTP to bypass WebView CORS for TheTVDB, and a Markdown export/share path.
+Both are feature-detected, so the same build runs unchanged in a plain browser.
 
 ## Project structure
 
@@ -62,7 +61,8 @@ src/
   export/
     markdown.js      DB → Markdown serializer
   util/
-    settings.js      Capacitor Preferences (with localStorage fallback)
+    settings.js      localStorage-backed settings
+    android-bridge.js Native HTTP + export bridges (no-op in a browser)
     icons.js         Inlined Lucide icons
     thumbs.js        Cover blob caching
   styles/
@@ -70,13 +70,13 @@ src/
     app.css          Component styles, glow layer
   main.js            Boot + tab routing
 index.html
-capacitor.config.ts
 vite.config.js
+android-app/         Native Android Studio project (WebView shell)
 ```
 
 ## Notes on the APIs
 
-**TheTVDB v4** issues a bearer token from `/login` that lasts ~1 month. The client caches it via Capacitor Preferences (or localStorage in the browser) and refreshes when it ages past 25 days, or whenever a request returns 401. Movies and series are both served from `/search`.
+**TheTVDB v4** issues a bearer token from `/login` that lasts ~1 month. The client caches it and refreshes when it ages past 25 days, or whenever a request returns 401. Movies and series are both served from `/search`. On Android the request is routed through the native HTTP bridge to bypass WebView CORS.
 
 **Google Books** requires no auth for basic use. Adding an API key raises the daily quota.
 

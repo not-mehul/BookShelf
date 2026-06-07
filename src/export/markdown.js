@@ -59,43 +59,21 @@ export async function saveAndShareMarkdown() {
   const today = new Date().toISOString().slice(0, 10);
   const filename = `bookshelf-${today}.md`;
 
-  // Native Android wrapper (no Capacitor) — hand off to the share intent.
+  // Native Android shell — hand the file to the system share sheet.
   if (hasNativeExport()) {
     nativeExport(filename, md);
     return { method: 'native', filename };
   }
 
-  // Try Capacitor Filesystem + Share when available.
-  try {
-    const fsMod = await import('@capacitor/filesystem');
-    const shareMod = await import('@capacitor/share');
-    const { Filesystem, Directory, Encoding } = fsMod;
-    const { Share } = shareMod;
-
-    const writeRes = await Filesystem.writeFile({
-      path: filename,
-      data: md,
-      directory: Directory.Cache,
-      encoding: Encoding.UTF8
-    });
-    await Share.share({
-      title: 'BookShelf catalog',
-      text: 'Catalog export',
-      url: writeRes.uri,
-      dialogTitle: 'Export catalog'
-    });
-    return { method: 'share', uri: writeRes.uri };
-  } catch {
-    // Browser fallback — trigger a download.
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return { method: 'download', filename };
-  }
+  // Browser — trigger a download.
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { method: 'download', filename };
 }

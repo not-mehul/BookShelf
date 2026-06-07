@@ -6,10 +6,6 @@ dist/
 .env.local
 .vite/
 
-# Capacitor native projects (generated)
-android/
-ios/
-
 # IDE
 .vscode/
 .idea/
