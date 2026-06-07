@@ -17,7 +17,7 @@ const state = {
 const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show' };
 const TYPE_PLURAL = { book: 'books', movie: 'movies', tv: 'TV shows' };
 
-export function renderSearch(container, { onChanged, goToSettings }) {
+export function renderSearch(container, { onChanged, onSaved, goToSettings }) {
   clear(container);
 
   // ── Source selector ────────────────────────────────────────────
@@ -36,7 +36,7 @@ export function renderSearch(container, { onChanged, goToSettings }) {
           state.type = v;
           state.query = '';
           state.results = [];
-          renderSearch(container, { onChanged, goToSettings });
+          renderSearch(container, { onChanged, onSaved, goToSettings });
         }
       )
     )
@@ -45,7 +45,8 @@ export function renderSearch(container, { onChanged, goToSettings }) {
   // ── Quotes — manual add form ───────────────────────────────────
 
   if (state.type === 'quote') {
-    renderQuoteAddSection(container, onChanged);
+    // Use onSaved (stats-only) so the success notice isn't wiped by a full re-render
+    renderQuoteAddSection(container, onSaved ?? onChanged);
     return;
   }
 

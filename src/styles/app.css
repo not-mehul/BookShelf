@@ -93,10 +93,14 @@ img { display: block; }
   max-width: 880px;
   margin: 0 auto;
   padding: 4rem 1.5rem 6rem;
+  /* Respect device safe areas (notches, punch-holes, home bar) */
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 2rem));
 }
 
 @media (max-width: 640px) {
-  .app-shell { padding: 2.5rem 1.25rem 4rem; }
+  .app-shell { padding: 1.75rem 1rem 5rem; }
 }
 
 /* ─── Type utilities ──────────────────────────────────────────── */
@@ -361,6 +365,15 @@ img { display: block; }
 }
 .btn-icon svg { width: 18px; height: 18px; stroke-width: 2; }
 
+/* ─── Segmented scroll wrapper ────────────────────────────────── */
+
+.seg-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.seg-scroll::-webkit-scrollbar { display: none; }
+
 /* ─── Segmented control ───────────────────────────────────────── */
 
 .segmented {
@@ -545,6 +558,25 @@ img { display: block; }
   padding: 0.55rem 0.875rem;
   width: 160px;
   font-size: 0.8125rem;
+}
+
+@media (max-width: 640px) {
+  .lib-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.625rem;
+  }
+  .lib-header-right {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+  .filter-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+  /* Show export as icon-only on mobile to save toolbar space */
+  .btn-label { display: none; }
 }
 
 /* ─── Entry card grid ─────────────────────────────────────────── */
@@ -818,6 +850,12 @@ img { display: block; }
   justify-content: center;
   padding: 1.25rem;
   animation: backdrop-in 0.2s ease-out;
+  /* On small screens, long modals start at top so they're scrollable */
+  align-items: flex-start;
+  padding-top: max(1.25rem, env(safe-area-inset-top, 1.25rem));
+}
+@media (min-height: 640px) {
+  .modal-backdrop { align-items: center; }
 }
 @keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
 

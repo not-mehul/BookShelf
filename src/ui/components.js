@@ -31,7 +31,7 @@ export function selectWrap(selectEl, compact = false) {
 }
 
 export function segmented(options, currentValue, onChange) {
-  const wrap = el('div', { class: 'segmented', role: 'tablist' });
+  const seg = el('div', { class: 'segmented', role: 'tablist' });
   for (const opt of options) {
     const btn = el(
       'button',
@@ -41,16 +41,19 @@ export function segmented(options, currentValue, onChange) {
         class: opt.value === currentValue ? 'active' : '',
         onClick: () => {
           if (opt.value === currentValue) return;
-          for (const c of wrap.children) c.classList.remove('active');
+          for (const c of seg.children) c.classList.remove('active');
           btn.classList.add('active');
           onChange(opt.value);
         }
       },
       opt.label
     );
-    wrap.appendChild(btn);
+    seg.appendChild(btn);
   }
-  return wrap;
+  // Wrap in scroll container so wide controls don't overflow on narrow screens
+  const scroll = el('div', { class: 'seg-scroll' });
+  scroll.appendChild(seg);
+  return scroll;
 }
 
 export function loadingNode(label = 'Loading') {

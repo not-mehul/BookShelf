@@ -4,7 +4,7 @@ import { icons } from '../util/icons.js';
 // 5-star rating control with a clear option. value is an integer 0–5 or null.
 export function ratingControl(initial, onChange) {
   let value = initial ?? null;
-  const wrap = el('div', { class: 'rating-control' });
+  const wrap = el('div', { class: 'rating-row' });
   const stars = [];
 
   const render = () => {

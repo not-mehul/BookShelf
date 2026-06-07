@@ -100,6 +100,7 @@ async function boot() {
     } else if (state.tab === 'search') {
       renderSearch(screen, {
         onChanged,
+        onSaved: () => refreshStats(),
         goToSettings: () => switchTab('settings')
       });
     } else if (state.tab === 'settings') {

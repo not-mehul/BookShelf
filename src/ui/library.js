@@ -61,7 +61,7 @@ export function renderLibrary(container, { onChanged }) {
       finally { exportBtn.removeAttribute('disabled'); }
     }
   });
-  exportBtn.innerHTML = `${icons.download()} Export`;
+  exportBtn.innerHTML = `${icons.download()} <span class="btn-label">Export</span>`;
 
   const libRight = el('div', { class: 'lib-header-right' },
     filterInput,
