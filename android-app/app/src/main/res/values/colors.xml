@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Editorial Dusk background — matches the web app so there is no white launch flash. -->
+    <color name="dusk_bg">#0F0D0B</color>
+    <color name="ic_launcher_background">#14110E</color>
+    <color name="accent_amber">#D4A574</color>
+</resources>

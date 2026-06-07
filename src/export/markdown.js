@@ -1,6 +1,7 @@
 // Serialize the catalog to Markdown, grouped by type and sorted by rating desc.
 
 import { listEntries } from '../db/database.js';
+import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
 
 const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV Shows' };
 const TYPE_ORDER = ['book', 'movie', 'tv'];
@@ -57,6 +58,12 @@ export async function saveAndShareMarkdown() {
   const md = await exportMarkdown();
   const today = new Date().toISOString().slice(0, 10);
   const filename = `bookshelf-${today}.md`;
+
+  // Native Android wrapper (no Capacitor) — hand off to the share intent.
+  if (hasNativeExport()) {
+    nativeExport(filename, md);
+    return { method: 'native', filename };
+  }
 
   // Try Capacitor Filesystem + Share when available.
   try {

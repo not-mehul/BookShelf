@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Open-book glyph, kept inside the adaptive-icon safe zone (center ~66%). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left page -->
+    <path
+        android:fillColor="#D4A574"
+        android:pathData="M54,40 C46,35 36,33 28,34 L28,72 C36,71 46,73 54,77 Z" />
+
+    <!-- Right page -->
+    <path
+        android:fillColor="#E8C9A0"
+        android:pathData="M54,40 C62,35 72,33 80,34 L80,72 C72,71 62,73 54,77 Z" />
+
+    <!-- Spine -->
+    <path
+        android:fillColor="#0F0D0B"
+        android:pathData="M52.5,40 L55.5,40 L55.5,77 L52.5,77 Z" />
+
+    <!-- Page lines (left) -->
+    <path
+        android:strokeColor="#0F0D0B"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:pathData="M34,44 C40,44 45,45 49,47 M34,52 C40,52 45,53 49,55 M34,60 C40,60 45,61 49,63" />
+
+    <!-- Page lines (right) -->
+    <path
+        android:strokeColor="#0F0D0B"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:pathData="M74,44 C68,44 63,45 59,47 M74,52 C68,52 63,53 59,55 M74,60 C68,60 63,61 59,63" />
+
+</vector>

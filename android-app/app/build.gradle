@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'app.bookshelf.personal'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.bookshelf.personal'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    buildTypes {
+        release {
+            // No code shrinking — the app is a thin WebView shell.
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader — serves the bundled web app over a secure https origin
+    // so IndexedDB / localStorage behave reliably (they are unreliable on file://).
+    implementation 'androidx.webkit:webkit:1.11.0'
+    // FileProvider, used by the export bridge to share the generated Markdown file.
+    implementation 'androidx.core:core:1.13.1'
+}

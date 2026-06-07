@@ -1,3 +1,4 @@
+import './util/android-bridge.js'; // patches fetch inside the Android wrapper; no-op on web
 import { initTheme, buildThemeToggle } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { renderLibrary } from './ui/library.js';
