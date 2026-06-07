@@ -1,5 +1,28 @@
 import { el, clear } from './components.js';
+import { icons } from '../util/icons.js';
 import { getSetting, setSetting, removeSetting } from '../util/settings.js';
+import { openModal, closeModal } from './detail-modal.js';
+
+// Open Settings as a modal (the app no longer has a Settings tab).
+export function openSettings() {
+  openModal((card) => {
+    clear(card);
+    const closeBtn = el('button', {
+      type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
+    });
+    closeBtn.innerHTML = icons.x();
+    card.appendChild(closeBtn);
+
+    card.appendChild(el('div', { class: 'add-head' },
+      el('div', { class: 'modal-eyebrow' }, 'Settings'),
+      el('h2', { class: 'add-title' }, 'API keys')
+    ));
+
+    const body = el('div', { class: 'settings-modal-body' });
+    card.appendChild(body);
+    renderSettings(body);
+  });
+}
 
 export async function renderSettings(container) {
   clear(container);

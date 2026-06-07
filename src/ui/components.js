@@ -31,6 +31,10 @@ export function selectWrap(selectEl, compact = false) {
 }
 
 export function segmented(options, currentValue, onChange) {
+  // Track current selection internally — the control persists across grid
+  // re-renders, so a captured `currentValue` would go stale (and the
+  // originally-active option could never be re-selected).
+  let current = currentValue;
   const seg = el('div', { class: 'segmented', role: 'tablist' });
   for (const opt of options) {
     const btn = el(
@@ -40,7 +44,8 @@ export function segmented(options, currentValue, onChange) {
         role: 'tab',
         class: opt.value === currentValue ? 'active' : '',
         onClick: () => {
-          if (opt.value === currentValue) return;
+          if (opt.value === current) return;
+          current = opt.value;
           for (const c of seg.children) c.classList.remove('active');
           btn.classList.add('active');
           onChange(opt.value);
