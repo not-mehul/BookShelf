@@ -23,7 +23,11 @@ async function refreshToken() {
   const pin = await getSetting('tvdb_pin', '');
 
   const body = pin ? { apikey, pin } : { apikey };
-  const res = await fetch(`${BASE}/login`, {
+  const url = `${BASE}/login`;
+  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const finalUrl = proxy ? `${proxy}${url}` : url;
+
+  const res = await fetch(finalUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body)
@@ -42,12 +46,16 @@ async function refreshToken() {
 async function tvdbFetch(path, params) {
   let token = await getToken();
   const qs = params ? `?${new URLSearchParams(params)}` : '';
-  let res = await fetch(`${BASE}${path}${qs}`, {
+  const url = `${BASE}${path}${qs}`;
+  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const finalUrl = proxy ? `${proxy}${url}` : url;
+
+  let res = await fetch(finalUrl, {
     headers: { authorization: `Bearer ${token}` }
   });
   if (res.status === 401) {
     token = await refreshToken();
-    res = await fetch(`${BASE}${path}${qs}`, {
+    res = await fetch(finalUrl, {
       headers: { authorization: `Bearer ${token}` }
     });
   }

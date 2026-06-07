@@ -11,9 +11,9 @@ const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote'
 const TYPE_ICON  = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 const STATUS_OPTS = [
   { v: '',            l: '— none —'   },
-  { v: 'want',        l: 'Want to read'  },
-  { v: 'in-progress', l: 'In progress' },
-  { v: 'finished',    l: 'Finished'   }
+  { v: 'want',        l: 'Wishlist'  },
+  { v: 'in-progress', l: 'Progressing' },
+  { v: 'finished',    l: 'Completed'   }
 ];
 
 let activeBackdrop = null;

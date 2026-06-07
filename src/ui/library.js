@@ -177,7 +177,7 @@ export function entryCard(entry, onChanged) {
   }
 
   if (entry.status) {
-    const STATUS_LABEL = { want: 'Want', 'in-progress': 'Reading', finished: 'Finished' };
+    const STATUS_LABEL = { want: 'Wishlist', 'in-progress': 'Progressing', finished: 'Completed' };
     meta.appendChild(el('span', { class: 'entry-status-chip' }, STATUS_LABEL[entry.status] || entry.status));
   }
 

@@ -98,6 +98,19 @@ export async function renderSettings(container, { onChanged } = {}) {
 
   container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
 
+  // ── Browser Compatibility ────────────────────────────────────
+
+  if (!window.AndroidHttp) {
+    container.appendChild(sectionHeading('Browser Compatibility'));
+    container.appendChild(await fieldGroup({
+      label: 'CORS Proxy (Browser only)',
+      hint:  'If running in a plain browser, TheTVDB API requires a CORS proxy (e.g. https://cors-anywhere.herokuapp.com/). Leave blank if not needed.',
+      key:   'cors_proxy',
+      type:  'url'
+    }));
+    container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
+  }
+
   // ── Data Management ──────────────────────────────────────────
 
   container.appendChild(sectionHeading('Data Management'));

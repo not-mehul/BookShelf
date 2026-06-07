@@ -20,6 +20,7 @@ async function boot() {
   const h1 = el('h1', { class: 'site-title' });
   h1.innerHTML = 'Book<em>Shelf</em>';
   titleBlock.appendChild(h1);
+  titleBlock.appendChild(el('p', { class: 'site-subtitle' }, '-by Mehul'));
 
   const settingsBtn = el('button', {
     type: 'button',

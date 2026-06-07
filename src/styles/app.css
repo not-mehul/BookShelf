@@ -160,6 +160,16 @@ img { display: block; }
   font-style: italic;
 }
 
+.site-subtitle {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+  opacity: 0.8;
+}
+
 .header-controls {
   display: flex;
   gap: 0.5rem;
