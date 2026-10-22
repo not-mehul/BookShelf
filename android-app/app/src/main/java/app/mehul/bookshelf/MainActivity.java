@@ -163,6 +163,27 @@ public class MainActivity extends Activity {
 
     // ── Native HTTP bridge ─────────────────────────────────────────────
 
+    // Hosts the native HTTP bridge is permitted to reach. The bridge exists
+    // only to bypass CORS for the app's own APIs, so it is scoped to those
+    // hosts (and their cover-image CDNs) rather than acting as an open proxy.
+    private static final String[] ALLOWED_HOST_SUFFIXES = {
+        "thetvdb.com",
+        "googleapis.com",
+        "google.com",
+        "gstatic.com",
+        "googleusercontent.com",
+        "openlibrary.org"
+    };
+
+    private static boolean isHostAllowed(String host) {
+        if (host == null) return false;
+        host = host.toLowerCase();
+        for (String suffix : ALLOWED_HOST_SUFFIXES) {
+            if (host.equals(suffix) || host.endsWith("." + suffix)) return true;
+        }
+        return false;
+    }
+
     private class HttpBridge {
         @JavascriptInterface
         public void request(final int id, final String method, final String url,
@@ -170,7 +191,12 @@ public class MainActivity extends Activity {
             executor.execute(() -> {
                 HttpURLConnection conn = null;
                 try {
-                    conn = (HttpURLConnection) new URL(url).openConnection();
+                    URL parsed = new URL(url);
+                    if (!"https".equalsIgnoreCase(parsed.getProtocol()) || !isHostAllowed(parsed.getHost())) {
+                        resolve(id, 0, "{}", "", "Blocked request to disallowed host");
+                        return;
+                    }
+                    conn = (HttpURLConnection) parsed.openConnection();
                     conn.setRequestMethod(method);
                     conn.setConnectTimeout(30000);
                     conn.setReadTimeout(30000);
@@ -260,7 +286,7 @@ public class MainActivity extends Activity {
                             out);
 
                     Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("text/markdown");
+                    share.setType(mimeForFilename(filename));
                     share.putExtra(Intent.EXTRA_STREAM, uri);
                     share.putExtra(Intent.EXTRA_TITLE, filename);
                     share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -281,5 +307,13 @@ public class MainActivity extends Activity {
     private static String sanitize(String name) {
         if (name == null || name.isEmpty()) return "export.md";
         return name.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
+    private static String mimeForFilename(String name) {
+        if (name == null) return "text/plain";
+        String lower = name.toLowerCase();
+        if (lower.endsWith(".json")) return "application/json";
+        if (lower.endsWith(".md")) return "text/markdown";
+        return "text/plain";
     }
 }
