@@ -1,63 +1,105 @@
-import { el, clear, selectWrap } from './components.js';
+import { el, clear, selectWrap, coverImage, trapFocus } from './components.js';
 import { icons } from '../util/icons.js';
 import { ratingControl } from './rating.js';
-import {
-  saveEntry, deleteEntry, getEntry,
-  newEntryId, findBySource, thumbnailUrl
-} from '../db/database.js';
+import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
+import { saveEntry, deleteEntry, getEntry, thumbnailUrl } from '../db/database.js';
+import { enrichEntry } from '../api/tvdb.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
+import { shareEntry } from '../export/share.js';
 
 const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' };
-const TYPE_ICON  = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
+const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 const STATUS_OPTS = [
-  { v: '',            l: '— none —'   },
-  { v: 'want',        l: 'Wishlist'  },
-  { v: 'in-progress', l: 'Progressing' },
-  { v: 'finished',    l: 'Completed'   }
+  { v: '', l: '— none —' },
+  { v: 'want', l: 'Want to read' },
+  { v: 'in-progress', l: 'In progress' },
+  { v: 'finished', l: 'Finished' }
 ];
+const PROGRESS_LABEL = { book: 'Pages read', tv: 'Episodes watched' };
 
 let activeBackdrop = null;
-let escListener   = null;
+let escListener = null;
+let releaseTrap = null;
 
 export function closeModal() {
   if (!activeBackdrop) return;
   activeBackdrop.remove();
   activeBackdrop = null;
-  if (escListener) { document.removeEventListener('keydown', escListener); escListener = null; }
+  if (escListener) {
+    document.removeEventListener('keydown', escListener);
+    escListener = null;
+  }
+  if (releaseTrap) {
+    releaseTrap();
+    releaseTrap = null;
+  }
 }
 
 export function openModal(renderFn) {
   closeModal();
 
-  const card = el('div', { class: 'modal-card', role: 'dialog', 'aria-modal': 'true' });
+  const card = el('div', {
+    class: 'modal-card',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-labelledby': 'modal-title'
+  });
 
   const closeBtn = el('button', {
-    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
+    type: 'button',
+    class: 'btn-icon modal-close',
+    'aria-label': 'Close',
+    onClick: closeModal
   });
   closeBtn.innerHTML = icons.x();
   card.appendChild(closeBtn);
 
   const backdrop = el('div', {
     class: 'modal-backdrop',
-    onClick: (ev) => { if (ev.target === backdrop) closeModal(); }
+    onClick: (ev) => {
+      if (ev.target === backdrop) closeModal();
+    }
   }, card);
   document.body.appendChild(backdrop);
   activeBackdrop = backdrop;
 
-  escListener = (ev) => { if (ev.key === 'Escape') closeModal(); };
+  escListener = (ev) => {
+    if (ev.key === 'Escape') closeModal();
+  };
   document.addEventListener('keydown', escListener);
 
   renderFn(card);
+  releaseTrap = trapFocus(card);
+  // Move focus into the dialog for keyboard / screen-reader users.
+  (card.querySelector('h2, [autofocus], button, input, textarea') || card).focus?.();
 }
 
 export async function openEntry(id, { onChanged } = {}) {
-  const entry = await getEntry(id);
+  let entry = await getEntry(id);
   if (!entry) return;
   openModal((card) => renderEntryView(card, entry, { onChanged }));
-}
 
-export function openSearchHit(hit, { onChanged } = {}) {
-  openModal((card) => renderHitView(card, hit, { onChanged }));
+  // Lazily enrich movies/TV that were saved from a thin search hit (no
+  // director/cast yet). One network round-trip, cached via the `enriched` flag.
+  if ((entry.type === 'movie' || entry.type === 'tv') && entry.sourceId && !entry.enriched) {
+    try {
+      const enriched = await enrichEntry(entry);
+      if (enriched.enriched) {
+        if (!enriched.thumbnailBlob && enriched.thumbnailUrl && enriched.thumbnailUrl !== entry.thumbnailUrl) {
+          enriched.thumbnailBlob = await fetchThumbBlob(enriched.thumbnailUrl);
+        }
+        entry = enriched;
+        await saveEntry(entry);
+        if (activeBackdrop) {
+          const card = activeBackdrop.querySelector('.modal-card');
+          if (card) renderEntryView(card, entry, { onChanged });
+        }
+        onChanged?.();
+      }
+    } catch {
+      /* offline or no key — keep the thin entry */
+    }
+  }
 }
 
 // ── Shared hero header ─────────────────────────────────────────
@@ -65,29 +107,24 @@ export function openSearchHit(hit, { onChanged } = {}) {
 function buildHero(entry) {
   const hero = el('div', { class: 'modal-hero' });
 
-  // Poster
   const poster = el('div', { class: 'modal-poster' });
-  const blobUrl = thumbnailUrl(entry);
-  const src = blobUrl || entry.thumbnailUrl;
+  const src = thumbnailUrl(entry) || entry.thumbnailUrl;
   if (src) {
-    const img = el('img', { src, alt: '' });
-    img.addEventListener('error', () => { img.remove(); poster.appendChild(posterPlaceholder(entry)); });
-    poster.appendChild(img);
+    poster.appendChild(
+      coverImage(src, { onError: (ev) => { ev.target.remove(); poster.appendChild(posterPlaceholder(entry)); } })
+    );
   } else {
     poster.appendChild(posterPlaceholder(entry));
   }
   hero.appendChild(poster);
 
-  // Heading block
   const heading = el('div', { class: 'modal-heading' });
   heading.appendChild(el('div', { class: 'modal-eyebrow' }, TYPE_LABEL[entry.type] || entry.type));
-  heading.appendChild(el('h2', { class: 'modal-title' }, entry.title));
+  heading.appendChild(el('h2', { class: 'modal-title', id: 'modal-title', tabindex: '-1' }, entry.title));
   if (entry.creators?.length) {
     heading.appendChild(el('p', { class: 'modal-creators' }, entry.creators.join(', ')));
   }
-  if (entry.year) {
-    heading.appendChild(el('p', { class: 'modal-year' }, String(entry.year)));
-  }
+  if (entry.year) heading.appendChild(el('p', { class: 'modal-year' }, String(entry.year)));
   if (entry.genres?.length) {
     const tagRow = el('div', { class: 'tag-row' });
     for (const g of entry.genres.slice(0, 8)) tagRow.appendChild(el('span', { class: 'tag' }, g));
@@ -107,19 +144,14 @@ function posterPlaceholder(entry) {
 // ── Saved-entry view ───────────────────────────────────────────
 
 function renderEntryView(card, entry, { onChanged }) {
-  if (entry.type === 'quote') { renderQuoteView(card, entry, { onChanged }); return; }
+  if (entry.type === 'quote') {
+    renderQuoteView(card, entry, { onChanged });
+    return;
+  }
   clear(card);
-
-  const closeBtn = el('button', {
-    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
-  });
-  closeBtn.innerHTML = icons.x();
-  card.appendChild(closeBtn);
-
-  // Hero
+  card.appendChild(closeButton());
   card.appendChild(buildHero(entry));
 
-  // Summary
   if (entry.summary?.trim()) {
     const sec = el('div', { class: 'modal-section' });
     sec.appendChild(el('div', { class: 'modal-section-label' }, 'Synopsis'));
@@ -128,27 +160,27 @@ function renderEntryView(card, entry, { onChanged }) {
   }
 
   // Rating
-  {
-    const sec = el('div', { class: 'modal-section' });
-    sec.appendChild(el('div', { class: 'modal-section-label' }, 'Rating'));
-    sec.appendChild(ratingControl(entry.rating, async (next) => {
+  card.appendChild(
+    section('Rating', ratingControl(entry.rating, async (next) => {
       entry.rating = next;
       entry.dateRated = next != null ? new Date().toISOString() : null;
       await saveEntry(entry);
       onChanged?.();
-    }));
-    card.appendChild(sec);
+    }))
+  );
+
+  // Progress (books & TV)
+  if (entry.type === 'book' || entry.type === 'tv') {
+    card.appendChild(progressSection(entry, onChanged));
   }
 
-  // Status + Notes (two-column)
+  // Status + Notes
   {
-    const sec = el('div', { class: 'modal-section' });
     const grid = el('div', { class: 'modal-two-col' });
 
-    // Status
     const statusCol = el('div', {});
-    statusCol.appendChild(el('div', { class: 'modal-section-label' }, 'Progress'));
-    const statusSel = el('select', { class: 'select' });
+    statusCol.appendChild(el('div', { class: 'modal-section-label' }, 'Progress status'));
+    const statusSel = el('select', { class: 'select', 'aria-label': 'Progress status' });
     for (const opt of STATUS_OPTS) {
       const o = el('option', { value: opt.v }, opt.l);
       if ((entry.status || '') === opt.v) o.setAttribute('selected', '');
@@ -162,183 +194,320 @@ function renderEntryView(card, entry, { onChanged }) {
     statusCol.appendChild(selectWrap(statusSel));
     grid.appendChild(statusCol);
 
-    // Notes
-    const notesCol = el('div', {});
-    notesCol.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
-    const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…' });
-    notes.style.minHeight = '80px';
-    notes.value = entry.notes || '';
-    let t;
-    notes.addEventListener('input', () => {
-      clearTimeout(t);
-      t = setTimeout(async () => { entry.notes = notes.value; await saveEntry(entry); onChanged?.(); }, 300);
-    });
-    notesCol.appendChild(notes);
-    grid.appendChild(notesCol);
+    grid.appendChild(notesCol(entry, onChanged));
 
+    const sec = el('div', { class: 'modal-section' });
     sec.appendChild(grid);
     card.appendChild(sec);
   }
 
-  // Actions
-  const actions = el('div', { class: 'modal-actions' });
-  const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove from catalog');
-  let removeArmed = false;
-  let removeTimer = null;
-  removeBtn.addEventListener('click', async () => {
-    if (!removeArmed) {
-      removeArmed = true;
-      removeBtn.textContent = 'Tap again to confirm';
-      removeTimer = setTimeout(() => {
-        removeArmed = false;
-        removeBtn.textContent = 'Remove from catalog';
-      }, 3000);
-      return;
-    }
-    clearTimeout(removeTimer);
-    await deleteEntry(entry.id);
-    closeModal();
-    onChanged?.();
-  });
-  actions.appendChild(removeBtn);
-  card.appendChild(actions);
+  // Tags
+  card.appendChild(tagsSection(entry, onChanged));
+
+  card.appendChild(actionsRow(card, entry, onChanged));
 }
 
 // ── Quote view ─────────────────────────────────────────────────
 
 function renderQuoteView(card, entry, { onChanged }) {
   clear(card);
+  card.appendChild(closeButton());
 
-  const closeBtn = el('button', {
-    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
-  });
-  closeBtn.innerHTML = icons.x();
-  card.appendChild(closeBtn);
-
-  // Quote display
   const quoteBlock = el('div', { class: 'modal-quote-block' });
   quoteBlock.appendChild(el('span', { class: 'modal-quote-glyph', 'aria-hidden': 'true' }, '“'));
-  quoteBlock.appendChild(el('blockquote', { class: 'modal-quote-text' }, entry.quoteText || entry.title));
+  quoteBlock.appendChild(
+    el('blockquote', { class: 'modal-quote-text', id: 'modal-title', tabindex: '-1' }, entry.quoteText || entry.title)
+  );
   const citeParts = [entry.creators?.[0], entry.source].filter(Boolean);
   if (citeParts.length) {
     quoteBlock.appendChild(el('div', { class: 'modal-quote-citation' }, '— ' + citeParts.join(', ')));
   }
   card.appendChild(quoteBlock);
 
-  // Rating
-  {
-    const sec = el('div', { class: 'modal-section' });
-    sec.appendChild(el('div', { class: 'modal-section-label' }, 'Rating'));
-    sec.appendChild(ratingControl(entry.rating, async (next) => {
+  card.appendChild(
+    section('Rating', ratingControl(entry.rating, async (next) => {
       entry.rating = next;
       entry.dateRated = next != null ? new Date().toISOString() : null;
       await saveEntry(entry);
       onChanged?.();
-    }));
-    card.appendChild(sec);
-  }
+    }))
+  );
 
-  // Notes
   {
     const sec = el('div', { class: 'modal-section' });
     sec.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
-    const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…' });
-    notes.style.minHeight = '80px';
-    notes.value = entry.notes || '';
-    let t;
-    notes.addEventListener('input', () => {
-      clearTimeout(t);
-      t = setTimeout(async () => { entry.notes = notes.value; await saveEntry(entry); onChanged?.(); }, 300);
-    });
-    sec.appendChild(notes);
+    sec.appendChild(notesCol(entry, onChanged).lastChild);
     card.appendChild(sec);
   }
 
-  // Actions
-  const actions = el('div', { class: 'modal-actions' });
-  const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove quote');
-  let removeArmed = false;
-  let removeTimer = null;
-  removeBtn.addEventListener('click', async () => {
-    if (!removeArmed) {
-      removeArmed = true;
-      removeBtn.textContent = 'Tap again to confirm';
-      removeTimer = setTimeout(() => {
-        removeArmed = false;
-        removeBtn.textContent = 'Remove quote';
-      }, 3000);
-      return;
-    }
-    clearTimeout(removeTimer);
-    await deleteEntry(entry.id);
-    closeModal();
-    onChanged?.();
-  });
-  actions.appendChild(removeBtn);
-  card.appendChild(actions);
+  card.appendChild(tagsSection(entry, onChanged));
+  card.appendChild(actionsRow(card, entry, onChanged));
 }
 
-// ── Search-hit view (not yet saved) ───────────────────────────
+// ── Edit form ──────────────────────────────────────────────────
 
-function renderHitView(card, hit, { onChanged }) {
+function renderEditForm(card, entry, { onChanged }) {
   clear(card);
+  card.appendChild(closeButton());
 
-  const closeBtn = el('button', {
-    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
+  const backBtn = el('button', {
+    type: 'button',
+    class: 'btn-icon modal-back',
+    'aria-label': 'Back',
+    onClick: () => renderEntryView(card, entry, { onChanged })
   });
-  closeBtn.innerHTML = icons.x();
-  card.appendChild(closeBtn);
+  backBtn.innerHTML = icons.arrowLeft();
+  card.appendChild(backBtn);
 
-  card.appendChild(buildHero(hit));
+  const head = el('div', { class: 'add-head' });
+  head.appendChild(el('div', { class: 'modal-eyebrow' }, 'Edit'));
+  head.appendChild(el('h2', { class: 'add-title', id: 'modal-title', tabindex: '-1' }, `Edit ${TYPE_LABEL[entry.type].toLowerCase()}`));
+  card.appendChild(head);
 
-  if (hit.summary?.trim()) {
-    const sec = el('div', { class: 'modal-section' });
-    sec.appendChild(el('div', { class: 'modal-section-label' }, 'Synopsis'));
-    sec.appendChild(el('p', { class: 'modal-summary' }, hit.summary));
-    card.appendChild(sec);
+  const form = el('form', { class: 'add-form' });
+  const errSlot = el('div', {});
+
+  if (entry.type === 'quote') {
+    const text = fieldTextarea('Quote text', 'e-text', 'The quote…', 5, entry.quoteText || entry.title);
+    const author = fieldInput('Author', 'e-author', 'e.g. George Orwell', entry.creators?.[0] || '');
+    const source = fieldInput('Source / Work', 'e-source', "e.g. 1984", entry.source || '');
+    form.append(text.field, author.field, source.field, errSlot, submitRow('Save changes'));
+    card.appendChild(form);
+    text.input.focus();
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      clear(errSlot);
+      const qt = text.input.value.trim();
+      if (!qt) { errSlot.appendChild(el('div', { class: 'msg-error' }, 'Quote text is required.')); return; }
+      entry.quoteText = qt;
+      entry.title = qt.slice(0, 100);
+      entry.creators = author.input.value.trim() ? [author.input.value.trim()] : [];
+      entry.source = source.input.value.trim() || '';
+      await saveEntry(entry);
+      onChanged?.();
+      renderEntryView(card, entry, { onChanged });
+    });
+    return;
   }
 
-  // Add action
-  const actions = el('div', { class: 'modal-actions' });
-  const addBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Add to catalog');
-  const hint   = el('p', { class: 'field-hint', style: 'margin:0;align-self:center' }, '');
-  actions.appendChild(addBtn);
-  actions.appendChild(hint);
-  card.appendChild(actions);
+  const creatorLabel = entry.type === 'book' ? 'Author(s)' : 'Director / Creator(s)';
+  const title = fieldInput('Title', 'e-title', 'Required', entry.title);
+  const creators = fieldInput(creatorLabel, 'e-creators', 'Comma-separated', (entry.creators || []).join(', '));
+  const year = fieldInput('Year', 'e-year', 'e.g. 2021', entry.year != null ? String(entry.year) : '');
+  year.input.type = 'number';
+  year.input.setAttribute('inputmode', 'numeric');
+  const genres = fieldInput('Genres / Tags', 'e-genres', 'Comma-separated', (entry.genres || []).join(', '));
+  const cover = fieldInput('Cover image URL', 'e-cover', 'https://…', entry.thumbnailUrl || '');
+  cover.input.type = 'url';
+  const summary = fieldTextarea('Summary', 'e-summary', 'Optional', 3, entry.summary || '');
 
-  addBtn.addEventListener('click', async () => {
-    addBtn.setAttribute('disabled', '');
-    addBtn.setAttribute('aria-disabled', 'true');
-    hint.textContent = 'Saving…';
+  form.append(title.field, creators.field, twoCol(year.field, genres.field), cover.field, summary.field, errSlot, submitRow('Save changes'));
+  card.appendChild(form);
+  title.input.focus();
 
-    const existing = await findBySource(hit.type, hit.sourceId);
-    if (existing) {
-      hint.textContent = 'Already in your catalog.';
-      setTimeout(() => openEntry(existing.id, { onChanged }), 350);
-      return;
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    clear(errSlot);
+    const t = title.input.value.trim();
+    if (!t) { errSlot.appendChild(el('div', { class: 'msg-error' }, 'A title is required.')); title.input.focus(); return; }
+
+    const yearNum = parseInt(year.input.value, 10);
+    const newCover = cover.input.value.trim() || null;
+    if (newCover && newCover !== entry.thumbnailUrl) {
+      try { entry.thumbnailBlob = await fetchThumbBlob(newCover); } catch { /* keep old */ }
+    } else if (!newCover) {
+      entry.thumbnailBlob = null;
     }
-
-    const blob = await fetchThumbBlob(hit.thumbnailUrl);
-    const entry = {
-      id:           newEntryId(),
-      type:         hit.type,
-      sourceId:     String(hit.sourceId),
-      title:        hit.title,
-      creators:     hit.creators || [],
-      year:         hit.year ?? null,
-      summary:      hit.summary || '',
-      genres:       hit.genres || [],
-      pageCount:    hit.pageCount || null,
-      thumbnailUrl: hit.thumbnailUrl || null,
-      thumbnailBlob: blob,
-      rating:       null,
-      status:       null,
-      notes:        '',
-      dateAdded:    new Date().toISOString(),
-      dateRated:    null
-    };
+    entry.title = t;
+    entry.creators = splitList(creators.input.value);
+    entry.year = Number.isFinite(yearNum) ? yearNum : null;
+    entry.genres = splitList(genres.input.value);
+    entry.thumbnailUrl = newCover;
+    entry.summary = summary.input.value.trim() || '';
     await saveEntry(entry);
     onChanged?.();
     renderEntryView(card, entry, { onChanged });
   });
+}
+
+// ── Sections ───────────────────────────────────────────────────
+
+function section(label, body) {
+  const sec = el('div', { class: 'modal-section' });
+  sec.appendChild(el('div', { class: 'modal-section-label' }, label));
+  sec.appendChild(body);
+  return sec;
+}
+
+function notesCol(entry, onChanged) {
+  const col = el('div', {});
+  col.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
+  const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…', 'aria-label': 'Notes' });
+  notes.style.minHeight = '80px';
+  notes.value = entry.notes || '';
+  let t;
+  notes.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      entry.notes = notes.value;
+      await saveEntry(entry);
+      onChanged?.();
+    }, 300);
+  });
+  col.appendChild(notes);
+  return col;
+}
+
+function progressSection(entry, onChanged) {
+  const sec = el('div', { class: 'modal-section' });
+  sec.appendChild(el('div', { class: 'modal-section-label' }, PROGRESS_LABEL[entry.type] || 'Progress'));
+
+  const p = entry.progress || { current: 0, total: 0 };
+  const row = el('div', { class: 'progress-edit-row' });
+
+  const current = el('input', {
+    type: 'number', min: '0', class: 'input progress-input',
+    value: String(p.current || ''), 'aria-label': 'Current', placeholder: '0'
+  });
+  const total = el('input', {
+    type: 'number', min: '0', class: 'input progress-input',
+    value: String(p.total || ''), 'aria-label': 'Total', placeholder: entry.type === 'book' ? 'pages' : 'episodes'
+  });
+
+  const bar = el('div', { class: 'progress-bar' });
+  const fill = el('div', { class: 'progress-bar-fill' });
+  bar.appendChild(fill);
+
+  const update = () => {
+    const c = Math.max(0, parseInt(current.value, 10) || 0);
+    const tt = Math.max(0, parseInt(total.value, 10) || 0);
+    const pct = tt > 0 ? Math.min(100, Math.round((c / tt) * 100)) : 0;
+    fill.style.width = pct + '%';
+    bar.setAttribute('title', tt ? `${pct}%` : '');
+  };
+  update();
+
+  let timer;
+  const onInput = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const c = Math.max(0, parseInt(current.value, 10) || 0);
+      const tt = Math.max(0, parseInt(total.value, 10) || 0);
+      entry.progress = { current: c, total: tt };
+      // Derive status from progress so the two stay consistent.
+      if (tt > 0 && c >= tt) entry.status = 'finished';
+      else if (c > 0) entry.status = 'in-progress';
+      update();
+      await saveEntry(entry);
+      onChanged?.();
+    }, 300);
+  };
+  current.addEventListener('input', onInput);
+  total.addEventListener('input', onInput);
+
+  row.append(current, el('span', { class: 'progress-of' }, 'of'), total);
+  sec.appendChild(row);
+  sec.appendChild(bar);
+  return sec;
+}
+
+function tagsSection(entry, onChanged) {
+  const sec = el('div', { class: 'modal-section' });
+  sec.appendChild(el('div', { class: 'modal-section-label' }, 'Tags / Collections'));
+
+  const chips = el('div', { class: 'tag-chip-row' });
+  const renderChips = () => {
+    clear(chips);
+    for (const tag of entry.tags || []) {
+      const chip = el('span', { class: 'tag-chip' }, tag);
+      const rm = el('button', {
+        type: 'button', class: 'tag-chip-x', 'aria-label': `Remove tag ${tag}`,
+        onClick: async () => {
+          entry.tags = (entry.tags || []).filter((t) => t !== tag);
+          renderChips();
+          await saveEntry(entry);
+          onChanged?.();
+        }
+      });
+      rm.innerHTML = icons.x();
+      chip.appendChild(rm);
+      chips.appendChild(chip);
+    }
+  };
+  renderChips();
+
+  const input = el('input', {
+    type: 'text', class: 'input tag-input', placeholder: 'Add a tag and press Enter…', 'aria-label': 'Add tag'
+  });
+  input.addEventListener('keydown', async (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ',') return;
+    ev.preventDefault();
+    const val = input.value.trim().replace(/,$/, '').trim();
+    if (!val) return;
+    entry.tags = [...new Set([...(entry.tags || []), val])];
+    input.value = '';
+    renderChips();
+    await saveEntry(entry);
+    onChanged?.();
+  });
+
+  sec.appendChild(chips);
+  sec.appendChild(input);
+  return sec;
+}
+
+function actionsRow(card, entry, onChanged) {
+  const actions = el('div', { class: 'modal-actions' });
+
+  const editBtn = el('button', {
+    type: 'button', class: 'btn btn-muted',
+    onClick: () => renderEditForm(card, entry, { onChanged })
+  });
+  editBtn.innerHTML = `${icons.edit()} <span class="btn-label">Edit</span>`;
+
+  const shareBtn = el('button', { type: 'button', class: 'btn btn-muted' });
+  shareBtn.innerHTML = `${icons.share()} <span class="btn-label">Share</span>`;
+  shareBtn.addEventListener('click', async () => {
+    const result = await shareEntry(entry);
+    if (result === 'copied') {
+      const prev = shareBtn.innerHTML;
+      shareBtn.innerHTML = `${icons.check()} <span class="btn-label">Copied</span>`;
+      setTimeout(() => { shareBtn.innerHTML = prev; }, 1500);
+    }
+  });
+
+  const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove');
+  let armed = false;
+  let timer = null;
+  removeBtn.addEventListener('click', async () => {
+    if (!armed) {
+      armed = true;
+      removeBtn.textContent = 'Tap again to confirm';
+      timer = setTimeout(() => { armed = false; removeBtn.textContent = 'Remove'; }, 3000);
+      return;
+    }
+    clearTimeout(timer);
+    await deleteEntry(entry.id);
+    closeModal();
+    onChanged?.();
+  });
+
+  actions.append(editBtn, shareBtn, removeBtn);
+  return actions;
+}
+
+function submitRow(label) {
+  const actions = el('div', { class: 'modal-actions add-form-actions' });
+  const saveBtn = el('button', { type: 'submit', class: 'btn btn-primary' });
+  saveBtn.innerHTML = `${icons.check()} ${label}`;
+  actions.appendChild(saveBtn);
+  return actions;
+}
+
+function closeButton() {
+  const closeBtn = el('button', {
+    type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
+  });
+  closeBtn.innerHTML = icons.x();
+  return closeBtn;
 }

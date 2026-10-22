@@ -1,6 +1,7 @@
-import { el, clear, segmented, selectWrap } from './components.js';
-import { listEntries, thumbnailUrl } from '../db/database.js';
+import { el, clear, segmented, selectWrap, coverImage } from './components.js';
+import { listEntries, listAllTags, thumbnailUrl } from '../db/database.js';
 import { openEntry } from './detail-modal.js';
+import { openStats } from './stats.js';
 import { saveAndShareMarkdown } from '../export/markdown.js';
 import { icons } from '../util/icons.js';
 
@@ -21,7 +22,7 @@ const SORT_OPTS = [
 
 const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 
-const state = { type: 'all', sort: 'dateAdded', query: '' };
+const state = { type: 'all', sort: 'dateAdded', query: '', tag: null };
 
 export function renderLibrary(container, { onChanged }) {
   clear(container);
@@ -53,6 +54,15 @@ export function renderLibrary(container, { onChanged }) {
   }
   sortSel.addEventListener('change', () => { state.sort = sortSel.value; refresh(); });
 
+  const statsBtn = el('button', {
+    type: 'button',
+    class: 'btn btn-muted',
+    title: 'View statistics',
+    'aria-label': 'View statistics',
+    onClick: () => openStats()
+  });
+  statsBtn.innerHTML = `${icons.chart()} <span class="btn-label">Stats</span>`;
+
   const exportBtn = el('button', {
     type: 'button',
     class: 'btn btn-muted',
@@ -69,12 +79,32 @@ export function renderLibrary(container, { onChanged }) {
   const toolsRow = el('div', { class: 'lib-tools-row' },
     filterInput,
     selectWrap(sortSel, true),
+    statsBtn,
     exportBtn
   );
 
+  // Row 3 — tag filter chips (populated async)
+  const tagRow = el('div', { class: 'lib-tags-row' });
+
   libHeader.appendChild(typesRow);
   libHeader.appendChild(toolsRow);
+  libHeader.appendChild(tagRow);
   container.appendChild(libHeader);
+
+  async function refreshTags() {
+    const tags = await listAllTags();
+    clear(tagRow);
+    if (!tags.length) { tagRow.style.display = 'none'; return; }
+    tagRow.style.display = '';
+    const makeChip = (label, value) => el('button', {
+      type: 'button',
+      class: `lib-tag-chip${state.tag === value ? ' active' : ''}`,
+      onClick: () => { state.tag = value; refresh(); refreshTags(); }
+    }, label);
+    tagRow.appendChild(makeChip('All tags', null));
+    for (const t of tags) tagRow.appendChild(makeChip(t, t));
+  }
+  refreshTags();
 
   // ── Grid ───────────────────────────────────────────────────────
 
@@ -84,11 +114,14 @@ export function renderLibrary(container, { onChanged }) {
   async function refresh() {
     let entries = await listEntries();
     if (state.type !== 'all') entries = entries.filter((e) => e.type === state.type);
+    if (state.tag) entries = entries.filter((e) => (e.tags || []).includes(state.tag));
     const q = state.query.trim().toLowerCase();
     if (q) {
       entries = entries.filter((e) => {
-        const hay = [e.title, e.quoteText, ...(e.creators || []), ...(e.genres || []), e.source || '']
-          .filter(Boolean).join(' ').toLowerCase();
+        const hay = [
+          e.title, e.quoteText, e.summary, e.notes, e.source || '',
+          ...(e.creators || []), ...(e.genres || []), ...(e.tags || [])
+        ].filter(Boolean).join(' ').toLowerCase();
         return hay.includes(q);
       });
     }
@@ -146,15 +179,11 @@ export function entryCard(entry, onChanged) {
 
   // Thumbnail
   const thumb = el('div', { class: 'entry-thumb' });
-  const blobUrl = thumbnailUrl(entry);
-  const src = blobUrl || entry.thumbnailUrl;
+  const src = thumbnailUrl(entry) || entry.thumbnailUrl;
   if (src) {
-    const img = el('img', { src, alt: '', loading: 'lazy' });
-    img.addEventListener('error', () => {
-      img.remove();
-      thumb.appendChild(thumbPlaceholder(entry));
-    });
-    thumb.appendChild(img);
+    thumb.appendChild(
+      coverImage(src, { onError: (ev) => { ev.target.remove(); thumb.appendChild(thumbPlaceholder(entry)); } })
+    );
   } else {
     thumb.appendChild(thumbPlaceholder(entry));
   }
@@ -210,12 +239,12 @@ function emptyState(type, query) {
   } else if (type === 'quote') {
     wrap.innerHTML = icons.quote();
     wrap.appendChild(el('h3', {}, 'No quotes yet'));
-    wrap.appendChild(el('p', {}, 'Add quotes from the Search tab.'));
+    wrap.appendChild(el('p', {}, 'Tap the + button to add a quote.'));
   } else {
     const labels = { book: 'books', movie: 'movies', tv: 'shows' };
     wrap.innerHTML = icons[TYPE_ICON[type]]?.() || icons.bookmark();
     wrap.appendChild(el('h3', {}, `No ${labels[type] || 'entries'} yet`));
-    wrap.appendChild(el('p', {}, 'Add one from the Search tab.'));
+    wrap.appendChild(el('p', {}, 'Tap the + button to add one.'));
   }
   return wrap;
 }

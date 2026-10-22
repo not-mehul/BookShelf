@@ -2,9 +2,10 @@ import { newEntryId, saveEntry } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
 
 /**
- * Naive parser for the Markdown format produced by exportMarkdown().
+ * Parse the Markdown format produced by exportMarkdown() into entry objects.
+ * Pure (aside from optional cover fetches) — safe to unit-test. Does not save.
  */
-export async function importMarkdown(text) {
+export async function parseMarkdown(text) {
   const entries = [];
   const typeSections = text.split(/\n## /);
 
@@ -27,14 +28,17 @@ export async function importMarkdown(text) {
       if (entry) entries.push(entry);
     }
   }
+  return entries;
+}
 
-  let count = 0;
-  for (const e of entries) {
-    await saveEntry(e);
-    count++;
-  }
-
-  return count;
+/**
+ * Best-effort import of a Markdown export. Prefer the JSON backup for a
+ * lossless, dedupe-able round-trip. Returns the number of entries saved.
+ */
+export async function importMarkdown(text) {
+  const entries = await parseMarkdown(text);
+  for (const e of entries) await saveEntry(e);
+  return entries.length;
 }
 
 async function parseEntry(text, type) {
@@ -48,6 +52,8 @@ async function parseEntry(text, type) {
     year: null,
     summary: '',
     genres: [],
+    tags: [],
+    progress: null,
     rating: null,
     notes: '',
     dateAdded: new Date().toISOString(),
@@ -103,7 +109,7 @@ async function parseEntry(text, type) {
       entry.rating = parseInt(ratingMatch[1], 10);
     }
 
-    let titleNoRating = titlePart.split('—')[0].trim();
+    const titleNoRating = titlePart.split('—')[0].trim();
     const yearMatch = titleNoRating.match(/\((\d{4})\)$/);
     if (yearMatch) {
       entry.year = parseInt(yearMatch[1], 10);

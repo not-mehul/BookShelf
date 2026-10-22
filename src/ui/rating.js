@@ -4,13 +4,14 @@ import { icons } from '../util/icons.js';
 // 5-star rating control with a clear option. value is an integer 0–5 or null.
 export function ratingControl(initial, onChange) {
   let value = initial ?? null;
-  const wrap = el('div', { class: 'rating-row' });
+  const wrap = el('div', { class: 'rating-row', role: 'radiogroup', 'aria-label': 'Rating' });
   const stars = [];
 
   const render = () => {
     stars.forEach((btn, i) => {
       const active = value != null && i < value;
       btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', value === i + 1 ? 'true' : 'false');
     });
     clearBtn.style.display = value != null ? '' : 'none';
   };
@@ -21,7 +22,9 @@ export function ratingControl(initial, onChange) {
       {
         type: 'button',
         class: 'rating-star',
-        'aria-label': `${i + 1} of 5`,
+        role: 'radio',
+        'aria-checked': 'false',
+        'aria-label': `${i + 1} star${i ? 's' : ''}`,
         onClick: () => {
           value = value === i + 1 ? i : i + 1;
           if (value === 0) value = null;
@@ -52,11 +55,4 @@ export function ratingControl(initial, onChange) {
 
   render();
   return wrap;
-}
-
-export function displayRating(value) {
-  if (value == null) return '— unrated';
-  const full = '★'.repeat(value);
-  const empty = '☆'.repeat(5 - value);
-  return `${full}${empty}  ${value}/5`;
 }

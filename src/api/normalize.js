@@ -31,6 +31,25 @@ function pickBookThumb(links) {
   return raw.replace(/^http:\/\//, 'https://');
 }
 
+// Open Library /search.json doc → unified book shape.
+export function normalizeOpenLibraryDoc(doc) {
+  const year = Number.isFinite(doc.first_publish_year) ? doc.first_publish_year : null;
+  const coverId = doc.cover_i;
+  return {
+    type: 'book',
+    sourceId: `ol:${doc.key || doc.isbn?.[0] || Math.random().toString(36).slice(2)}`,
+    title: doc.title || 'Untitled',
+    creators: doc.author_name || [],
+    year,
+    summary: '',
+    genres: (doc.subject || []).slice(0, 8),
+    pageCount: doc.number_of_pages_median || null,
+    isbn: doc.isbn?.[0] || null,
+    thumbnailUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null,
+    detailUrl: doc.key ? `https://openlibrary.org${doc.key}` : null
+  };
+}
+
 // TheTVDB /search returns a heterogeneous list with `type`: 'movie' | 'series' | etc.
 export function normalizeTvdbSearchHit(hit) {
   const isSeries = hit.type === 'series';
@@ -58,13 +77,11 @@ export function enrichFromTvdbDetail(entry, detail) {
   if (detail.overview) next.summary = next.summary || detail.overview;
   const genres = (detail.genres || []).map((g) => g.name).filter(Boolean);
   if (genres.length) next.genres = genres;
-  if (detail.companies?.production) {
-    // ignore — not needed for catalog
-  }
   const directors = (detail.characters || [])
     .filter((c) => /director/i.test(c.peopleType || ''))
     .map((c) => c.personName)
     .filter(Boolean);
   if (directors.length) next.creators = directors;
+  next.enriched = true;
   return next;
 }

@@ -30,16 +30,3 @@ export async function searchBooks(query, { maxResults = 20 } = {}) {
   const items = data.items || [];
   return items.map(normalizeBook);
 }
-
-export async function getBook(volumeId) {
-  const apiKey = await getSetting('google_books_api_key', '');
-  const params = new URLSearchParams();
-  if (apiKey) params.set('key', apiKey);
-  const qs = params.toString();
-  const res = await fetch(`${BASE}/volumes/${encodeURIComponent(volumeId)}${qs ? `?${qs}` : ''}`);
-  if (!res.ok) {
-    throw new Error(`Google Books detail failed (${res.status})`);
-  }
-  const data = await res.json();
-  return normalizeBook(data);
-}

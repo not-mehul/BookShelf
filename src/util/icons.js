@@ -19,16 +19,9 @@ export const icons = {
   tv: () => wrap('<rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/>'),
   quote: () => wrap('<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>'),
   arrowLeft: () => wrap('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
-  check: () => wrap('<path d="M20 6 9 17l-5-5"/>')
+  check: () => wrap('<path d="M20 6 9 17l-5-5"/>'),
+  edit: () => wrap('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+  share: () => wrap('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>'),
+  chart: () => wrap('<path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/>'),
+  tag: () => wrap('<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.8 8.8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.8Z"/><circle cx="7.5" cy="7.5" r="1.3"/>')
 };
-
-export function setIcon(el, key, size = 16) {
-  el.innerHTML = icons[key] ? icons[key]() : '';
-  if (size !== 16) {
-    const svg = el.querySelector('svg');
-    if (svg) {
-      svg.setAttribute('width', String(size));
-      svg.setAttribute('height', String(size));
-    }
-  }
-}

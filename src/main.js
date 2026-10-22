@@ -51,7 +51,7 @@ async function boot() {
     class: 'fab',
     'aria-label': 'Add to catalog',
     title: 'Add to catalog',
-    onClick: () => openAddFlow({ onChanged, goToSettings: () => openSettings() })
+    onClick: () => openAddFlow({ onChanged, goToSettings: () => openSettings({ onChanged }) })
   });
   fab.innerHTML = icons.plus();
   document.body.appendChild(fab);
@@ -94,3 +94,11 @@ boot().catch((err) => {
   document.getElementById('app').innerHTML =
     `<div class="msg-error" style="margin:3rem 1.5rem">Failed to start: ${err.message}</div>`;
 });
+
+// Register the service worker for offline support (web/PWA only). The native
+// Android shell already bundles the app, so skip it there.
+if ('serviceWorker' in navigator && !window.AndroidHttp) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW registration failed', err));
+  });
+}

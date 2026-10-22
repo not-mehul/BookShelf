@@ -6,10 +6,12 @@
 // Uses the shared modal system from detail-modal.js so only one modal is open
 // at a time. Adding an entry closes this flow and opens the entry's detail view.
 
-import { el, clear, segmented, loadingNode, errorNode, noticeNode } from './components.js';
+import { el, clear, loadingNode, errorNode, noticeNode, coverImage } from './components.js';
 import { icons } from '../util/icons.js';
 import { openModal, closeModal, openEntry } from './detail-modal.js';
+import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
 import { searchBooks } from '../api/books.js';
+import { searchOpenLibrary, looksLikeIsbn } from '../api/openlibrary.js';
 import { searchTvdb } from '../api/tvdb.js';
 import { findBySource, saveEntry, newEntryId } from '../db/database.js';
 import { getSetting } from '../util/settings.js';
@@ -31,7 +33,7 @@ export function openAddFlow({ onChanged, goToSettings } = {}) {
 
 // ── Helpers ────────────────────────────────────────────────────
 
-function closeBtnFor(card) {
+function closeBtnFor() {
   const btn = el('button', {
     type: 'button', class: 'btn-icon modal-close', 'aria-label': 'Close', onClick: closeModal
   });
@@ -51,7 +53,7 @@ function backBtn(onBack) {
 
 function renderMediumPicker(card, ctx) {
   clear(card);
-  card.appendChild(closeBtnFor(card));
+  card.appendChild(closeBtnFor());
 
   const head = el('div', { class: 'add-head' });
   head.appendChild(el('div', { class: 'modal-eyebrow' }, 'Add to catalog'));
@@ -82,7 +84,7 @@ function renderMediumPicker(card, ctx) {
 
 function renderSearchStep(card, ctx, type) {
   clear(card);
-  card.appendChild(closeBtnFor(card));
+  card.appendChild(closeBtnFor());
   card.appendChild(backBtn(() => renderMediumPicker(card, ctx)));
 
   const head = el('div', { class: 'add-head add-head-search' });
@@ -146,7 +148,7 @@ function renderSearchStep(card, ctx, type) {
 
     zone.appendChild(loadingNode('Searching'));
     try {
-      const hits = type === 'book' ? await searchBooks(q) : await searchTvdb(q, type);
+      const hits = type === 'book' ? await searchBooksMerged(q) : await searchTvdb(q, type);
       clear(zone);
 
       if (!hits.length) {
@@ -178,6 +180,25 @@ function renderSearchStep(card, ctx, type) {
   }
 }
 
+// Books: ISBN queries go straight to Open Library; otherwise try Google Books
+// first and fall back to Open Library if it returns nothing or rate-limits.
+async function searchBooksMerged(q) {
+  if (looksLikeIsbn(q)) {
+    const ol = await searchOpenLibrary(q);
+    if (ol.length) return ol;
+    return searchBooks(q);
+  }
+  try {
+    const g = await searchBooks(q);
+    if (g.length) return g;
+  } catch (err) {
+    const ol = await searchOpenLibrary(q);
+    if (ol.length) return ol;
+    throw err;
+  }
+  return searchOpenLibrary(q);
+}
+
 async function resultRow(hit, ctx) {
   const existing = await findBySource(hit.type, hit.sourceId);
 
@@ -189,9 +210,9 @@ async function resultRow(hit, ctx) {
 
   const thumb = el('div', { class: 'add-result-thumb' });
   if (hit.thumbnailUrl) {
-    const img = el('img', { src: hit.thumbnailUrl, alt: '', loading: 'lazy' });
-    img.addEventListener('error', () => { img.remove(); thumb.appendChild(rowPlaceholder(hit)); });
-    thumb.appendChild(img);
+    thumb.appendChild(
+      coverImage(hit.thumbnailUrl, { onError: (ev) => { ev.target.remove(); thumb.appendChild(rowPlaceholder(hit)); } })
+    );
   } else {
     thumb.appendChild(rowPlaceholder(hit));
   }
@@ -239,8 +260,12 @@ async function addHit(hit, ctx) {
     summary: hit.summary || '',
     genres: hit.genres || [],
     pageCount: hit.pageCount || null,
+    isbn: hit.isbn || null,
+    detailUrl: hit.detailUrl || null,
     thumbnailUrl: hit.thumbnailUrl || null,
     thumbnailBlob: blob,
+    tags: [],
+    progress: null,
     rating: null,
     status: null,
     notes: '',
@@ -256,7 +281,7 @@ async function addHit(hit, ctx) {
 
 function renderQuoteForm(card, ctx) {
   clear(card);
-  card.appendChild(closeBtnFor(card));
+  card.appendChild(closeBtnFor());
   card.appendChild(backBtn(() => renderMediumPicker(card, ctx)));
 
   const head = el('div', { class: 'add-head' });
@@ -300,6 +325,8 @@ function renderQuoteForm(card, ctx) {
       genres: [],
       thumbnailUrl: null,
       thumbnailBlob: null,
+      tags: [],
+      progress: null,
       rating: null,
       status: null,
       notes: '',
@@ -316,7 +343,7 @@ function renderQuoteForm(card, ctx) {
 
 function renderManualForm(card, ctx, type) {
   clear(card);
-  card.appendChild(closeBtnFor(card));
+  card.appendChild(closeBtnFor());
   card.appendChild(backBtn(() => renderSearchStep(card, ctx, type)));
 
   const head = el('div', { class: 'add-head' });
@@ -378,8 +405,12 @@ function renderManualForm(card, ctx, type) {
       summary: summary.input.value.trim() || '',
       genres: splitList(genres.input.value),
       pageCount: null,
+      isbn: null,
+      detailUrl: null,
       thumbnailUrl: coverUrl,
       thumbnailBlob: blob,
+      tags: [],
+      progress: null,
       rating: null,
       status: null,
       notes: '',
@@ -390,33 +421,4 @@ function renderManualForm(card, ctx, type) {
     ctx.onChanged?.();
     openEntry(entry.id, { onChanged: ctx.onChanged });
   });
-}
-
-// ── Small field builders ───────────────────────────────────────
-
-function fieldInput(label, id, placeholder) {
-  const field = el('div', { class: 'field' });
-  field.appendChild(el('label', { class: 'label-field', for: id }, label));
-  const input = el('input', { id, type: 'text', class: 'input', placeholder, autocomplete: 'off' });
-  field.appendChild(input);
-  return { field, input };
-}
-
-function fieldTextarea(label, id, placeholder, rows) {
-  const field = el('div', { class: 'field' });
-  field.appendChild(el('label', { class: 'label-field', for: id }, label));
-  const input = el('textarea', { id, class: 'textarea', placeholder, rows: String(rows) });
-  field.appendChild(input);
-  return { field, input };
-}
-
-function twoCol(a, b) {
-  return el('div', { class: 'modal-two-col' }, a, b);
-}
-
-function splitList(value) {
-  return (value || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
