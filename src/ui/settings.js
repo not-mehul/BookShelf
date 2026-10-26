@@ -4,6 +4,7 @@ import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 import { openModal, closeModal } from './detail-modal.js';
 import { buildThemeToggle } from './theme.js';
 import { importMarkdown } from '../export/import.js';
+import { importJson, saveAndShareJson } from '../export/json.js';
 
 // Open Settings as a modal (the app no longer has a Settings tab).
 export function openSettings({ onChanged } = {}) {
@@ -104,7 +105,7 @@ export async function renderSettings(container, { onChanged } = {}) {
     container.appendChild(sectionHeading('Browser Compatibility'));
     container.appendChild(await fieldGroup({
       label: 'CORS Proxy (Browser only)',
-      hint:  'If running in a plain browser, TheTVDB API requires a CORS proxy (e.g. https://cors-anywhere.herokuapp.com/). Leave blank if not needed.',
+      hint:  'In a plain browser, TheTVDB blocks cross-origin requests. Set the base URL of a CORS proxy you trust/run to enable movie & TV search. The Android app does not need this. Leave blank otherwise.',
       key:   'cors_proxy',
       type:  'url'
     }));
@@ -113,60 +114,79 @@ export async function renderSettings(container, { onChanged } = {}) {
 
   // ── Data Management ──────────────────────────────────────────
 
-  container.appendChild(sectionHeading('Data Management'));
+  container.appendChild(sectionHeading('Backup & Data'));
 
-  const dataRow = el('div', { class: 'token-info-row' });
-  const dataText = el('p', { class: 'token-info-text' }, 'Import entries from a previously exported Markdown file.');
+  // Inline status line (native WebView has no window.alert).
+  const notice = el('div', { class: 'settings-notice', role: 'status', 'aria-live': 'polite' });
+  const say = (msg, kind = 'ok') => {
+    notice.className = `settings-notice settings-notice-${kind}`;
+    notice.textContent = msg;
+  };
 
-  const fileInput = el('input', { type: 'file', accept: '.md', style: 'display:none' });
-  fileInput.addEventListener('change', async () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+  container.appendChild(el('p', { class: 'field-hint' },
+    'JSON is a complete, lossless backup (covers included) and is safe to re-import. Markdown import is best-effort for older exports.'));
 
-    const importBtn = dataRow.querySelector('.btn-import');
-    const originalText = importBtn.textContent;
-    importBtn.textContent = 'Importing...';
-    importBtn.disabled = true;
-
+  // JSON backup
+  const backupBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Export JSON backup');
+  backupBtn.addEventListener('click', async () => {
+    backupBtn.disabled = true;
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const count = await importMarkdown(reader.result);
-          alert(`Successfully imported ${count} entries.`);
-          onChanged?.();
-        } catch (err) {
-          alert('Import failed: ' + err.message);
-        } finally {
-          importBtn.textContent = originalText;
-          importBtn.disabled = false;
-          fileInput.value = '';
-        }
-      };
-      reader.onerror = () => {
-        alert('Failed to read file.');
-        importBtn.textContent = originalText;
-        importBtn.disabled = false;
-      };
-      reader.readAsText(file);
+      const { method, filename } = await saveAndShareJson();
+      say(method === 'native' ? 'Backup shared.' : `Downloaded ${filename}.`);
     } catch (err) {
-      console.error(err);
-      alert('Import failed: ' + err.message);
-      importBtn.textContent = originalText;
-      importBtn.disabled = false;
+      say('Backup failed: ' + err.message, 'err');
+    } finally {
+      backupBtn.disabled = false;
     }
   });
 
-  const importBtn = el('button', {
-    type: 'button',
-    class: 'btn btn-primary btn-import',
-    onClick: () => fileInput.click()
+  const jsonInput = el('input', { type: 'file', accept: '.json,application/json', style: 'display:none' });
+  jsonInput.addEventListener('change', () => {
+    readFileThen(jsonInput, importBtnJson, async (text) => {
+      const { imported, skippedExisting } = await importJson(text);
+      say(`Imported ${imported} entries${skippedExisting ? `, skipped ${skippedExisting} existing` : ''}.`);
+      onChanged?.();
+    }, say);
+  });
+  const importBtnJson = el('button', {
+    type: 'button', class: 'btn btn-muted', onClick: () => jsonInput.click()
+  }, 'Import JSON');
+
+  const mdInput = el('input', { type: 'file', accept: '.md,text/markdown', style: 'display:none' });
+  mdInput.addEventListener('change', () => {
+    readFileThen(mdInput, importBtnMd, async (text) => {
+      const count = await importMarkdown(text);
+      say(`Imported ${count} entries from Markdown.`);
+      onChanged?.();
+    }, say);
+  });
+  const importBtnMd = el('button', {
+    type: 'button', class: 'btn btn-muted', onClick: () => mdInput.click()
   }, 'Import Markdown');
 
-  dataRow.appendChild(dataText);
-  dataRow.appendChild(importBtn);
-  container.appendChild(fileInput);
-  container.appendChild(dataRow);
+  const btnRow = el('div', { class: 'settings-btn-row' }, backupBtn, importBtnJson, importBtnMd);
+  container.append(jsonInput, mdInput, btnRow, notice);
+}
+
+// Read a chosen file as text and run `handler`, toggling the button's busy
+// state and surfacing errors through `say` (no window.alert — unsupported in
+// the Android WebView).
+function readFileThen(fileInput, btn, handler, say) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const original = btn.textContent;
+  btn.textContent = 'Importing…';
+  btn.disabled = true;
+  const done = () => { btn.textContent = original; btn.disabled = false; fileInput.value = ''; };
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try { await handler(reader.result); }
+    catch (err) { say('Import failed: ' + err.message, 'err'); }
+    finally { done(); }
+  };
+  reader.onerror = () => { say('Failed to read file.', 'err'); done(); };
+  reader.readAsText(file);
 }
 
 function sectionHeading(label) {

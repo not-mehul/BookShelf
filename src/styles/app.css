@@ -1532,3 +1532,155 @@ img { display: block; }
 .hidden { display: none !important; }
 .mt-1 { margin-top: 1rem; }
 .mt-half { margin-top: 0.5rem; }
+
+/* ─── Tag filter chips (library) ──────────────────────────────── */
+
+.lib-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+.lib-tag-chip {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 2px;
+  border: 1px solid var(--border-soft);
+  background: var(--chip-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lib-tag-chip:hover { background: var(--chip-bg-hover); color: var(--text-body); }
+.lib-tag-chip.active {
+  background: rgba(var(--accent-amber-rgb), 0.16);
+  border-color: var(--accent-amber);
+  color: var(--text-heading);
+}
+
+/* ─── Progress (books & TV) ───────────────────────────────────── */
+
+.progress-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.progress-input {
+  width: 6rem;
+  text-align: center;
+}
+.progress-of { color: var(--text-muted); font-size: 0.85rem; }
+.progress-bar {
+  margin-top: 0.6rem;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--chip-bg);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent-sage);
+  transition: width 0.25s ease;
+}
+
+/* ─── Tag editor (detail modal) ───────────────────────────────── */
+
+.tag-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.65rem;
+  border-radius: 2px;
+  background: rgba(var(--accent-amber-rgb), 0.14);
+  border: 1px solid var(--border-soft);
+  color: var(--text-heading);
+}
+.tag-chip-x {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 0;
+}
+.tag-chip-x svg { width: 12px; height: 12px; }
+.tag-chip-x:hover { color: var(--danger); }
+.tag-input { max-width: 100%; }
+
+/* ─── Settings: backup/notice ─────────────────────────────────── */
+
+.settings-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+.settings-notice {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+  color: var(--text-dim);
+}
+.settings-notice-ok { color: var(--accent-sage); }
+.settings-notice-err { color: var(--danger); }
+
+/* ─── Statistics modal ────────────────────────────────────────── */
+
+.stats-body { padding: 0.25rem 0 0.5rem; }
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+.stat-tile {
+  text-align: center;
+  padding: 0.85rem 0.5rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 2px;
+  background: var(--panel-bg-faint);
+}
+.stat-tile-value {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 1.7rem;
+  color: var(--accent-amber);
+  line-height: 1;
+}
+.stat-tile-label {
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.stats-section-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 1rem 0 0.6rem;
+}
+.stats-bars { display: flex; flex-direction: column; gap: 0.4rem; }
+.stats-bar-row { display: flex; align-items: center; gap: 0.6rem; }
+.stats-bar-key { width: 1.8rem; font-size: 0.8rem; color: var(--text-dim); }
+.stats-bar-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--chip-bg);
+  overflow: hidden;
+}
+.stats-bar-fill { height: 100%; background: var(--accent-amber); border-radius: 2px; }
+.stats-bar-val { width: 1.6rem; text-align: right; font-size: 0.8rem; color: var(--text-muted); }
