@@ -64,19 +64,28 @@ describe('installNativeBridge', () => {
     expect(shell.webFetch).not.toHaveBeenCalled();
   });
 
-  it('keeps same-origin and non-http requests on the WebView fetch', async () => {
+  it('keeps same-origin, non-http and non-allowlisted requests on the WebView fetch', async () => {
     const shell = fakeShell();
     native.installNativeBridge(shell.win);
     await shell.win.fetch(`${ORIGIN}/index.html`);
     await shell.win.fetch('blob:abc');
-    expect(shell.webFetch).toHaveBeenCalledTimes(2);
+    await shell.win.fetch('https://bookshelf-tvdb-proxy.example.workers.dev/search?query=x'); // self-hosted proxy
+    await shell.win.fetch('http://api4.thetvdb.com/v4/search'); // plain http is never sent natively
+    expect(shell.webFetch).toHaveBeenCalledTimes(4);
     expect(shell.sent).toHaveLength(0);
+  });
+
+  it('matches allowlisted hosts exactly, not by look-alike suffix', () => {
+    expect(native.usesNativeHttp('https://www.googleapis.com/books/v1/volumes')).toBe(true);
+    expect(native.usesNativeHttp('https://evilthetvdb.com/')).toBe(false);
+    expect(native.usesNativeHttp('https://thetvdb.com.evil.net/')).toBe(false);
+    expect(native.usesNativeHttp('not a url')).toBe(false);
   });
 
   it('rejects with a TypeError on a native network failure, like fetch()', async () => {
     const shell = fakeShell();
     native.installNativeBridge(shell.win);
-    const pending = shell.win.fetch('https://example.org/');
+    const pending = shell.win.fetch('https://covers.openlibrary.org/b/id/1-L.jpg');
     shell.reply({ type: 'http', id: shell.sent[0].id, status: 0, error: 'Blocked request' });
     await expect(pending).rejects.toThrow(TypeError);
   });

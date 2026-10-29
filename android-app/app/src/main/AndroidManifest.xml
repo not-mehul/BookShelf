@@ -44,6 +44,19 @@
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode_ui" />
 
+        <!-- Home-screen widget (Jetpack Glance). -->
+        <receiver
+            android:name=".widget.BookShelfWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bookshelf_widget_info" />
+        </receiver>
+
         <!-- Lets the export bridge share generated files via the system share sheet. -->
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -69,6 +69,20 @@ export async function renderSettings(container, { onChanged } = {}) {
     type:  'password'
   }));
 
+  container.appendChild(await fieldGroup({
+    label: 'Proxy URL (optional)',
+    hint:  'Use a BookShelf TheTVDB proxy (see proxy/ in the repo) instead of entering an API key on this device.',
+    key:   'tvdb_proxy_url',
+    type:  'url'
+  }));
+
+  container.appendChild(await fieldGroup({
+    label: 'Proxy access token',
+    hint:  'Only if your proxy was deployed with a PROXY_TOKEN.',
+    key:   'tvdb_proxy_token',
+    type:  'password'
+  }));
+
   // Cached token status
   const tokenIssued = parseInt(await getSetting('tvdb_token_issued', '0'), 10);
   const issuedText = tokenIssued

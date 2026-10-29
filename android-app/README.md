@@ -45,10 +45,26 @@ For a signed release: **Build → Generate Signed App Bundle / APK** (or add a
   - native HTTP (coroutines on `Dispatchers.IO`) so cross-origin API calls bypass
     WebView CORS — limited to an https allowlist of the app's API hosts;
   - file export through `FileProvider` and the system share sheet;
-  - theme and back-handler signalling.
+  - theme and back-handler signalling;
+  - an RPC registry (`register(name) { … }`) for the features below, and
+    events (`emit`) that are queued until the page reports it is ready.
 
   The web side is `src/platform/native.js`. Every feature is detected at runtime,
   so the identical web build still runs in a plain browser.
+
+## Native features
+
+| Feature | Where | Notes |
+| :-- | :-- | :-- |
+| **Share into BookShelf** | `MainActivity.handleIntent` | `ACTION_SEND` `text/plain` filter ("Add to BookShelf"); `singleTask`, so shares reach the running app via `onNewIntent`. Queued until the page is ready. |
+| **Barcode scanning** | `BarcodeScanner.kt` | Google Code Scanner (Play services) — full camera UI, **no CAMERA permission**, EAN/UPC only. The module is fetched at install time. |
+| **Secrets in the Keystore** | `SecureStore.kt` | AES-256-GCM key generated in the Android Keystore; prefs hold only `iv‖ciphertext`, with the setting name as associated data. Excluded from backup (the key never leaves the device). |
+| **Encrypted folder sync** | `FolderSync.kt` | Storage Access Framework folder picker with a persisted permission; reads/writes `bookshelf-sync.json` via a temp-file swap. Encryption and merging happen in the page — this class only moves ciphertext. |
+| **Home-screen widget** | `widget/` | Jetpack Glance, `SizeMode.Responsive` (small / medium / large), Dusk/Dawn colours, "+" opens the add flow. The page pushes a summary (`widgetUpdate`) after every change. |
+
+> **R8 note:** release builds keep `BookShelfWidget.provideGlance` via
+> `proguard-rules.pro` — without it R8 strips the widget's whole UI from release
+> builds only. CI checks the release APK for it.
 
 ## Updating the bundled web app
 
@@ -72,9 +88,12 @@ CI fails if the committed assets don't match a fresh build.
 | AGP                    | 9.5 (built-in Kotlin, new DSL)         |
 | Kotlin                 | 2.4                                    |
 | Gradle                 | 9.8 (configuration cache on)           |
+| UI extras              | Jetpack Glance 1.2 (Compose compiler plugin), Play services Code Scanner |
 | Build scripts          | Kotlin DSL + `gradle/libs.versions.toml` |
 | Release                | R8 minify + resource shrinking         |
 
 API keys (TheTVDB, optional Google Books) are entered in the app's **Settings**
-and stored on-device — they are never compiled into the build. Android Auto
-Backup includes the catalog, so a reinstall or new phone restores it.
+and stored encrypted in the Android Keystore — never compiled into the build.
+Android Auto Backup includes the catalog (but not the Keystore-encrypted
+secrets), so a reinstall or new phone restores the shelf; re-enter keys and the
+sync passphrase afterwards.

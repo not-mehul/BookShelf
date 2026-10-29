@@ -19,6 +19,23 @@
 
 const CHANNEL_NAME = 'BookShelfNative';
 
+// Hosts the shell's native HTTP will fetch (keep in sync with
+// ALLOWED_HOST_SUFFIXES in NativeBridge.kt). Everything else — e.g. a
+// self-hosted TheTVDB proxy — uses the WebView's own, CORS-checked fetch.
+const NATIVE_HOST_SUFFIXES = ['thetvdb.com', 'googleapis.com', 'google.com', 'gstatic.com', 'googleusercontent.com', 'openlibrary.org'];
+
+/** @param {string} url */
+export function usesNativeHttp(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  return parsed.protocol === 'https:' && NATIVE_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`));
+}
+
 /** @type {NativeChannel | null} */
 let channel = null;
 /** @type {(() => void) | null} */
@@ -34,7 +51,7 @@ export function isNativeShell() {
 }
 
 /**
- * Wires up the channel and routes cross-origin fetches through native HTTP
+ * Wires up the channel and routes the app's API calls through native HTTP
  * (TheTVDB and friends don't send CORS headers a WebView would accept).
  * Returns true when running inside the shell.
  * @param {any} [win] The window to install into (injectable for tests).
@@ -49,13 +66,10 @@ export function installNativeBridge(win = window) {
 
   /** @type {typeof fetch} */
   const webFetch = win.fetch.bind(win);
-  const origin = win.location.origin;
   /** @type {typeof fetch} */
   win.fetch = (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input?.url || '';
-    // Same-origin and non-http(s) requests (assets, blob:, data:) stay local.
-    if (!/^https?:\/\//i.test(url) || url.startsWith(origin)) return webFetch(input, init);
-    return nativeHttp(url, init || {});
+    return usesNativeHttp(url) ? nativeHttp(url, init || {}) : webFetch(input, init);
   };
   return true;
 }

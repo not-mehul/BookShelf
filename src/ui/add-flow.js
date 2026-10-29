@@ -12,9 +12,8 @@ import { openModal, closeModal, openEntry } from './detail-modal.js';
 import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
 import { searchBooks } from '../api/books.js';
 import { searchOpenLibrary, looksLikeIsbn } from '../api/openlibrary.js';
-import { searchTvdb } from '../api/tvdb.js';
+import { searchTvdb, isTvdbConfigured } from '../api/tvdb.js';
 import { findBySource, saveEntry, newEntryId } from '../db/database.js';
-import { getSetting } from '../util/settings.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
 import { canScanBarcodes, scanBarcode } from '../util/barcode.js';
 
@@ -184,12 +183,11 @@ function renderSearchStep(card, ctx, type) {
     clear(zone);
     if (!q) { input.focus(); return; }
 
-    // TheTVDB needs a key for movies/TV
+    // Movies/TV need TheTVDB access: an API key or a BookShelf proxy.
     if (type !== 'book') {
-      const apikey = await getSetting('tvdb_api_key', '');
-      if (!apikey) {
+      if (!(await isTvdbConfigured())) {
         const msg = noticeNode(
-          'TheTVDB API key not set — required for movies and TV. ' +
+          'TheTVDB isn’t set up — add an API key or a proxy URL for movies and TV. ' +
           '<a href="#" data-go-settings>Open Settings</a> to add it, ' +
           'or enter details manually below.'
         );

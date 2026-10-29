@@ -11,7 +11,14 @@ import { isNativeShell, callNative } from '../platform/native.js';
 const PREFIX = 'bookshelf:';
 
 /** Setting keys whose values are secrets. */
-export const SECRET_KEYS = new Set(['tvdb_api_key', 'tvdb_pin', 'tvdb_token', 'google_books_api_key', 'sync_passphrase']);
+export const SECRET_KEYS = new Set([
+  'tvdb_api_key',
+  'tvdb_pin',
+  'tvdb_token',
+  'tvdb_proxy_token',
+  'google_books_api_key',
+  'sync_passphrase'
+]);
 
 /** @type {Map<string, string | null>} In-memory cache of Keystore reads for this session. */
 const secretCache = new Map();

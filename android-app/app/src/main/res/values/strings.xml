@@ -3,5 +3,10 @@
     <string name="app_name">BookShelf</string>
     <string name="export_chooser_title">Export catalog</string>
     <string name="share_target_label">Add to BookShelf</string>
+    <string name="widget_label">BookShelf</string>
+    <string name="widget_description">What you\'re reading and watching, your shelf counts and latest quote.</string>
+    <string name="widget_add">Add to BookShelf</string>
+    <string name="widget_preview_counts">12 books · 5 movies · 3 shows</string>
+    <string name="widget_preview_title">The Left Hand of Darkness</string>
     <string name="export_failed">Export failed: %1$s</string>
 </resources>

@@ -25,7 +25,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.glance.appwidget.updateAll
 import androidx.webkit.WebViewAssetLoader
+import app.mehul.bookshelf.widget.BookShelfWidget
+import app.mehul.bookshelf.widget.WidgetData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -208,6 +211,12 @@ class MainActivity : ComponentActivity() {
         bridge.register("syncForget") { folderSync.forget(); true }
         bridge.register("syncRead") { folderSync.read() }
         bridge.register("syncWrite") { p -> folderSync.write(p.getString("text")); true }
+
+        bridge.register("widgetUpdate") { p ->
+            WidgetData.save(this, p.getJSONObject("summary"))
+            BookShelfWidget().updateAll(this)
+            true
+        }
     }
 
     // Transparent bars; icon colour follows the page's Dusk/Dawn theme.

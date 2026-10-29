@@ -33,6 +33,29 @@ jobs:
           git diff --exit-code -- android-app/app/src/main/assets \
             || (echo "::error::android-app assets are stale — run 'npm run android:assets' and commit." && exit 1)
 
+  e2e:
+    name: E2E — Playwright smoke tests (phone)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+
   android:
     name: Android — unit tests, lint, build
     runs-on: ubuntu-latest
@@ -52,6 +75,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+
+      # R8 once stripped the Glance widget's UI from release builds only (see
+      # proguard-rules.pro); fail if a sentinel string from it ever disappears.
+      - name: Release build kept the widget UI
+        run: unzip -p app/build/outputs/apk/release/app-release-unsigned.apk 'classes*.dex' | grep -q -a "Nothing in progress right now"
 
       - uses: actions/upload-artifact@v7
         if: always()

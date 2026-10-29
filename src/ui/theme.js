@@ -32,6 +32,7 @@ export async function toggleTheme() {
   const next = current === 'light' ? 'dark' : 'light';
   apply(next);
   await setSetting(KEY, next);
+  document.dispatchEvent(new CustomEvent('themechange', { detail: next }));
   return next;
 }
 

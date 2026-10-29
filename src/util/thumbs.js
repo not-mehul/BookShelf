@@ -11,8 +11,7 @@ const MAX_WIDTH = 400; // cover cards never render wider than this
 export async function fetchThumbBlob(url) {
   if (!url) return null;
   try {
-    const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
-    const finalUrl = proxy ? `${proxy}${url}` : url;
+    const finalUrl = isNativeShell() ? url : await browserUrl(url);
     const res = await fetch(finalUrl, { mode: 'cors' });
     if (!res.ok) return null;
     const blob = await res.blob();
@@ -21,6 +20,19 @@ export async function fetchThumbBlob(url) {
   } catch {
     return null;
   }
+}
+
+// In a plain browser, cover hosts may not send CORS headers. TheTVDB artwork
+// goes through the BookShelf proxy when one is set; otherwise a generic CORS
+// proxy (if configured) is prefixed.
+/** @param {string} url */
+async function browserUrl(url) {
+  const tvdbProxy = (await getSetting('tvdb_proxy_url', '')).trim().replace(/\/+$/, '');
+  if (tvdbProxy && /^https:\/\/artworks\.thetvdb\.com\//.test(url)) {
+    return `${tvdbProxy}/artwork?url=${encodeURIComponent(url)}`;
+  }
+  const corsProxy = await getSetting('cors_proxy', '');
+  return corsProxy ? `${corsProxy}${url}` : url;
 }
 
 // Returns a smaller JPEG blob, or null if downscaling isn't possible/needed.

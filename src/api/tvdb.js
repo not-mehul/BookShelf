@@ -1,5 +1,8 @@
 // TheTVDB v4 client.
-// Login → bearer token (≈1 month lifetime). We cache the token and refresh proactively.
+// Either talks to TheTVDB directly (login → bearer token, ≈1 month lifetime,
+// cached and refreshed proactively), or — when a BookShelf proxy URL is set —
+// to the proxy Worker (proxy/), which holds the API key server-side and
+// exposes the same paths.
 
 import { getSetting, setSetting } from '../util/settings.js';
 import { isNativeShell } from '../platform/native.js';
@@ -44,7 +47,24 @@ async function refreshToken() {
   return token;
 }
 
+/** Base URL of a BookShelf TheTVDB proxy, if configured ('' otherwise). */
+async function proxyBase() {
+  return (await getSetting('tvdb_proxy_url', '')).trim().replace(/\/+$/, '');
+}
+
+/** Movie/TV search works with either a proxy or a TheTVDB API key. */
+export async function isTvdbConfigured() {
+  return Boolean((await proxyBase()) || (await getSetting('tvdb_api_key', '')));
+}
+
+/**
+ * @param {string} path
+ * @param {Record<string, string>} [params]
+ */
 async function tvdbFetch(path, params) {
+  const proxyUrl = await proxyBase();
+  if (proxyUrl) return proxyFetch(proxyUrl, path, params);
+
   let token = await getToken();
   const qs = params ? `?${new URLSearchParams(params)}` : '';
   const url = `${BASE}${path}${qs}`;
@@ -63,6 +83,22 @@ async function tvdbFetch(path, params) {
   if (!res.ok) {
     throw new Error(`TheTVDB request failed (${res.status})`);
   }
+  return res.json();
+}
+
+/**
+ * @param {string} base
+ * @param {string} path
+ * @param {Record<string, string>} [params]
+ */
+async function proxyFetch(base, path, params) {
+  const proxyToken = await getSetting('tvdb_proxy_token', '');
+  const qs = params ? `?${new URLSearchParams(params)}` : '';
+  const res = await fetch(`${base}${path}${qs}`, {
+    headers: proxyToken ? { authorization: `Bearer ${proxyToken}` } : {}
+  });
+  if (res.status === 401) throw new Error('The TheTVDB proxy rejected the access token. Check it in Settings.');
+  if (!res.ok) throw new Error(`TheTVDB proxy request failed (${res.status})`);
   return res.json();
 }
 

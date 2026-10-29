@@ -1,6 +1,7 @@
 import { installNativeBridge, isNativeShell, onNativeEvent, notifyNativeReady } from './platform/native.js';
 import { parseSharedText } from './util/share-intake.js';
 import { startAutoSync } from './sync/sync.js';
+import { pushWidgetSummary } from './platform/widget.js';
 import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
@@ -65,6 +66,7 @@ async function boot() {
   // ── Stats + render ────────────────────────────────────────────
   async function refreshStats() {
     const entries = await listEntries();
+    void pushWidgetSummary(entries); // keep the home-screen widget current
     const counts = { book: 0, movie: 0, tv: 0, quote: 0 };
     for (const e of entries) if (counts[e.type] != null) counts[e.type]++;
     clear(statsBar);
@@ -123,6 +125,8 @@ async function boot() {
   // Encrypted folder sync (Android app, once configured): pull now, push after
   // changes. Incoming changes only refresh the UI — they don't re-trigger sync.
   scheduleSync = startAutoSync(() => { refreshStats(); render(); });
+  // Re-skin the widget when the user switches Dusk/Dawn.
+  document.addEventListener('themechange', () => void refreshStats());
 
   // Booted: the shell may now deliver events it queued during startup.
   notifyNativeReady();
