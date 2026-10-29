@@ -235,7 +235,7 @@ function emptyState(type, query) {
   } else if (type === 'all') {
     wrap.innerHTML = icons.bookmark();
     wrap.appendChild(el('h3', {}, 'The shelf is empty'));
-    wrap.appendChild(el('p', {}, 'Search for a book, film, or show to get started.'));
+    wrap.appendChild(el('p', {}, 'Tap the + button to add a book, film, show, or quote.'));
   } else if (type === 'quote') {
     wrap.innerHTML = icons.quote();
     wrap.appendChild(el('h3', {}, 'No quotes yet'));

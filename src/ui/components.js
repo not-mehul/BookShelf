@@ -76,39 +76,6 @@ export function coverImage(src, { alt = '', onError } = {}) {
   return img;
 }
 
-// Trap Tab focus inside a container and restore focus to the previously-active
-// element when released. Returns a release() function.
-export function trapFocus(container) {
-  const previouslyFocused = document.activeElement;
-  const selector =
-    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-  function onKeydown(ev) {
-    if (ev.key !== 'Tab') return;
-    const focusable = [...container.querySelectorAll(selector)].filter(
-      (e) => e.offsetParent !== null || e === document.activeElement
-    );
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (ev.shiftKey && document.activeElement === first) {
-      ev.preventDefault();
-      last.focus();
-    } else if (!ev.shiftKey && document.activeElement === last) {
-      ev.preventDefault();
-      first.focus();
-    }
-  }
-
-  container.addEventListener('keydown', onKeydown);
-  return function release() {
-    container.removeEventListener('keydown', onKeydown);
-    if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-      previouslyFocused.focus();
-    }
-  };
-}
-
 export function loadingNode(label = 'Loading') {
   return el('div', { class: 'loading-row' }, label);
 }

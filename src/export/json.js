@@ -7,7 +7,7 @@
 // backup replaces rather than duplicates.
 
 import { listEntries, saveEntry, getEntry } from '../db/database.js';
-import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
+import { isNativeShell, nativeExport } from '../platform/native.js';
 
 export const BACKUP_VERSION = 1;
 
@@ -80,7 +80,7 @@ export async function saveAndShareJson() {
   const today = new Date().toISOString().slice(0, 10);
   const filename = `bookshelf-backup-${today}.json`;
 
-  if (hasNativeExport()) {
+  if (isNativeShell()) {
     nativeExport(filename, json);
     return { method: 'native', filename };
   }

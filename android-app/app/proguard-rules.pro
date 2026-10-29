@@ -1,4 +1,3 @@
-# JavascriptInterface methods are called reflectively from the WebView; keep them.
--keepclassmembers class app.bookshelf.personal.MainActivity$* {
-    @android.webkit.JavascriptInterface <methods>;
-}
+# The web bridge uses WebViewCompat.addWebMessageListener (a normal listener
+# object), not reflective @JavascriptInterface methods, so R8 needs no special
+# keep rules for it. AndroidX libraries ship their own consumer rules.

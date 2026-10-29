@@ -57,7 +57,7 @@ function renderMediumPicker(card, ctx) {
 
   const head = el('div', { class: 'add-head' });
   head.appendChild(el('div', { class: 'modal-eyebrow' }, 'Add to catalog'));
-  head.appendChild(el('h2', { class: 'add-title' }, 'What would you like to add?'));
+  head.appendChild(el('h2', { class: 'add-title', id: 'modal-title', tabindex: '-1' }, 'What would you like to add?'));
   card.appendChild(head);
 
   const grid = el('div', { class: 'medium-grid' });
@@ -78,6 +78,10 @@ function renderMediumPicker(card, ctx) {
     grid.appendChild(choice);
   }
   card.appendChild(grid);
+  // Re-rendering (e.g. after Back from a later step) drops the focused button.
+  if (!card.contains(document.activeElement) || document.activeElement === card) {
+    head.querySelector('#modal-title').focus();
+  }
 }
 
 // ── Step 2b — search ───────────────────────────────────────────
@@ -88,7 +92,7 @@ function renderSearchStep(card, ctx, type) {
   card.appendChild(backBtn(() => renderMediumPicker(card, ctx)));
 
   const head = el('div', { class: 'add-head add-head-search' });
-  head.appendChild(el('div', { class: 'modal-eyebrow' }, `Add a ${TYPE_LABEL[type].toLowerCase()}`));
+  head.appendChild(el('div', { class: 'modal-eyebrow', id: 'modal-title', tabindex: '-1' }, `Add a ${TYPE_LABEL[type].toLowerCase()}`));
   card.appendChild(head);
 
   const input = el('input', {
@@ -122,7 +126,14 @@ function renderSearchStep(card, ctx, type) {
 
   input.focus();
 
+  // Each search gets a sequence number; a slower, older response (or one
+  // that lands after the user left this step) is dropped instead of
+  // overwriting newer results.
+  let searchSeq = 0;
+  const isStale = (seq) => seq !== searchSeq || !zone.isConnected;
+
   async function runSearch() {
+    const seq = ++searchSeq;
     const q = input.value.trim();
     clear(zone);
     if (!q) { input.focus(); return; }
@@ -149,6 +160,7 @@ function renderSearchStep(card, ctx, type) {
     zone.appendChild(loadingNode('Searching'));
     try {
       const hits = type === 'book' ? await searchBooksMerged(q) : await searchTvdb(q, type);
+      if (isStale(seq)) return;
       clear(zone);
 
       if (!hits.length) {
@@ -169,10 +181,12 @@ function renderSearchStep(card, ctx, type) {
         `${hits.length} ${TYPE_PLURAL[type]} found — tap to add`));
 
       const list = el('div', { class: 'add-result-list' });
-      for (const hit of hits) list.appendChild(await resultRow(hit, ctx));
+      list.append(...(await Promise.all(hits.map((hit) => resultRow(hit, ctx)))));
+      if (isStale(seq)) return;
       zone.appendChild(list);
 
     } catch (err) {
+      if (isStale(seq)) return;
       console.error(err);
       clear(zone);
       zone.appendChild(errorNode(err.message || 'Search failed. Check your connection and API key.'));
@@ -285,7 +299,7 @@ function renderQuoteForm(card, ctx) {
   card.appendChild(backBtn(() => renderMediumPicker(card, ctx)));
 
   const head = el('div', { class: 'add-head' });
-  head.appendChild(el('div', { class: 'modal-eyebrow' }, 'Add a quote'));
+  head.appendChild(el('div', { class: 'modal-eyebrow', id: 'modal-title', tabindex: '-1' }, 'Add a quote'));
   card.appendChild(head);
 
   const form = el('form', { class: 'add-form' });
@@ -347,7 +361,7 @@ function renderManualForm(card, ctx, type) {
   card.appendChild(backBtn(() => renderSearchStep(card, ctx, type)));
 
   const head = el('div', { class: 'add-head' });
-  head.appendChild(el('div', { class: 'modal-eyebrow' }, `Add a ${TYPE_LABEL[type].toLowerCase()} manually`));
+  head.appendChild(el('div', { class: 'modal-eyebrow', id: 'modal-title', tabindex: '-1' }, `Add a ${TYPE_LABEL[type].toLowerCase()} manually`));
   card.appendChild(head);
 
   const form = el('form', { class: 'add-form' });

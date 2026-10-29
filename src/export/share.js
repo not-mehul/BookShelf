@@ -1,7 +1,7 @@
 // Share a single catalog entry. Uses the Android export bridge on-device,
 // the Web Share API where available, and a clipboard copy as a last resort.
 
-import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
+import { isNativeShell, nativeExport } from '../platform/native.js';
 
 function ratingStars(value) {
   if (value == null) return '';
@@ -25,7 +25,7 @@ export async function shareEntry(entry) {
   const text = entryToText(entry);
   const title = entry.type === 'quote' ? 'A quote' : entry.title;
 
-  if (hasNativeExport()) {
+  if (isNativeShell()) {
     const safe = (title || 'entry').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 40);
     nativeExport(`${safe}.txt`, text);
     return 'shared';

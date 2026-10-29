@@ -1,7 +1,7 @@
 // Serialize the catalog to Markdown, grouped by type and sorted by rating desc.
 
 import { listEntries } from '../db/database.js';
-import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
+import { isNativeShell, nativeExport } from '../platform/native.js';
 
 const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV Shows', quote: 'Quotes' };
 const TYPE_ORDER = ['book', 'movie', 'tv', 'quote'];
@@ -72,7 +72,7 @@ export async function saveAndShareMarkdown() {
   const filename = `bookshelf-${today}.md`;
 
   // Native Android shell — hand the file to the system share sheet.
-  if (hasNativeExport()) {
+  if (isNativeShell()) {
     nativeExport(filename, md);
     return { method: 'native', filename };
   }

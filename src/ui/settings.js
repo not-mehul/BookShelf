@@ -3,6 +3,7 @@ import { icons } from '../util/icons.js';
 import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 import { openModal, closeModal } from './detail-modal.js';
 import { buildThemeToggle } from './theme.js';
+import { isNativeShell } from '../platform/native.js';
 import { importMarkdown } from '../export/import.js';
 import { importJson, saveAndShareJson } from '../export/json.js';
 
@@ -18,7 +19,7 @@ export function openSettings({ onChanged } = {}) {
 
     card.appendChild(el('div', { class: 'add-head' },
       el('div', { class: 'modal-eyebrow' }, 'Settings'),
-      el('h2', { class: 'add-title' }, 'Preferences')
+      el('h2', { class: 'add-title', id: 'modal-title', tabindex: '-1' }, 'Preferences')
     ));
 
     const body = el('div', { class: 'settings-modal-body' });
@@ -101,7 +102,7 @@ export async function renderSettings(container, { onChanged } = {}) {
 
   // ── Browser Compatibility ────────────────────────────────────
 
-  if (!window.AndroidHttp) {
+  if (!isNativeShell()) {
     container.appendChild(sectionHeading('Browser Compatibility'));
     container.appendChild(await fieldGroup({
       label: 'CORS Proxy (Browser only)',

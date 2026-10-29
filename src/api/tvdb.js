@@ -2,6 +2,7 @@
 // Login → bearer token (≈1 month lifetime). We cache the token and refresh proactively.
 
 import { getSetting, setSetting } from '../util/settings.js';
+import { isNativeShell } from '../platform/native.js';
 import {
   normalizeTvdbSearchHit,
   enrichFromTvdbDetail
@@ -24,7 +25,7 @@ async function refreshToken() {
 
   const body = pin ? { apikey, pin } : { apikey };
   const url = `${BASE}/login`;
-  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
   const finalUrl = proxy ? `${proxy}${url}` : url;
 
   const res = await fetch(finalUrl, {
@@ -47,7 +48,7 @@ async function tvdbFetch(path, params) {
   let token = await getToken();
   const qs = params ? `?${new URLSearchParams(params)}` : '';
   const url = `${BASE}${path}${qs}`;
-  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
   const finalUrl = proxy ? `${proxy}${url}` : url;
 
   let res = await fetch(finalUrl, {

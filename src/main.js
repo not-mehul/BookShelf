@@ -1,4 +1,4 @@
-import './util/android-bridge.js'; // patches fetch inside the Android wrapper; no-op on web
+import { installNativeBridge, isNativeShell } from './platform/native.js';
 import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
@@ -6,6 +6,10 @@ import { renderLibrary } from './ui/library.js';
 import { openSettings } from './ui/settings.js';
 import { openAddFlow } from './ui/add-flow.js';
 import { listEntries } from './db/database.js';
+
+// Must run before anything fetches: routes cross-origin calls through the
+// Android shell's native HTTP. A no-op in a plain browser.
+installNativeBridge();
 
 async function boot() {
   await initTheme();
@@ -97,7 +101,7 @@ boot().catch((err) => {
 
 // Register the service worker for offline support (web/PWA only). The native
 // Android shell already bundles the app, so skip it there.
-if ('serviceWorker' in navigator && !window.AndroidHttp) {
+if ('serviceWorker' in navigator && !isNativeShell()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW registration failed', err));
   });

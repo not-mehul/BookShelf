@@ -1,0 +1,119 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const ORIGIN = 'https://appassets.androidwebview.com';
+
+// A stand-in for the object the Android shell injects as window.BookShelfNative.
+function fakeShell() {
+  const sent = [];
+  let listener = null;
+  const channel = {
+    postMessage: (json) => sent.push(JSON.parse(json)),
+    addEventListener: (type, cb) => {
+      if (type === 'message') listener = cb;
+    }
+  };
+  const webFetch = vi.fn(async () => new Response('local'));
+  const win = { BookShelfNative: channel, fetch: webFetch, location: { origin: ORIGIN } };
+  const reply = (msg) => listener({ data: JSON.stringify(msg) });
+  return { win, sent, webFetch, reply };
+}
+
+let native;
+beforeEach(async () => {
+  vi.resetModules(); // the module keeps channel state; start each test fresh
+  native = await import('../src/platform/native.js');
+});
+
+describe('installNativeBridge', () => {
+  it('is a no-op in a plain browser', () => {
+    const webFetch = vi.fn();
+    const win = { fetch: webFetch, location: { origin: 'http://localhost' } };
+    expect(native.installNativeBridge(win)).toBe(false);
+    expect(native.isNativeShell()).toBe(false);
+    expect(win.fetch).toBe(webFetch);
+  });
+
+  it('routes cross-origin fetches through native HTTP and decodes the response', async () => {
+    const shell = fakeShell();
+    expect(native.installNativeBridge(shell.win)).toBe(true);
+    expect(native.isNativeShell()).toBe(true);
+
+    const pending = shell.win.fetch('https://api4.thetvdb.com/v4/search?query=x', {
+      headers: { Authorization: 'Bearer t' }
+    });
+    const req = shell.sent[0];
+    expect(req).toMatchObject({
+      type: 'http',
+      method: 'GET',
+      url: 'https://api4.thetvdb.com/v4/search?query=x',
+      headers: { authorization: 'Bearer t' },
+      body: null
+    });
+
+    shell.reply({
+      type: 'http',
+      id: req.id,
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: btoa('{"data":[1]}')
+    });
+    const res = await pending;
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('application/json');
+    expect(await res.json()).toEqual({ data: [1] });
+    expect(shell.webFetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps same-origin and non-http requests on the WebView fetch', async () => {
+    const shell = fakeShell();
+    native.installNativeBridge(shell.win);
+    await shell.win.fetch(`${ORIGIN}/index.html`);
+    await shell.win.fetch('blob:abc');
+    expect(shell.webFetch).toHaveBeenCalledTimes(2);
+    expect(shell.sent).toHaveLength(0);
+  });
+
+  it('rejects with a TypeError on a native network failure, like fetch()', async () => {
+    const shell = fakeShell();
+    native.installNativeBridge(shell.win);
+    const pending = shell.win.fetch('https://example.org/');
+    shell.reply({ type: 'http', id: shell.sent[0].id, status: 0, error: 'Blocked request' });
+    await expect(pending).rejects.toThrow(TypeError);
+  });
+});
+
+describe('shell messages', () => {
+  it('claims and releases Android Back, and invokes the handler on "back"', () => {
+    const shell = fakeShell();
+    native.installNativeBridge(shell.win);
+    const handler = vi.fn();
+
+    native.setNativeBackHandler(handler);
+    expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: true });
+    shell.reply({ type: 'back' });
+    expect(handler).toHaveBeenCalledOnce();
+
+    native.setNativeBackHandler(null);
+    expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: false });
+  });
+
+  it('posts theme and export messages', () => {
+    const shell = fakeShell();
+    native.installNativeBridge(shell.win);
+    native.setNativeTheme('light');
+    native.nativeExport('a.md', '# hi');
+    expect(shell.sent).toEqual([
+      { type: 'theme', mode: 'light' },
+      { type: 'export', filename: 'a.md', text: '# hi' }
+    ]);
+  });
+
+  it('sends nothing when not inside the shell', () => {
+    // No install → no channel; these must be safe no-ops in a browser.
+    expect(() => {
+      native.setNativeTheme('dark');
+      native.setNativeBackHandler(() => {});
+      native.nativeExport('x.txt', 'x');
+    }).not.toThrow();
+  });
+});

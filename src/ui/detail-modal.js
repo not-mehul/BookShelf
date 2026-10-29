@@ -1,4 +1,5 @@
-import { el, clear, selectWrap, coverImage, trapFocus } from './components.js';
+import { el, clear, selectWrap, coverImage } from './components.js';
+import { setNativeBackHandler } from '../platform/native.js';
 import { icons } from '../util/icons.js';
 import { ratingControl } from './rating.js';
 import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
@@ -17,34 +18,25 @@ const STATUS_OPTS = [
 ];
 const PROGRESS_LABEL = { book: 'Pages read', tv: 'Episodes watched' };
 
-let activeBackdrop = null;
-let escListener = null;
-let releaseTrap = null;
+// One modal at a time, built on the native <dialog> element: showModal()
+// provides the top layer, an inert background (so focus can't escape),
+// Escape handling via `cancel`, and focus restoration on close.
+let activeDialog = null;
 
 export function closeModal() {
-  if (!activeBackdrop) return;
-  activeBackdrop.remove();
-  activeBackdrop = null;
-  if (escListener) {
-    document.removeEventListener('keydown', escListener);
-    escListener = null;
-  }
-  if (releaseTrap) {
-    releaseTrap();
-    releaseTrap = null;
-  }
+  const dialog = activeDialog;
+  if (!dialog) return;
+  activeDialog = null;
+  setNativeBackHandler(null);
+  if (dialog.open) dialog.close();
+  dialog.remove();
 }
 
+// Returns the opened <dialog>, so async callers can check it is still current.
 export function openModal(renderFn) {
   closeModal();
 
-  const card = el('div', {
-    class: 'modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-labelledby': 'modal-title'
-  });
-
+  const card = el('div', { class: 'modal-card' });
   const closeBtn = el('button', {
     type: 'button',
     class: 'btn-icon modal-close',
@@ -54,30 +46,38 @@ export function openModal(renderFn) {
   closeBtn.innerHTML = icons.x();
   card.appendChild(closeBtn);
 
-  const backdrop = el('div', {
-    class: 'modal-backdrop',
-    onClick: (ev) => {
-      if (ev.target === backdrop) closeModal();
-    }
-  }, card);
-  document.body.appendChild(backdrop);
-  activeBackdrop = backdrop;
+  const dialog = el('dialog', { class: 'modal-dialog', 'aria-labelledby': 'modal-title' }, card);
+  // The dialog box fills the viewport; a click on it outside the card dismisses.
+  dialog.addEventListener('click', (ev) => {
+    if (ev.target === dialog) closeModal();
+  });
+  dialog.addEventListener('cancel', (ev) => {
+    ev.preventDefault();
+    closeModal();
+  });
+  document.body.appendChild(dialog);
+  activeDialog = dialog;
 
-  escListener = (ev) => {
-    if (ev.key === 'Escape') closeModal();
-  };
-  document.addEventListener('keydown', escListener);
-
+  // Open first so views can focus their own inputs while rendering.
+  dialog.showModal();
   renderFn(card);
-  releaseTrap = trapFocus(card);
-  // Move focus into the dialog for keyboard / screen-reader users.
-  (card.querySelector('h2, [autofocus], button, input, textarea') || card).focus?.();
+  // If the view didn't claim focus, land on its title (for screen readers),
+  // or failing that on its first control — never leave focus outside. (The
+  // card itself doesn't count: showModal() may focus it as an empty scroller,
+  // and it stops being focusable once the view renders controls into it.)
+  const active = document.activeElement;
+  if (!card.contains(active) || active === card || active === closeBtn) {
+    (card.querySelector('#modal-title') || card.querySelector('input, textarea, select, button'))?.focus();
+  }
+  // Android Back closes the modal instead of leaving the app.
+  setNativeBackHandler(closeModal);
+  return dialog;
 }
 
 export async function openEntry(id, { onChanged } = {}) {
   let entry = await getEntry(id);
   if (!entry) return;
-  openModal((card) => renderEntryView(card, entry, { onChanged }));
+  const dialog = openModal((card) => renderEntryView(card, entry, { onChanged }));
 
   // Lazily enrich movies/TV that were saved from a thin search hit (no
   // director/cast yet). One network round-trip, cached via the `enriched` flag.
@@ -90,9 +90,9 @@ export async function openEntry(id, { onChanged } = {}) {
         }
         entry = enriched;
         await saveEntry(entry);
-        if (activeBackdrop) {
-          const card = activeBackdrop.querySelector('.modal-card');
-          if (card) renderEntryView(card, entry, { onChanged });
+        // Only refresh if this entry's modal is still the one on screen.
+        if (activeDialog === dialog) {
+          renderEntryView(dialog.querySelector('.modal-card'), entry, { onChanged });
         }
         onChanged?.();
       }

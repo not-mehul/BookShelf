@@ -4,13 +4,14 @@
 // the original blob (or null), and callers keep the remote URL.
 
 import { getSetting } from './settings.js';
+import { isNativeShell } from '../platform/native.js';
 
 const MAX_WIDTH = 400; // cover cards never render wider than this
 
 export async function fetchThumbBlob(url) {
   if (!url) return null;
   try {
-    const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+    const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
     const finalUrl = proxy ? `${proxy}${url}` : url;
     const res = await fetch(finalUrl, { mode: 'cors' });
     if (!res.ok) return null;

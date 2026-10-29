@@ -15,6 +15,8 @@ A personal catalog for books, films, TV shows, and quotes — searchable, ratabl
 
 ## Quick start (development)
 
+Requires **Node 22.12+** (Node 24 LTS recommended — see `.nvmrc`).
+
 ```bash
 npm install
 npm run dev
@@ -43,8 +45,10 @@ npm run test         # Vitest unit tests
 npm run lint         # ESLint
 npm run format       # Prettier (write)
 npm run check        # lint + test + build (what CI runs)
-npm run android:assets  # build, then copy dist/ into the Android assets
+npm run android:assets  # build, then copy dist/ into the Android assets (cross-platform)
 ```
+
+Toolchain: Vite 8 (Rolldown), Vitest 5, ESLint 10 (flat config), Prettier 3, Dexie 4.
 
 ## Android
 
@@ -53,10 +57,13 @@ Android Studio project that bundles the web build inside a `WebView`. See
 [`android-app/README.md`](./android-app/README.md) for how to open, run, and
 build an APK.
 
-The shell provides two native bridges (`src/util/android-bridge.js` wires them up):
-native HTTP to bypass WebView CORS (restricted to the app's API hosts), and a
-file export/share path. Both are feature-detected, so the same build runs
-unchanged in a plain browser.
+The shell is Kotlin on AGP 9.5 / Gradle 9.8, targeting Android 17 (API 37). It
+draws edge-to-edge, supports predictive back (Back closes an open modal), and
+talks to the page over a single origin-scoped message channel
+(`src/platform/native.js` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
+CORS (restricted to the app's API hosts), file export/share, and theme / back
+signalling. Everything is feature-detected, so the same build runs unchanged in
+a plain browser.
 
 ## Project structure
 
@@ -73,20 +80,21 @@ src/
     theme.js         Dusk/Dawn toggle
     library.js       Library grid (sort, filter, full-text search, tag chips)
     add-flow.js      Add modal: choose medium → search / manual / quote
-    detail-modal.js  Entry detail + edit + rating + progress + tags + share
+    detail-modal.js  Modal system (native <dialog>) + entry detail/edit/rating/progress/tags/share
     stats.js         Statistics overview modal
     settings.js      API keys + JSON/Markdown backup & restore
     forms.js         Shared form-field builders
-    components.js    DOM helpers, segmented control, focus trap, cover images
+    components.js    DOM helpers, segmented control, cover images
     rating.js        5-star rating control (radiogroup)
   export/
     markdown.js      DB → Markdown serializer
     import.js        Markdown parser (best-effort)
     json.js          Lossless JSON backup / restore
     share.js         Single-entry share
+  platform/
+    native.js        Android shell bridge: native HTTP, export, theme, back (no-op in a browser)
   util/
     settings.js      localStorage-backed settings
-    android-bridge.js Native HTTP + export bridges (no-op in a browser)
     icons.js         Inlined Lucide icons
     thumbs.js        Cover blob fetch + downscale
   styles/
@@ -95,6 +103,8 @@ src/
   main.js            Boot + service-worker registration
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
+scripts/
+  sync-android-assets.mjs  Copies dist/ into the Android app's assets
 test/                Vitest unit tests
 index.html
 android-app/         Native Android Studio project (WebView shell)
@@ -108,7 +118,12 @@ android-app/         Native Android Studio project (WebView shell)
 
 ## Testing & CI
 
-Unit tests (Vitest) cover the pure logic: API normalization, ISBN detection, the Markdown parser, and single-entry share formatting. GitHub Actions (`.github/workflows/ci.yml`) runs lint + tests + build on every push and PR.
+Web unit tests (Vitest) cover API normalization, ISBN detection, the Markdown parser, share formatting, and the native bridge protocol (against a simulated shell). Android JVM tests cover the bridge's host allowlist and export-filename sanitizing.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs two jobs on every push and PR:
+
+- **Web** — lint, tests, build, and a check that the committed Android assets match a fresh build.
+- **Android** — JVM unit tests, Android Lint, and debug + R8 release builds.
 
 ## Design system
 

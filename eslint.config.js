@@ -24,6 +24,10 @@ export default [
     languageOptions: { globals: { ...globals.serviceworker } }
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node } }
+  },
+  {
     files: ['test/**/*.js', '**/*.test.js'],
     languageOptions: { globals: { ...globals.node, ...globals.vitest } }
   }

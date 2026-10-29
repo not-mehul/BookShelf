@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-colour open-book glyph for Android 13+ themed icons. The launcher
+     tints it, so only the shape (alpha) matters; the pages are split at the
+     spine so the book still reads as two pages. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M52.5,40 C45,35.5 36,33 28,34 L28,72 C36,71 45,73 52.5,76.5 Z" />
+
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M55.5,40 C63,35.5 72,33 80,34 L80,72 C72,71 63,73 55.5,76.5 Z" />
+
+</vector>

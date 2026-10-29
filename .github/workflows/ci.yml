@@ -5,24 +5,55 @@ on:
     branches: ['**']
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  web:
+    name: Web — lint, test, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
 
-      - name: Lint
-        run: npm run lint
+      - name: Bundled Android assets match the web build
+        run: |
+          node scripts/sync-android-assets.mjs
+          git diff --exit-code -- android-app/app/src/main/assets \
+            || (echo "::error::android-app assets are stale — run 'npm run android:assets' and commit." && exit 1)
 
-      - name: Test
-        run: npm run test
+  android:
+    name: Android — unit tests, lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-app
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Build
-        run: npm run build
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v4
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: android-reports
+          path: android-app/app/build/reports/

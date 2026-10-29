@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ backup / device-transfer rules. The catalog lives in the
+     WebView's IndexedDB under the app's data dir, so the defaults (everything
+     except caches) are what we want: a reinstall or new phone keeps the shelf.
+     Export files are written to the cache dir and are never backed up. -->
+<data-extraction-rules>
+    <cloud-backup />
+    <device-transfer />
+</data-extraction-rules>

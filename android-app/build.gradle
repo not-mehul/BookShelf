@@ -1,4 +1,0 @@
-// Top-level build file. Plugin versions are declared here and applied per-module.
-plugins {
-    id 'com.android.application' version '9.2.1' apply false
-}

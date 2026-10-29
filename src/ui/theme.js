@@ -2,8 +2,11 @@
 
 import { getSetting, setSetting } from '../util/settings.js';
 import { icons } from '../util/icons.js';
+import { setNativeTheme } from '../platform/native.js';
 
 const KEY = 'theme';
+// Browser/PWA chrome colour per theme (matches --bg-grad-top in tokens.css).
+const THEME_COLOR = { dark: '#14110e', light: '#f3ece0' };
 
 export async function initTheme() {
   const saved = await getSetting(KEY, '');
@@ -20,6 +23,8 @@ function apply(mode) {
   } else {
     document.documentElement.removeAttribute('data-theme');
   }
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[mode]);
+  setNativeTheme(mode);
 }
 
 export async function toggleTheme() {
