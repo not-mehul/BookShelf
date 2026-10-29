@@ -16,17 +16,33 @@
 
         <!-- configChanges: the WebView handles rotation, resizing (foldables,
              multi-window, large screens) and theme changes itself, so the page
-             and its state are never torn down for them. -->
+             and its state are never torn down for them.
+             singleTask: text shared from another app (or a widget tap) is
+             delivered to the existing instance via onNewIntent instead of
+             starting a second WebView. -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- "Share → BookShelf" for highlights, quotes, titles and links. -->
+            <intent-filter android:label="@string/share_target_label">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
+
+        <!-- Ask Play services to fetch the Code Scanner module at install time, so
+             the first scan doesn't wait for a download. -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
 
         <!-- Lets the export bridge share generated files via the system share sheet. -->
         <provider

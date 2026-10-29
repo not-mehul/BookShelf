@@ -44,12 +44,12 @@ export function openStats() {
     body.appendChild(tiles);
 
     // ── Ratings ──
-    const rated = entries.filter((e) => e.rating != null);
-    if (rated.length) {
-      const avg = (rated.reduce((s, e) => s + e.rating, 0) / rated.length).toFixed(1);
-      body.appendChild(sectionLabel(`Ratings — avg ${avg}★ across ${rated.length}`));
+    const ratings = entries.map((e) => e.rating).filter((r) => r != null);
+    if (ratings.length) {
+      const avg = (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(1);
+      body.appendChild(sectionLabel(`Ratings — avg ${avg}★ across ${ratings.length}`));
       const dist = [0, 0, 0, 0, 0];
-      for (const e of rated) dist[e.rating - 1]++;
+      for (const r of ratings) dist[r - 1]++;
       const max = Math.max(...dist, 1);
       const chart = el('div', { class: 'stats-bars' });
       for (let i = 5; i >= 1; i--) {

@@ -1719,6 +1719,81 @@ body:has(.modal-dialog[open]) { overflow: hidden; }
 .stats-bar-fill { height: 100%; background: var(--accent-amber); border-radius: 2px; }
 .stats-bar-val { width: 1.6rem; text-align: right; font-size: 0.8rem; color: var(--text-muted); }
 
+/* ─── Shared-text preview (add flow) ─────────────────────────── */
+
+.shared-preview {
+  margin: 0 2rem 1.25rem;
+  padding: 0.85rem 1rem;
+  border-left: 2px solid var(--accent-amber);
+  background: var(--panel-bg-faint);
+}
+.shared-preview-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+.shared-preview-text {
+  font-family: var(--font-display, Georgia, serif);
+  font-style: italic;
+  color: var(--text-heading);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .shared-preview { margin: 0 1.25rem 1rem; }
+}
+
+/* ─── Camera barcode scanner (browser fallback) ───────────────── */
+
+.scanner-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  padding: 0;
+  background: var(--scanner-bg);
+  color: var(--scanner-fg);
+}
+.scanner-dialog:not([open]) { display: none; }
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scanner-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(80vw, 360px);
+  height: min(32vw, 140px);
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--accent-amber);
+  border-radius: 2px;
+  box-shadow: 0 0 0 100vmax var(--scanner-scrim);
+}
+.scanner-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(2.5rem + var(--inset-bottom));
+  text-align: center;
+  font-size: 0.9rem;
+}
+.scanner-cancel {
+  position: absolute;
+  top: calc(1rem + var(--inset-top));
+  right: calc(1rem + var(--inset-right));
+  color: var(--scanner-fg);
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,0 +1,121 @@
+package app.mehul.bookshelf
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.edit
+import androidx.documentfile.provider.DocumentFile
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+
+/**
+ * Storage for the encrypted sync file in a folder the user picks with the
+ * system folder picker (Storage Access Framework) — e.g. a Google Drive,
+ * Nextcloud or Syncthing folder. The page encrypts/decrypts; this class only
+ * moves opaque text in and out of `bookshelf-sync.json`.
+ *
+ * Must be constructed before the activity is started (it registers an
+ * activity-result launcher), e.g. as a property initializer.
+ */
+class FolderSync(private val activity: ComponentActivity) {
+
+    private val prefs by lazy { activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
+    private var pickResult: CompletableDeferred<Uri?>? = null
+
+    private val picker = activity.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        pickResult?.complete(uri)
+        pickResult = null
+    }
+
+    /** Let the user choose a folder; keeps the previous one if they cancel. */
+    suspend fun pickFolder(): JSONObject? {
+        val deferred = CompletableDeferred<Uri?>()
+        pickResult?.cancel()
+        pickResult = deferred
+        picker.launch(folderUri())
+        val uri = deferred.await() ?: return status()
+
+        val resolver = activity.contentResolver
+        resolver.takePersistableUriPermission(uri, PERMISSION_FLAGS)
+        folderUri()?.takeIf { it != uri }?.let { old ->
+            runCatching { resolver.releasePersistableUriPermission(old, PERMISSION_FLAGS) }
+        }
+        prefs.edit { putString(KEY_FOLDER, uri.toString()) }
+        return status()
+    }
+
+    /** `{ folderName }`, or null when no folder is set or access was revoked. */
+    fun status(): JSONObject? {
+        val dir = folder() ?: return null
+        return JSONObject().put("folderName", dir.name ?: "Selected folder")
+    }
+
+    fun forget() {
+        folderUri()?.let { runCatching { activity.contentResolver.releasePersistableUriPermission(it, PERMISSION_FLAGS) } }
+        prefs.edit { remove(KEY_FOLDER) }
+    }
+
+    /** Contents of the sync file, or null if there isn't one yet. */
+    suspend fun read(): String? = withContext(Dispatchers.IO) {
+        val dir = requireFolder()
+        // Fall back to the temp file if a previous write was interrupted mid-swap.
+        val file = dir.findFile(FILE_NAME) ?: dir.findFile(TEMP_NAME) ?: return@withContext null
+        activity.contentResolver.openInputStream(file.uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+    }
+
+    /**
+     * Replace the sync file. Writes a temp file first and swaps it in, so an
+     * interrupted write never leaves a truncated sync file behind.
+     */
+    suspend fun write(text: String) = withContext(Dispatchers.IO) {
+        val dir = requireFolder()
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        dir.findFile(TEMP_NAME)?.delete()
+        // octet-stream: some providers append an extension for other MIME types.
+        val temp = dir.createFile(TEMP_MIME, TEMP_NAME) ?: error("Can't create files in the sync folder")
+        writeTo(temp.uri, bytes)
+
+        val existing = dir.findFile(FILE_NAME)
+        if (existing == null || existing.delete()) {
+            if (temp.renameTo(FILE_NAME)) return@withContext
+        }
+        // Provider can't rename: write in place instead, then drop the temp file.
+        val target = dir.findFile(FILE_NAME) ?: dir.createFile(TEMP_MIME, FILE_NAME)
+            ?: error("Can't create the sync file")
+        writeTo(target.uri, bytes)
+        temp.delete()
+    }
+
+    private fun writeTo(uri: Uri, bytes: ByteArray) {
+        activity.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
+            ?: error("Can't write to the sync folder")
+    }
+
+    private fun folderUri(): Uri? = prefs.getString(KEY_FOLDER, null)?.let(Uri::parse)
+
+    private fun folder(): DocumentFile? {
+        val uri = folderUri() ?: return null
+        val granted = activity.contentResolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission && it.isWritePermission
+        }
+        if (!granted) return null
+        return DocumentFile.fromTreeUri(activity, uri)?.takeIf { it.isDirectory }
+    }
+
+    private fun requireFolder(): DocumentFile =
+        folder() ?: error("The sync folder is no longer accessible. Choose it again in Settings.")
+
+    companion object {
+        private const val PREFS_NAME = "sync"
+        private const val KEY_FOLDER = "folder_uri"
+        const val FILE_NAME = "bookshelf-sync.json"
+        private const val TEMP_NAME = "bookshelf-sync.json.tmp"
+        private const val TEMP_MIME = "application/octet-stream"
+        private const val PERMISSION_FLAGS =
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+    }
+}

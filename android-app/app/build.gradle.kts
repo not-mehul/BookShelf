@@ -36,9 +36,11 @@ android {
 dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.documentfile)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.webkit)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.play.services.code.scanner)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test.junit)

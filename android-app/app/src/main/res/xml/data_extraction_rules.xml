@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android 12+ backup / device-transfer rules. The catalog lives in the
-     WebView's IndexedDB under the app's data dir, so the defaults (everything
-     except caches) are what we want: a reinstall or new phone keeps the shelf.
-     Export files are written to the cache dir and are never backed up. -->
+     WebView's IndexedDB under the app's data dir, so it is included: a
+     reinstall or new phone keeps the shelf. Export files are written to the
+     cache dir and are never backed up.
+
+     secure_settings.xml (API keys, sync passphrase) is excluded: its values
+     are encrypted with an Android Keystore key, which never leaves this
+     device, so a restored copy could not be decrypted anyway. -->
 <data-extraction-rules>
-    <cloud-backup />
-    <device-transfer />
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secure_settings.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="secure_settings.xml" />
+    </device-transfer>
 </data-extraction-rules>

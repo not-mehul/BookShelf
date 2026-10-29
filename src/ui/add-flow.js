@@ -6,7 +6,7 @@
 // Uses the shared modal system from detail-modal.js so only one modal is open
 // at a time. Adding an entry closes this flow and opens the entry's detail view.
 
-import { el, clear, loadingNode, errorNode, noticeNode, coverImage } from './components.js';
+import { el, clear, loadingNode, errorNode, noticeNode, coverImage, messageOf } from './components.js';
 import { icons } from '../util/icons.js';
 import { openModal, closeModal, openEntry } from './detail-modal.js';
 import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
@@ -16,6 +16,7 @@ import { searchTvdb } from '../api/tvdb.js';
 import { findBySource, saveEntry, newEntryId } from '../db/database.js';
 import { getSetting } from '../util/settings.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
+import { canScanBarcodes, scanBarcode } from '../util/barcode.js';
 
 const MEDIA = [
   { type: 'book',  label: 'Book',  icon: 'book',  blurb: 'Search Google Books' },
@@ -27,8 +28,17 @@ const MEDIA = [
 const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' };
 const TYPE_PLURAL = { book: 'books', movie: 'movies', tv: 'TV shows' };
 
-export function openAddFlow({ onChanged, goToSettings } = {}) {
-  openModal((card) => renderMediumPicker(card, { onChanged, goToSettings }));
+/**
+ * @typedef {object} AddFlowContext
+ * @property {() => void} [onChanged] Called after an entry is saved.
+ * @property {() => void} [goToSettings] Opens Settings (e.g. to add an API key).
+ * @property {import('../util/share-intake.js').SharePrefill} [prefill] Text shared
+ *   into the app: prefills the quote form and the search query.
+ */
+
+/** @param {AddFlowContext} [ctx] */
+export function openAddFlow(ctx = {}) {
+  openModal((card) => renderMediumPicker(card, ctx));
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -60,6 +70,15 @@ function renderMediumPicker(card, ctx) {
   head.appendChild(el('h2', { class: 'add-title', id: 'modal-title', tabindex: '-1' }, 'What would you like to add?'));
   card.appendChild(head);
 
+  // Shared text: show what arrived, then let the user pick what it is.
+  const shared = ctx.prefill && (ctx.prefill.quoteText || ctx.prefill.query || ctx.prefill.link);
+  if (shared) {
+    card.appendChild(el('div', { class: 'shared-preview' },
+      el('div', { class: 'shared-preview-label' }, 'Shared with BookShelf'),
+      el('div', { class: 'shared-preview-text' }, shared)
+    ));
+  }
+
   const grid = el('div', { class: 'medium-grid' });
   for (const m of MEDIA) {
     const choice = el('button', {
@@ -80,7 +99,7 @@ function renderMediumPicker(card, ctx) {
   card.appendChild(grid);
   // Re-rendering (e.g. after Back from a later step) drops the focused button.
   if (!card.contains(document.activeElement) || document.activeElement === card) {
-    head.querySelector('#modal-title').focus();
+    /** @type {HTMLElement} */ (head.querySelector('#modal-title')).focus();
   }
 }
 
@@ -124,6 +143,33 @@ function renderSearchStep(card, ctx, type) {
   manualRow.appendChild(manualLink);
   card.appendChild(manualRow);
 
+  // Books: scan an ISBN barcode instead of typing (native scanner or the
+  // browser's BarcodeDetector; hidden when neither is available).
+  if (type === 'book' && canScanBarcodes()) {
+    const scanBtn = el('button', { type: 'button', class: 'btn btn-muted', 'aria-label': 'Scan barcode' });
+    scanBtn.innerHTML = `${icons.barcode()} <span class="btn-label">Scan</span>`;
+    scanBtn.addEventListener('click', async () => {
+      scanBtn.disabled = true;
+      try {
+        const code = await scanBarcode();
+        if (code) {
+          input.value = code;
+          runSearch();
+        }
+      } catch (err) {
+        clear(zone);
+        zone.appendChild(errorNode(messageOf(err)));
+      } finally {
+        scanBtn.disabled = false;
+      }
+    });
+    form.insertBefore(scanBtn, submitBtn);
+  }
+
+  if (ctx.prefill?.query) {
+    input.value = ctx.prefill.query;
+    queueMicrotask(runSearch);
+  }
   input.focus();
 
   // Each search gets a sequence number; a slower, older response (or one
@@ -189,7 +235,7 @@ function renderSearchStep(card, ctx, type) {
       if (isStale(seq)) return;
       console.error(err);
       clear(zone);
-      zone.appendChild(errorNode(err.message || 'Search failed. Check your connection and API key.'));
+      zone.appendChild(errorNode(messageOf(err) || 'Search failed. Check your connection and API key.'));
     }
   }
 }
@@ -225,7 +271,7 @@ async function resultRow(hit, ctx) {
   const thumb = el('div', { class: 'add-result-thumb' });
   if (hit.thumbnailUrl) {
     thumb.appendChild(
-      coverImage(hit.thumbnailUrl, { onError: (ev) => { ev.target.remove(); thumb.appendChild(rowPlaceholder(hit)); } })
+      coverImage(hit.thumbnailUrl, { onError: (img) => { img.remove(); thumb.appendChild(rowPlaceholder(hit)); } })
     );
   } else {
     thumb.appendChild(rowPlaceholder(hit));
@@ -304,9 +350,10 @@ function renderQuoteForm(card, ctx) {
 
   const form = el('form', { class: 'add-form' });
 
-  const text = fieldTextarea('Quote text', 'q-text', 'The quote…', 5);
-  const author = fieldInput('Author', 'q-author', 'e.g. George Orwell');
-  const source = fieldInput('Source / Work', 'q-source', "e.g. 1984, Hamlet, or a person's name");
+  const pre = ctx.prefill;
+  const text = fieldTextarea('Quote text', 'q-text', 'The quote…', 5, pre?.quoteText || '');
+  const author = fieldInput('Author', 'q-author', 'e.g. George Orwell', pre?.author || '');
+  const source = fieldInput('Source / Work', 'q-source', "e.g. 1984, Hamlet, or a person's name", pre?.source || '');
   form.appendChild(text.field);
   form.appendChild(author.field);
   form.appendChild(source.field);
@@ -326,6 +373,7 @@ function renderQuoteForm(card, ctx) {
     if (!quoteText) { text.input.focus(); return; }
     saveBtn.disabled = true;
 
+    /** @type {import('../types').CatalogEntry} */
     const entry = {
       id: newEntryId(),
       type: 'quote',

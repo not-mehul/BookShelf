@@ -30,8 +30,12 @@ import kotlin.math.max
  * `addJavascriptInterface`, no other page could ever reach it. Messages are JSON
  * strings; the web side lives in `src/platform/native.js`.
  *
- * Web → native: `http`, `export`, `theme`, `backHandler`.
- * Native → web: `http` (response, matched by id) and `back`.
+ * Web → native: `http`, `call` (RPC to a [register]ed method), `export`,
+ * `theme`, `backHandler`, `ready`.
+ * Native → web: `http` / `result` (replies matched by id), `back`, `event`.
+ *
+ * Events emitted before the page has booted are queued and flushed when it
+ * sends `ready`, so e.g. text shared into a cold-started app is not lost.
  */
 class NativeBridge(
     private val activity: ComponentActivity,
@@ -41,6 +45,28 @@ class NativeBridge(
 ) {
     private var replyProxy: JavaScriptReplyProxy? = null
     private var insetsScript: String? = null
+
+    private val methods = mutableMapOf<String, suspend (JSONObject) -> Any?>()
+    private val pendingEvents = ArrayDeque<String>()
+    private var pageReady = false
+
+    /** Expose a native method to the page's `callNative(name, params)`. */
+    fun register(name: String, handler: suspend (params: JSONObject) -> Any?) {
+        methods[name] = handler
+    }
+
+    /** Push an event to the page (`onNativeEvent(name, …)`), queued until it is ready. */
+    fun emit(name: String, data: JSONObject? = null) {
+        val json = JSONObject().put("type", "event").put("name", name).put("data", data ?: JSONObject.NULL).toString()
+        val proxy = replyProxy
+        if (pageReady && proxy != null) proxy.send(json) else pendingEvents.addLast(json)
+    }
+
+    /** A new document is loading: it must announce `ready` before receiving events. */
+    fun onPageStarted() {
+        pageReady = false
+        replyProxy = null
+    }
 
     fun install() {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
@@ -69,8 +95,27 @@ class NativeBridge(
             "export" -> activity.lifecycleScope.launch {
                 exportFile(msg.optString("filename"), msg.optString("text"))
             }
+            "call" -> activity.lifecycleScope.launch { proxy.send(invoke(msg).toString()) }
             "theme" -> onThemeChanged(msg.optString("mode") != "light")
             "backHandler" -> onBackHandlerChanged(msg.optBoolean("enabled"))
+            "ready" -> {
+                pageReady = true
+                while (pendingEvents.isNotEmpty()) proxy.send(pendingEvents.removeFirst())
+            }
+        }
+    }
+
+    private suspend fun invoke(msg: JSONObject): JSONObject {
+        val reply = JSONObject().put("type", "result").put("id", msg.optInt("id"))
+        val handler = methods[msg.optString("method")]
+            ?: return reply.put("ok", false).put("error", "Unknown method: ${msg.optString("method")}")
+        return try {
+            val value = handler(msg.optJSONObject("params") ?: JSONObject())
+            reply.put("ok", true).put("value", value ?: JSONObject.NULL)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            reply.put("ok", false).put("error", e.message ?: e.toString())
         }
     }
 

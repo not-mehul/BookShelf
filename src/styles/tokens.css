@@ -3,6 +3,10 @@
 
 :root {
   color-scheme: dark;
+  /* Camera viewfinder — deliberately black in both themes (Dawn inherits these). */
+  --scanner-bg: #000;
+  --scanner-fg: #fff;
+  --scanner-scrim: rgba(0, 0, 0, 0.45);
 
   /* Surface */
   --bg-grad-top: #14110e;

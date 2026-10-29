@@ -38,6 +38,7 @@ async function downscale(blob) {
     canvas.width = MAX_WIDTH;
     canvas.height = Math.round(bitmap.height * scale);
     const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close?.();
     return await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));

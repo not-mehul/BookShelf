@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   web:
-    name: Web — lint, test, build
+    name: Web — lint, typecheck, test, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -23,6 +23,7 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm run test
       - run: npm run build
 

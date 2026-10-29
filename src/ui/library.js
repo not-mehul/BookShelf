@@ -22,6 +22,7 @@ const SORT_OPTS = [
 
 const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 
+/** @type {{ type: string, sort: string, query: string, tag: string | null }} */
 const state = { type: 'all', sort: 'dateAdded', query: '', tag: null };
 
 export function renderLibrary(container, { onChanged }) {
@@ -114,7 +115,8 @@ export function renderLibrary(container, { onChanged }) {
   async function refresh() {
     let entries = await listEntries();
     if (state.type !== 'all') entries = entries.filter((e) => e.type === state.type);
-    if (state.tag) entries = entries.filter((e) => (e.tags || []).includes(state.tag));
+    const tag = state.tag;
+    if (tag) entries = entries.filter((e) => (e.tags || []).includes(tag));
     const q = state.query.trim().toLowerCase();
     if (q) {
       entries = entries.filter((e) => {
@@ -182,7 +184,7 @@ export function entryCard(entry, onChanged) {
   const src = thumbnailUrl(entry) || entry.thumbnailUrl;
   if (src) {
     thumb.appendChild(
-      coverImage(src, { onError: (ev) => { ev.target.remove(); thumb.appendChild(thumbPlaceholder(entry)); } })
+      coverImage(src, { onError: (img) => { img.remove(); thumb.appendChild(thumbPlaceholder(entry)); } })
     );
   } else {
     thumb.appendChild(thumbPlaceholder(entry));

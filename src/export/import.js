@@ -1,6 +1,9 @@
 import { newEntryId, saveEntry } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
 
+/** @typedef {import('../types').CatalogEntry} CatalogEntry */
+/** @typedef {import('../types').EntryType} EntryType */
+
 /**
  * Parse the Markdown format produced by exportMarkdown() into entry objects.
  * Pure (aside from optional cover fetches) — safe to unit-test. Does not save.
@@ -12,6 +15,7 @@ export async function parseMarkdown(text) {
   for (const section of typeSections) {
     const lines = section.split('\n');
     const header = lines[0].toLowerCase();
+    /** @type {EntryType | null} */
     let type = null;
     if (header.includes('books')) type = 'book';
     else if (header.includes('movies')) type = 'movie';
@@ -41,9 +45,15 @@ export async function importMarkdown(text) {
   return entries.length;
 }
 
+/**
+ * @param {string} text
+ * @param {EntryType} type
+ * @returns {Promise<CatalogEntry | null>}
+ */
 async function parseEntry(text, type) {
   if (!text) return null;
 
+  /** @type {CatalogEntry} */
   const entry = {
     id: newEntryId(),
     type,
@@ -65,6 +75,7 @@ async function parseEntry(text, type) {
 
   if (type === 'quote') {
     const lines = text.split('\n');
+    /** @type {string[]} */
     const quoteLines = [];
     let state = 'quote';
 
@@ -133,7 +144,8 @@ async function parseEntry(text, type) {
       } else if (line.startsWith('**Genres:**')) {
         entry.genres = line.replace('**Genres:**', '').split(',').map(s => s.trim());
       } else if (line.startsWith('**Status:**')) {
-        entry.status = line.replace('**Status:**', '').trim();
+        const status = line.replace('**Status:**', '').trim();
+        if (status === 'want' || status === 'in-progress' || status === 'finished') entry.status = status;
       } else if (line.startsWith('>')) {
         entry.notes += (entry.notes ? '\n' : '') + line.slice(1).trim();
       } else if (line.startsWith('_Added')) {

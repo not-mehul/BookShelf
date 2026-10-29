@@ -21,6 +21,7 @@ const PROGRESS_LABEL = { book: 'Pages read', tv: 'Episodes watched' };
 // One modal at a time, built on the native <dialog> element: showModal()
 // provides the top layer, an inert background (so focus can't escape),
 // Escape handling via `cancel`, and focus restoration on close.
+/** @type {HTMLDialogElement | null} */
 let activeDialog = null;
 
 export function closeModal() {
@@ -67,15 +68,23 @@ export function openModal(renderFn) {
   // and it stops being focusable once the view renders controls into it.)
   const active = document.activeElement;
   if (!card.contains(active) || active === card || active === closeBtn) {
-    (card.querySelector('#modal-title') || card.querySelector('input, textarea, select, button'))?.focus();
+    /** @type {HTMLElement | null} */ (
+      card.querySelector('#modal-title') || card.querySelector('input, textarea, select, button')
+    )?.focus();
   }
   // Android Back closes the modal instead of leaving the app.
   setNativeBackHandler(closeModal);
   return dialog;
 }
 
+/** @typedef {{ onChanged?: () => void }} ChangeListener */
+
+/**
+ * @param {string} id
+ * @param {ChangeListener} [listener]
+ */
 export async function openEntry(id, { onChanged } = {}) {
-  let entry = await getEntry(id);
+  const entry = await getEntry(id);
   if (!entry) return;
   const dialog = openModal((card) => renderEntryView(card, entry, { onChanged }));
 
@@ -88,11 +97,10 @@ export async function openEntry(id, { onChanged } = {}) {
         if (!enriched.thumbnailBlob && enriched.thumbnailUrl && enriched.thumbnailUrl !== entry.thumbnailUrl) {
           enriched.thumbnailBlob = await fetchThumbBlob(enriched.thumbnailUrl);
         }
-        entry = enriched;
-        await saveEntry(entry);
+        await saveEntry(enriched);
         // Only refresh if this entry's modal is still the one on screen.
         if (activeDialog === dialog) {
-          renderEntryView(dialog.querySelector('.modal-card'), entry, { onChanged });
+          renderEntryView(/** @type {HTMLElement} */ (dialog.querySelector('.modal-card')), enriched, { onChanged });
         }
         onChanged?.();
       }
@@ -111,7 +119,7 @@ function buildHero(entry) {
   const src = thumbnailUrl(entry) || entry.thumbnailUrl;
   if (src) {
     poster.appendChild(
-      coverImage(src, { onError: (ev) => { ev.target.remove(); poster.appendChild(posterPlaceholder(entry)); } })
+      coverImage(src, { onError: (img) => { img.remove(); poster.appendChild(posterPlaceholder(entry)); } })
     );
   } else {
     poster.appendChild(posterPlaceholder(entry));
@@ -236,7 +244,7 @@ function renderQuoteView(card, entry, { onChanged }) {
   {
     const sec = el('div', { class: 'modal-section' });
     sec.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
-    sec.appendChild(notesCol(entry, onChanged).lastChild);
+    sec.appendChild(notesField(entry, onChanged));
     card.appendChild(sec);
   }
 
@@ -342,6 +350,12 @@ function section(label, body) {
 function notesCol(entry, onChanged) {
   const col = el('div', {});
   col.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
+  col.appendChild(notesField(entry, onChanged));
+  return col;
+}
+
+// Auto-saving private-notes textarea.
+function notesField(entry, onChanged) {
   const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…', 'aria-label': 'Notes' });
   notes.style.minHeight = '80px';
   notes.value = entry.notes || '';
@@ -354,8 +368,7 @@ function notesCol(entry, onChanged) {
       onChanged?.();
     }, 300);
   });
-  col.appendChild(notes);
-  return col;
+  return notes;
 }
 
 function progressSection(entry, onChanged) {
@@ -478,7 +491,8 @@ function actionsRow(card, entry, onChanged) {
 
   const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove');
   let armed = false;
-  let timer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
   removeBtn.addEventListener('click', async () => {
     if (!armed) {
       armed = true;

@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -25,6 +26,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.webkit.WebViewAssetLoader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /**
  * Thin native shell for the BookShelf web app.
@@ -44,6 +48,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var bridge: NativeBridge
 
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
+    // Registers an activity-result launcher, so it must exist before onStart.
+    private val folderSync = FolderSync(this)
 
     private val fileChooser =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -79,6 +86,7 @@ class MainActivity : ComponentActivity() {
             onThemeChanged = { dark -> applySystemBarStyle(dark) },
         )
         configureWebView()
+        registerNativeMethods()
         bridge.install()
         onBackPressedDispatcher.addCallback(this, backCallback)
 
@@ -92,6 +100,28 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
             webView.loadUrl("$APP_ORIGIN/index.html")
+        }
+        // A restored instance already handled its launch intent.
+        if (savedInstanceState == null) handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** Forward shared text and widget actions to the page (queued until it is ready). */
+    private fun handleIntent(intent: Intent?) {
+        when {
+            intent == null -> return
+            intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+                val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
+                if (text.isNotBlank() || subject.isNotBlank()) {
+                    bridge.emit("shared", JSONObject().put("text", text.take(MAX_SHARED_CHARS)).put("subject", subject))
+                }
+            }
+            intent.getStringExtra(EXTRA_ACTION) == ACTION_ADD -> bridge.emit("openAdd")
         }
     }
 
@@ -122,6 +152,10 @@ class MainActivity : ComponentActivity() {
                 } catch (_: ActivityNotFoundException) {
                 }
                 return true
+            }
+
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                bridge.onPageStarted()
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -155,6 +189,27 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Methods the page can call with `callNative(name, params)`. */
+    private fun registerNativeMethods() {
+        val secureStore = SecureStore(this)
+        bridge.register("secureGet") { p -> withContext(Dispatchers.IO) { secureStore.get(p.getString("key")) } }
+        bridge.register("secureSet") { p ->
+            withContext(Dispatchers.IO) { secureStore.set(p.getString("key"), p.getString("value")) }
+            true
+        }
+        bridge.register("secureRemove") { p ->
+            withContext(Dispatchers.IO) { secureStore.remove(p.getString("key")) }
+            true
+        }
+        bridge.register("scanBarcode") { BarcodeScanner.scan(this) }
+
+        bridge.register("syncStatus") { folderSync.status() }
+        bridge.register("syncPickFolder") { folderSync.pickFolder() }
+        bridge.register("syncForget") { folderSync.forget(); true }
+        bridge.register("syncRead") { folderSync.read() }
+        bridge.register("syncWrite") { p -> folderSync.write(p.getString("text")); true }
+    }
+
     // Transparent bars; icon colour follows the page's Dusk/Dawn theme.
     private fun applySystemBarStyle(darkTheme: Boolean) {
         val style = if (darkTheme) {
@@ -185,5 +240,12 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val APP_DOMAIN = "appassets.androidwebview.com"
         const val APP_ORIGIN = "https://$APP_DOMAIN"
+
+        /** Intent extra used by the home-screen widget to request an action. */
+        const val EXTRA_ACTION = "app.mehul.bookshelf.action"
+        const val ACTION_ADD = "add"
+
+        // Shared text becomes a quote; cap absurdly large payloads.
+        private const val MAX_SHARED_CHARS = 20_000
     }
 }

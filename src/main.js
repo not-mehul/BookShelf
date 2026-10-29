@@ -1,4 +1,6 @@
-import { installNativeBridge, isNativeShell } from './platform/native.js';
+import { installNativeBridge, isNativeShell, onNativeEvent, notifyNativeReady } from './platform/native.js';
+import { parseSharedText } from './util/share-intake.js';
+import { startAutoSync } from './sync/sync.js';
 import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
@@ -14,7 +16,7 @@ installNativeBridge();
 async function boot() {
   await initTheme();
 
-  const app = document.getElementById('app');
+  const app = /** @type {HTMLElement} */ (document.getElementById('app'));
   clear(app);
 
   // ── Header ────────────────────────────────────────────────────
@@ -55,7 +57,7 @@ async function boot() {
     class: 'fab',
     'aria-label': 'Add to catalog',
     title: 'Add to catalog',
-    onClick: () => openAddFlow({ onChanged, goToSettings: () => openSettings({ onChanged }) })
+    onClick: () => openAdd()
   });
   fab.innerHTML = icons.plus();
   document.body.appendChild(fab);
@@ -83,20 +85,53 @@ async function boot() {
     }
   }
 
-  function onChanged() { refreshStats(); render(); }
+  // Local edits: refresh, then schedule a (debounced) sync push.
+  /** @type {() => void} */
+  let scheduleSync = () => {};
+  function onChanged() { refreshStats(); render(); scheduleSync(); }
 
   function render() {
     renderLibrary(screen, { onChanged });
   }
 
+  /** @param {import('./util/share-intake.js').SharedInput} [shared] */
+  function openAdd(shared) {
+    openAddFlow({
+      onChanged,
+      goToSettings: () => openSettings({ onChanged }),
+      prefill: shared ? parseSharedText(shared) : undefined
+    });
+  }
+
   await refreshStats();
   render();
+
+  // Text shared from another app: Android share sheet (native event) …
+  onNativeEvent('shared', (data) => openAdd(data || {}));
+  // … the home-screen widget's "+" button …
+  onNativeEvent('openAdd', () => openAdd());
+  // … or the installed PWA's Web Share Target (manifest share_target).
+  const params = new URLSearchParams(location.search);
+  if (['share-text', 'share-title', 'share-url'].some((k) => params.has(k))) {
+    history.replaceState(null, '', location.pathname);
+    openAdd({
+      text: params.get('share-text') || '',
+      subject: params.get('share-title') || '',
+      url: params.get('share-url') || ''
+    });
+  }
+  // Encrypted folder sync (Android app, once configured): pull now, push after
+  // changes. Incoming changes only refresh the UI — they don't re-trigger sync.
+  scheduleSync = startAutoSync(() => { refreshStats(); render(); });
+
+  // Booted: the shell may now deliver events it queued during startup.
+  notifyNativeReady();
 }
 
 boot().catch((err) => {
   console.error(err);
-  document.getElementById('app').innerHTML =
-    `<div class="msg-error" style="margin:3rem 1.5rem">Failed to start: ${err.message}</div>`;
+  const msg = el('div', { class: 'msg-error', style: 'margin:3rem 1.5rem' }, `Failed to start: ${err?.message ?? err}`);
+  document.getElementById('app')?.replaceChildren(msg);
 });
 
 // Register the service worker for offline support (web/PWA only). The native
