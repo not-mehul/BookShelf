@@ -20,6 +20,14 @@ the built web app is bundled in `app/src/main/assets/` and served inside a
 > button (or *Settings → Build, Execution, Deployment → Gradle*) — and sync
 > again (*File → Sync Project with Gradle Files*). The first sync downloads
 > everything; offline mode works afterwards.
+>
+> **App crashes on launch with `ClassNotFoundException: …MainActivity`?** The
+> APK was built without the app's Kotlin code, which happens when
+> `gradle.properties` sets `android.builtInKotlin=false` (Android Studio's AGP
+> Upgrade Assistant adds it). The build now stops with an explanation instead;
+> remove the line — from this project's `gradle.properties` or
+> `~/.gradle/gradle.properties` — and don't run the Upgrade Assistant's
+> "built-in Kotlin" step on this project, which already uses it.
 
 From the command line (JDK 17+; Gradle provisions JDK 21 for its daemon):
 

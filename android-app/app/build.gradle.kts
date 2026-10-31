@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// With built-in Kotlin turned off (Android Studio's AGP Upgrade Assistant adds
+// `android.builtInKotlin=false` to gradle.properties) the .kt sources are
+// silently skipped and the APK crashes on launch with ClassNotFoundException.
+check(!providers.gradleProperty("android.builtInKotlin").orNull.orEmpty().trim().equals("false", ignoreCase = true)) {
+    "android.builtInKotlin=false would leave the app's Kotlin code out of the APK. " +
+        "Remove that line from gradle.properties (this project's, or ~/.gradle/gradle.properties) and sync again."
+}
+
 android {
     namespace = "app.mehul.bookshelf"
     compileSdk = 37
