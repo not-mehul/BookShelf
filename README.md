@@ -63,8 +63,9 @@ npm run check        # lint + typecheck + test + build
 npm run android:assets  # build, then copy dist/ into the Android assets (cross-platform)
 ```
 
-Toolchain: Vite 8 (Rolldown), TypeScript 7 (type-checking only), Vitest 5,
-Playwright, ESLint 10 (flat config), Prettier 3, Dexie 4.
+Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vite 8
+(Rolldown), Vitest 5, Playwright, ESLint 10 (flat config, typescript-eslint,
+eslint-plugin-svelte), Prettier 3, Dexie 4. The same stack as Ledger.
 
 For `test:e2e`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
 or point `PW_CHROMIUM_PATH` at an existing Chromium.
@@ -80,7 +81,7 @@ The shell is Kotlin on AGP 9.4 / Gradle 9.8, targeting Android 17 (API 37), and
 opens in Android Studio 2026.2 (Rabbit) or newer. It
 draws edge-to-edge, supports predictive back (Back closes an open modal), and
 talks to the page over a single origin-scoped message channel
-(`src/platform/native.js` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
+(`src/platform/native.ts` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
 CORS (restricted to the app's API hosts), file export/share, theme / back
 signalling, and RPCs for the Keystore, barcode scanner, folder sync and the
 widget. Everything is feature-detected, so the same build runs unchanged in a
@@ -90,62 +91,50 @@ plain browser.
 
 ```
 src/
+  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync, service worker
+  components/        Svelte 5 UI (runes)
+    App.svelte       Header, stats bar, library, add button, the one dialog
+    Library.svelte   Grid: type filter, search, sort, tag chips, selection mode
+    EntryCard.svelte, UpNext.svelte, RatingControl.svelte, EntryPicker.svelte, …
+    Modal.svelte     The native <dialog> every view opens in (focus, Escape, Android Back)
+    entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
+    add/             Add flow: medium → search / manual / quote
+    settings/        Preferences, sync setup, backup & restore
+    Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte, CameraScanner.svelte
+  state/
+    shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts
+    ui.svelte.ts     Which dialog is open
   api/
-    books.js         Google Books client
-    openlibrary.js   Open Library client + ISBN detection
-    tvdb.js          TheTVDB v4 client (login, token cache, extended enrichment)
-    normalize.js     API responses → unified CatalogEntry shape
+    books.ts         Google Books client
+    openlibrary.ts   Open Library client + ISBN detection
+    tvdb.ts          TheTVDB v4 client (login, token cache, extended enrichment)
+    normalize.ts     API responses → unified CatalogEntry shape
+    episode-sync.ts  Episode-guide refresh + Android reminder schedule
   db/
-    database.js      Dexie schema (v3: tags index, tombstones) + CRUD
-  ui/
-    theme.js         Dusk/Dawn toggle
-    library.js       Library grid (sort, filter, full-text search, tag chips)
-    add-flow.js      Add modal: choose medium → search / manual / quote
-    detail-modal.js  Modal system (native <dialog>) + entry detail/edit, series, quotes, tags
-    episodes-section.js  TV episodes: next up, seasons, alerts toggle
-    queue.js         Ranked Wishlist queue + pick-for-me
-    bulk.js          Multi-select bulk edit / delete
-    share-card.js    Share-card preview dialog
-    entry-picker.js  "From (on your shelf)" combobox for quotes
-    stats.js         Statistics overview modal
-    settings.js      API keys, proxy, sync setup, JSON/Markdown backup & restore
-    forms.js         Shared form-field builders
-    components.js    DOM helpers, segmented control, cover images
-    rating.js        Half-star rating slider + aspect ratings
+    database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD
   share/
-    card.js          Canvas share-card renderer (palette read from tokens.css)
-    layout.js        Text wrapping / fit-to-box (pure)
-    share-image.js   Native share sheet, Web Share (files) or download
-  api/
-    episode-sync.js  Episode-guide refresh + Android reminder schedule
+    card.ts          Canvas share-card renderer (palette read from tokens.css)
+    layout.ts        Text wrapping / fit-to-box (pure)
+    share-image.ts   Native share sheet, Web Share (files) or download
   export/
-    markdown.js      DB → Markdown serializer
-    import.js        Markdown parser (best-effort)
-    json.js          Lossless JSON backup / restore
-    share.js         Single-entry share
+    markdown.ts      DB → Markdown serializer
+    import.ts        Markdown parser (best-effort)
+    json.ts          Lossless JSON backup / restore
+    share.ts         Single-entry share
   platform/
-    native.js        Android shell bridge: native HTTP, RPC, events, export, theme, back
-    widget.js        Builds the home-screen widget's summary
+    native.ts        Android shell bridge: native HTTP, RPC, events, export, theme, back
+    theme.ts         Dusk/Dawn: saved choice, else the OS setting
+    widget.ts        Builds the home-screen widget's summary
   sync/
-    crypto.js        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
-    merge.js         Last-writer-wins merge with deletion tombstones (pure)
-    sync.js          Pull → merge → push orchestration, auto-sync
-  util/
-    settings.js      Settings; secrets routed to the Android Keystore
-    share-intake.js  Parses text shared into the app into prefill values
-    barcode.js       ISBN scanning (native scanner / BarcodeDetector)
-    stars.js         Half-star formatting and histogram
-    series.js        Series detection, order, next-in-series
-    queue.js         Fractional queue ranks + weighted pick
-    episodes.js      Episode progress, seasons, reminder window
-    status.js        Status labels (Wishlist / Progressing / Completed)
-    icons.js         Inlined Lucide icons
-    thumbs.js        Cover blob fetch + downscale
+    crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
+    merge.ts         Last-writer-wins merge with deletion tombstones (pure)
+    sync.ts          Pull → merge → push orchestration, auto-sync
+  util/              Pure helpers: settings, share intake, barcode, stars, series,
+                     queue ranks, episodes, bulk edits, entry matching, icons, covers
   styles/
-    tokens.css       Both theme blocks (Dusk + Dawn)
+    tokens.css       Generated from design/tokens.json (npm run tokens)
     app.css          Component styles, glow layer
-  types.d.ts         Shared data types (CatalogEntry, …) for type-checking
-  main.js            Boot, share/widget events, auto-sync, service worker
+  types.d.ts         Shared data types (CatalogEntry, …)
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
 scripts/

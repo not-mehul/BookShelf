@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildWidgetSummary } from '../src/platform/widget.js';
+import { buildWidgetSummary } from '../src/platform/widget';
 
 const e = (over) => ({
   id: Math.random().toString(36), type: 'book', title: 'T', creators: [], status: null,

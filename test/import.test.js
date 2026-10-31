@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMarkdown } from '../src/export/import.js';
+import { parseMarkdown } from '../src/export/import';
 
 const SAMPLE = `# My Catalog
 

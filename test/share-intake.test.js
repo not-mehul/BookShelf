@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSharedText } from '../src/util/share-intake.js';
+import { parseSharedText } from '../src/util/share-intake';
 
 describe('parseSharedText', () => {
   it('splits a reader-app highlight into quote, author, source and link', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSeriesFromTitle, seriesKey, seriesEntries, nextInSeries } from '../src/util/series.js';
+import { parseSeriesFromTitle, seriesKey, seriesEntries, nextInSeries } from '../src/util/series';
 
 describe('parseSeriesFromTitle', () => {
   it.each([

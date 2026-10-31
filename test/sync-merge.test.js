@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSnapshots } from '../src/sync/merge.js';
+import { mergeSnapshots } from '../src/sync/merge';
 
 const T = (n) => new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString(); // T(1) < T(2) < …
 const entry = (id, n, extra = {}) => ({ id, type: 'book', title: id, updatedAt: T(n), dateAdded: T(0), ...extra });

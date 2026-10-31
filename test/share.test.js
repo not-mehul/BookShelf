@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { entryToText } from '../src/export/share.js';
+import { entryToText } from '../src/export/share';
 
 describe('entryToText', () => {
   it('formats a quote with its citation', () => {

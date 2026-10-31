@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchEntries, findEntryByTitle } from '../src/ui/entry-picker.js';
+import { matchEntries, findEntryByTitle } from '../src/util/entry-match';
 
 const shelf = [
   { id: '1', type: 'book', title: 'Dune', creators: ['Frank Herbert'] },

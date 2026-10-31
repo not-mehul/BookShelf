@@ -1,0 +1,33 @@
+// Google Books API client. Key is optional but recommended to raise quota.
+
+import { getSetting } from '../util/settings';
+import { normalizeBook, type GoogleVolume } from './normalize';
+import type { SearchHit } from '../types';
+
+const BASE = 'https://www.googleapis.com/books/v1';
+
+export async function searchBooks(query: string, { maxResults = 20 } = {}): Promise<SearchHit[]> {
+  if (!query.trim()) return [];
+  const apiKey = await getSetting('google_books_api_key', '');
+  const params = new URLSearchParams({
+    q: query,
+    maxResults: String(maxResults),
+    printType: 'books'
+  });
+  if (apiKey) params.set('key', apiKey);
+
+  const res = await fetch(`${BASE}/volumes?${params}`);
+  if (res.status === 429 || res.status === 403) {
+    throw new Error(
+      apiKey
+        ? 'Google Books rate limit hit. Wait a moment, or check your key’s daily quota.'
+        : 'Google Books rate limit hit. Add a Google Books API key in Settings to lift the anonymous quota.'
+    );
+  }
+  if (!res.ok) {
+    throw new Error(`Google Books search failed (${res.status})`);
+  }
+  const data = await res.json();
+  const items: GoogleVolume[] = data.items || [];
+  return items.map(normalizeBook);
+}

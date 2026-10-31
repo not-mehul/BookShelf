@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { wrapLines, fitText } from '../src/share/layout.js';
+import { wrapLines, fitText } from '../src/share/layout';
 
 // Monospace-ish fake: every character is half the font size wide.
 const measure = (text, size) => text.length * size * 0.5;
