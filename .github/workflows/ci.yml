@@ -78,10 +78,12 @@ jobs:
 
       # R8 once stripped the Glance widget's UI from release builds only (see
       # proguard-rules.pro); fail if it — or the reminder worker, which
-      # WorkManager instantiates by class name — ever disappears.
-      - name: Release build kept the widget UI and reminder worker
+      # WorkManager instantiates by class name — ever disappears. MainActivity
+      # goes missing if the Kotlin sources are skipped (built-in Kotlin off).
+      - name: Release build kept the activity, widget UI and reminder worker
         run: |
           dex() { unzip -p app/build/outputs/apk/release/app-release-unsigned.apk 'classes*.dex'; }
+          dex | grep -q -a "Lapp/mehul/bookshelf/MainActivity;"
           dex | grep -q -a "Nothing in progress right now"
           dex | grep -q -a "Lapp/mehul/bookshelf/reminders/EpisodeReminderWorker;"
 
