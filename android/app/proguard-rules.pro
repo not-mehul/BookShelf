@@ -9,3 +9,11 @@
     public <init>();
     *** provideGlance(...);
 }
+
+# ML Kit (the barcode Code Scanner) finds its components by class name and
+# creates them through their no-argument constructors. R8's strict full mode
+# drops those constructors unless they are kept, and ML Kit then logs
+# NoSuchMethodException at start-up and scanning fails in release builds.
+-keep class * implements com.google.firebase.components.ComponentRegistrar {
+    public <init>();
+}
