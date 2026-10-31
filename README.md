@@ -60,7 +60,7 @@ npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
 npm run lint         # ESLint
 npm run format       # Prettier (write)
 npm run check        # lint + typecheck + test + build
-npm run android:assets  # build, then copy dist/ into the Android assets (cross-platform)
+npm run sync         # build, then copy it into the Android project (cap sync android)
 ```
 
 Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vite 8
@@ -72,20 +72,15 @@ or point `PW_CHROMIUM_PATH` at an existing Chromium.
 
 ## Android
 
-The native Android project lives in [`android-app/`](./android-app) — a standalone
-Android Studio project that bundles the web build inside a `WebView`. See
-[`android-app/README.md`](./android-app/README.md) for how to open, run, and
-build an APK.
-
-The shell is Kotlin on AGP 9.4 / Gradle 9.8, targeting Android 17 (API 37), and
-opens in Android Studio 2026.2 (Rabbit) or newer. It
-draws edge-to-edge, supports predictive back (Back closes an open modal), and
-talks to the page over a single origin-scoped message channel
-(`src/platform/native.ts` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
-CORS (restricted to the app's API hosts), file export/share, theme / back
-signalling, and RPCs for the Keystore, barcode scanner, folder sync and the
-widget. Everything is feature-detected, so the same build runs unchanged in a
-plain browser.
+The Android app is a Capacitor 8 project in [`android/`](./android), set up like
+Ledger's: Capacitor hosts the web build, and one Kotlin plugin
+(`BookShelfPlugin.kt` ↔ `src/platform/native.ts`) adds native HTTP to bypass
+WebView CORS (restricted to the app's API hosts), file export/share, predictive
+Back, and the Keystore, barcode scanner, folder sync, new-episode alerts and the
+home-screen widget. Everything is feature-detected, so the same build runs
+unchanged in a plain browser. See [`android/README.md`](./android/README.md) for
+how to build and run it, and how your data carries over from the old WebView
+shell.
 
 ## Project structure
 
@@ -122,7 +117,7 @@ src/
     json.ts          Lossless JSON backup / restore
     share.ts         Single-entry share
   platform/
-    native.ts        Android shell bridge: native HTTP, RPC, events, export, theme, back
+    native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
     theme.ts         Dusk/Dawn: saved choice, else the OS setting
     widget.ts        Builds the home-screen widget's summary
   sync/
@@ -138,12 +133,14 @@ src/
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
 scripts/
-  sync-android-assets.mjs  Copies dist/ into the Android app's assets
+  android-upgrade-test.mjs  Emulator: old shell → Capacitor upgrade keeps the data
+  android-emulator-tests.sh, android-smoke.sh  CI emulator steps
 test/                Vitest unit tests
 e2e/                 Playwright smoke tests (+ a simulated Android shell)
 proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
 index.html
-android-app/         Native Android Studio project (WebView shell)
+capacitor.config.ts  App id, web origin, SystemBars
+android/             Capacitor Android project (BookShelfPlugin and native features)
 ```
 
 ## Notes on the APIs
@@ -161,19 +158,20 @@ android-app/         Native Android Studio project (WebView shell)
   ratings, series detection, queue ranking and picks, episode progress,
   share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
 - **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
-  simulated Android shell (`e2e/fake-shell.js`), with a fixture shelf
+  simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
   (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
   entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
   stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
-- **Android (JVM)** — bridge host allowlist, filename sanitizing and MIME types,
+- **Android (JVM)** — native HTTP host allowlist, filename sanitizing and MIME types,
   Keystore name validation, the widget summary contract, and which new-episode
   alerts are due.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
 
-- **Web** — lint, typecheck, unit tests, build, and a check that the committed Android assets match a fresh build.
+- **Web** — lint, typecheck, unit tests, build.
 - **E2E** — Playwright smoke tests (report uploaded on failure).
-- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the widget UI and the reminder worker.
+- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the plugin, widget UI and reminder worker.
+- **Android emulator** (API 36) — installs the old WebView shell, upgrades it in place to this build and checks the shelf, settings and saved keys survived; then a launch smoke test of the minified release build.
 
 ## Design system
 

@@ -1,6 +1,6 @@
 {
   "name": "bookshelf",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Personal catalog for books, movies, TV, and quotes — Editorial Dusk & Dawn",
@@ -17,15 +17,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "node design/build-tokens.mjs --check && npm run lint && npm run typecheck && npm run test && npm run build",
-    "android:assets": "vite build && node scripts/sync-android-assets.mjs",
+    "sync": "npm run build && cap sync android",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test:e2e": "playwright test",
     "tokens": "node design/build-tokens.mjs --css src/styles/tokens.css --fonts src/styles/fonts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
     "dexie": "^4.4.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",

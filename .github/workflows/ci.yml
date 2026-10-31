@@ -27,12 +27,6 @@ jobs:
       - run: npm run test
       - run: npm run build
 
-      - name: Bundled Android assets match the web build
-        run: |
-          node scripts/sync-android-assets.mjs
-          git diff --exit-code -- android-app/app/src/main/assets \
-            || (echo "::error::android-app assets are stale — run 'npm run android:assets' and commit." && exit 1)
-
   e2e:
     name: E2E — Playwright smoke tests (phone)
     runs-on: ubuntu-latest
@@ -59,11 +53,17 @@ jobs:
   android:
     name: Android — unit tests, lint, build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: android-app
+    env:
+      # The last commit with the hand-built WebView shell. The emulator job
+      # installs it first and upgrades it in place to this build.
+      OLD_SHELL_REF: 51e1079495df40a437b729644050de5174df07c1
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
 
       - uses: actions/setup-java@v6
         with:
@@ -74,21 +74,103 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+      - run: npm ci
+      - run: npm run sync
+
+      - name: Unit tests, lint, build
+        working-directory: android
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 
       # R8 once stripped the Glance widget's UI from release builds only (see
       # proguard-rules.pro); fail if it — or the reminder worker, which
       # WorkManager instantiates by class name — ever disappears. MainActivity
-      # goes missing if the Kotlin sources are skipped (built-in Kotlin off).
-      - name: Release build kept the activity, widget UI and reminder worker
+      # and the plugin go missing if the Kotlin sources are skipped (built-in
+      # Kotlin off).
+      - name: Release build kept the activity, plugin, widget UI and reminder worker
+        working-directory: android
         run: |
           dex() { unzip -p app/build/outputs/apk/release/app-release-unsigned.apk 'classes*.dex'; }
           dex | grep -q -a "Lapp/mehul/bookshelf/MainActivity;"
+          dex | grep -q -a "Lapp/mehul/bookshelf/BookShelfPlugin;"
           dex | grep -q -a "Nothing in progress right now"
           dex | grep -q -a "Lapp/mehul/bookshelf/reminders/EpisodeReminderWorker;"
+
+      - name: Sign the release APK with the debug key for the smoke test
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" sign --ks ~/.android/debug.keystore --ks-pass pass:android \
+            --out android/app/build/outputs/apk/release/app-release-smoke.apk \
+            android/app/build/outputs/apk/release/app-release-unsigned.apk
+
+      # Built in the same job, so it carries the same debug key as the new
+      # debug build and can be upgraded in place.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.OLD_SHELL_REF }}
+          path: old-shell
+
+      - name: Build the old shell
+        working-directory: old-shell/android-app
+        run: ./gradlew assembleDebug
+
+      - name: Collect APKs
+        run: |
+          mkdir -p apks/debug apks/release apks/old-shell
+          cp android/app/build/outputs/apk/debug/app-debug.apk apks/debug/
+          cp android/app/build/outputs/apk/release/app-release-smoke.apk apks/release/
+          cp old-shell/android-app/app/build/outputs/apk/debug/app-debug.apk apks/old-shell/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bookshelf-apks
+          path: apks/
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-reports
-          path: android-app/app/build/reports/
+          path: android/app/build/reports/
+
+  android-emulator:
+    name: Android emulator — upgrade in place, release smoke test
+    runs-on: ubuntu-latest
+    needs: android
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Only for Playwright's Android API (drives the WebView over adb); no
+      # browsers are needed.
+      - run: npm ci
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: bookshelf-apks
+          path: apks
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          disk-size: 6G
+          disable-animations: true
+          # Start adb before the emulator; if the emulator comes up first it can
+          # stay "offline" for the whole boot timeout.
+          pre-emulator-launch-script: adb start-server
+          emulator-boot-timeout: 420
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none
+          script: scripts/android-emulator-tests.sh apks

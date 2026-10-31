@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window backgrounds matching the web app's Dusk / Dawn themes, so the
+         frame shown before the WebView paints never flashes a foreign colour. -->
+    <color name="dusk_bg">#0F0D0B</color>
+    <color name="dawn_bg">#F3ECE0</color>
+    <!-- Follows the system theme: Dawn here, Dusk in values-night. -->
+    <color name="app_surface">@color/dawn_bg</color>
+    <color name="ic_launcher_background">#14110E</color>
+</resources>

@@ -10,10 +10,9 @@ function memoryStorage() {
   return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
 }
 
-// Answers `call` RPCs the way NativeBridge.kt / FolderSync.kt do.
+// Answers plugin calls the way BookShelfPlugin.kt / FolderSync.kt do.
 function fakeShell(folder) {
   const keystore = new Map();
-  let listener;
   const methods = {
     secureGet: ({ key }) => keystore.get(key) ?? null,
     secureSet: ({ key, value }) => keystore.set(key, value) && true,
@@ -26,17 +25,17 @@ function fakeShell(folder) {
       return true;
     }
   };
-  const channel = {
-    postMessage(json) {
-      const msg = JSON.parse(json);
-      if (msg.type !== 'call') return;
-      const value = methods[msg.method](msg.params);
-      queueMicrotask(() => listener({ data: JSON.stringify({ type: 'result', id: msg.id, ok: true, value }) }));
+  return {
+    call: async (method, params) => {
+      const value = methods[method](params);
+      return value == null ? {} : { value };
     },
-    addEventListener: (_t, cb) => (listener = cb)
+    on: () => {},
+    setBarStyle: () => {}
   };
-  return { BookShelfNative: channel, fetch: vi.fn(), location: { origin: 'https://appassets.androidwebview.com' } };
 }
+
+const win = () => ({ fetch: vi.fn(), location: { origin: 'https://appassets.androidwebview.com' } });
 
 async function device(folder, passphrase = 'shared secret') {
   vi.resetModules();
@@ -45,7 +44,7 @@ async function device(folder, passphrase = 'shared secret') {
   // with the current dependencies, and an open db keeps its connection).
   (await import('dexie')).default.dependencies.indexedDB = new IDBFactory();
   globalThis.localStorage = memoryStorage();
-  (await import('../src/platform/native.js')).installNativeBridge(fakeShell(folder));
+  (await import('../src/platform/native.js')).installNativeBridge(win(), fakeShell(folder));
   const db = await import('../src/db/database.js');
   await (await import('../src/util/settings.js')).setSetting('sync_passphrase', passphrase);
   const sync = await import('../src/sync/sync.js');

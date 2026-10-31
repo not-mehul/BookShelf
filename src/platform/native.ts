@@ -1,29 +1,60 @@
-// Client for the native Android shell's message bridge.
+// Client for the native Android shell: a Capacitor app whose BookShelf
+// plugin (android/.../BookShelfPlugin.kt) carries the app's native features.
 //
-// The shell (android-app/.../NativeBridge.kt) injects `window.BookShelfNative`
-// via WebViewCompat.addWebMessageListener — only into this app's own origin.
-// Messages are JSON strings in both directions:
-//   web → native: http, call (generic RPC), export, theme, backHandler, ready
-//   native → web: http / result (replies, matched by id), back, event
+//   web → native: plugin methods (http, secure*, sync*, scanBarcode, …), each
+//                 resolving { value }
+//   native → web: plugin events: shared, openAdd, openEntry, back. Capacitor
+//                 keeps them until a listener is added, so nothing that
+//                 arrives during a cold start is lost.
 //
 // Everything here is a no-op in a plain browser, so the same build runs in
 // both places. Call installNativeBridge() once, before the app boots.
 
-export interface NativeChannel {
-  postMessage: (message: string) => void;
-  addEventListener: (type: 'message', listener: (ev: { data: string }) => void) => void;
+import { Capacitor, registerPlugin, SystemBars, SystemBarsStyle } from '@capacitor/core';
+
+/** The calls this module makes on the shell (injectable for tests). */
+export interface NativeShell {
+  /** Invoke a BookShelf plugin method. */
+  call: (method: string, params: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  /** Subscribe to a BookShelf plugin event. */
+  on: (event: string, handler: EventHandler) => void;
+  /** Status / navigation bar icon colours for the current theme. */
+  setBarStyle: (mode: 'light' | 'dark') => void;
 }
-export type Pending = { resolve: (value: unknown) => void; reject: (reason: Error) => void };
 /** Event payloads are JSON from the shell; handlers check what they use. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type EventHandler = (data: any) => void;
-/** The window, plus the channel the shell injects. */
-type ShellWindow = Window & typeof globalThis & { [CHANNEL_NAME]?: NativeChannel };
 
-const CHANNEL_NAME = 'BookShelfNative' as const;
+/** What the plugin's `http` method resolves with (see NativeHttp.kt). */
+interface HttpReply {
+  status?: number;
+  headers?: Record<string, string>;
+  body?: string;
+  error?: string;
+}
+
+type PluginMethods = Record<string, (params: Record<string, unknown>) => Promise<Record<string, unknown>>>;
+interface BookShelfPlugin {
+  addListener: (event: string, handler: EventHandler) => Promise<unknown>;
+}
+
+/** The real shell, or null outside the Android app. */
+function capacitorShell(): NativeShell | null {
+  if (!Capacitor.isNativePlatform()) return null;
+  const plugin = registerPlugin<BookShelfPlugin>('BookShelf');
+  const methods = plugin as unknown as PluginMethods;
+  return {
+    call: (method, params) => methods[method]!(params),
+    on: (event, handler) => void plugin.addListener(event, handler),
+    setBarStyle: (mode) =>
+      void SystemBars.setStyle({
+        style: mode === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light
+      }).catch((err: unknown) => console.warn('Could not set the system bar style', err))
+  };
+}
 
 // Hosts the shell's native HTTP will fetch (keep in sync with
-// ALLOWED_HOST_SUFFIXES in NativeBridge.kt). Everything else — e.g. a
+// ALLOWED_HOST_SUFFIXES in NativeHttp.kt). Everything else — e.g. a
 // self-hosted TheTVDB proxy — uses the WebView's own, CORS-checked fetch.
 const NATIVE_HOST_SUFFIXES = [
   'thetvdb.com',
@@ -46,103 +77,57 @@ export function usesNativeHttp(url: string) {
     parsed.protocol === 'https:' && NATIVE_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`))
   );
 }
-let channel: NativeChannel | null = null;
+
+let shell: NativeShell | null = null;
 /** Back handlers, innermost last (e.g. a modal over selection mode). */
 const backStack: (() => void)[] = [];
-const pending: Map<number, Pending> = new Map();
-const eventHandlers: Map<string, EventHandler> = new Map();
-let nextId = 0;
 
 export function isNativeShell() {
-  return channel !== null;
+  return shell !== null;
 }
 
 /**
- * Wires up the channel and routes the app's API calls through native HTTP
+ * Wires up the shell and routes the app's API calls through native HTTP
  * (TheTVDB and friends don't send CORS headers a WebView would accept).
  * Returns true when running inside the shell.
  * @param [win] The window to install into (injectable for tests).
+ * @param [native] The shell (injectable for tests); defaults to Capacitor's.
  */
-export function installNativeBridge(win: ShellWindow = window) {
-  if (channel) return true;
-  const ch = win[CHANNEL_NAME];
-  if (!ch || typeof ch.postMessage !== 'function') return false;
-  channel = ch;
-  ch.addEventListener('message', (ev) => onMessage(ev.data));
+export function installNativeBridge(
+  win: Pick<Window, 'fetch'> = window,
+  native: NativeShell | null = capacitorShell()
+) {
+  if (shell) return true;
+  if (!native) return false;
+  shell = native;
+  native.on('back', () => backStack.at(-1)?.());
   const webFetch: typeof fetch = win.fetch.bind(win);
   win.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input?.url || '';
-    return usesNativeHttp(url) ? nativeHttp(url, init || {}) : webFetch(input, init);
+    return usesNativeHttp(url) ? nativeHttp(native, url, init || {}) : webFetch(input, init);
   };
   return true;
 }
 
-function post(message: Record<string, unknown>) {
-  channel?.postMessage(JSON.stringify(message));
-}
-
-function onMessage(data: string) {
-  let msg;
-  try {
-    msg = JSON.parse(data);
-  } catch {
-    return;
-  }
-  switch (msg.type) {
-    case 'http': {
-      const p = takePending(msg.id);
-      if (!p) return;
-      if (msg.error || !msg.status) {
-        // Mirror fetch(): network-level failures reject with a TypeError.
-        p.reject(new TypeError(msg.error || 'Network request failed'));
-        return;
-      }
-      const noBody = msg.status === 204 || msg.status === 205 || msg.status === 304;
-      p.resolve(
-        new Response(noBody ? null : base64ToBytes(msg.body), {
-          status: msg.status,
-          headers: msg.headers || {}
-        })
-      );
-      break;
-    }
-    case 'result': {
-      const p = takePending(msg.id);
-      if (!p) return;
-      if (msg.ok) p.resolve(msg.value ?? null);
-      else p.reject(new Error(msg.error || 'Native call failed'));
-      break;
-    }
-    case 'back':
-      backStack.at(-1)?.();
-      break;
-    case 'event':
-      eventHandlers.get(msg.name)?.(msg.data);
-      break;
-  }
-}
-
-function takePending(id: number) {
-  const p = pending.get(id);
-  pending.delete(id);
-  return p;
-}
-function nativeHttp(url: string, init: RequestInit): Promise<Response> {
+async function nativeHttp(native: NativeShell, url: string, init: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {};
   new Headers(init.headers || {}).forEach((value, key) => {
     headers[key] = value;
   });
-  return new Promise<Response>((resolve, reject) => {
-    const id = ++nextId;
-    pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
-    post({
-      type: 'http',
-      id,
-      url,
-      method: (init.method || 'GET').toUpperCase(),
-      headers,
-      body: init.body != null ? String(init.body) : null
-    });
+  const reply = (await native.call('http', {
+    url,
+    method: (init.method || 'GET').toUpperCase(),
+    headers,
+    body: init.body != null ? String(init.body) : null
+  })) as HttpReply;
+  if (reply.error || !reply.status) {
+    // Mirror fetch(): network-level failures reject with a TypeError.
+    throw new TypeError(reply.error || 'Network request failed');
+  }
+  const noBody = reply.status === 204 || reply.status === 205 || reply.status === 304;
+  return new Response(noBody ? null : base64ToBytes(reply.body), {
+    status: reply.status,
+    headers: reply.headers || {}
   });
 }
 
@@ -157,42 +142,43 @@ function base64ToBytes(b64: string | null | undefined) {
 /**
  * Call a native method and await its result. Rejects outside the shell.
  * Methods: secureGet/secureSet/secureRemove, scanBarcode, syncStatus,
- * syncPickFolder, syncForget, syncRead, syncWrite, widgetUpdate.
+ * syncPickFolder, syncForget, syncRead, syncWrite, episodeReminders,
+ * requestNotificationPermission, shareFile, widgetUpdate.
  */
-export function callNative<T = unknown>(method: string, params: Record<string, unknown> = {}): Promise<T> {
-  if (!channel) return Promise.reject(new Error('Not running in the Android app'));
-  return new Promise<T>((resolve, reject) => {
-    const id = ++nextId;
-    pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
-    post({ type: 'call', id, method, params });
-  });
+export async function callNative<T = unknown>(
+  method: string,
+  params: Record<string, unknown> = {}
+): Promise<T> {
+  if (!shell) throw new Error('Not running in the Android app');
+  const result = await shell.call(method, params);
+  return (result.value ?? null) as T;
 }
 
 /**
  * Handle an event pushed by the shell (e.g. 'shared' text, 'openAdd' from
- * the widget). The shell queues events until notifyNativeReady().
+ * the widget). Events that arrived before this call are delivered now.
  */
 export function onNativeEvent(name: string, handler: EventHandler) {
-  eventHandlers.set(name, handler);
-}
-
-/** Tell the shell the page has booted and can receive queued events. */
-export function notifyNativeReady() {
-  post({ type: 'ready' });
+  shell?.on(name, handler);
 }
 
 /**
- * Hand a generated file to the system share sheet.
+ * Hand a generated file to the system share sheet. The shell shows a toast
+ * if that fails.
  */
 export function nativeExport(filename: string, text: string) {
-  post({ type: 'export', filename, text });
+  shell?.call('export', { filename, text }).catch((err: unknown) => console.warn('Export failed', err));
 }
 
 /**
  * Keep the system-bar icon colours in step with Dusk / Dawn.
  */
 export function setNativeTheme(mode: 'light' | 'dark') {
-  post({ type: 'theme', mode });
+  shell?.setBarStyle(mode);
+}
+
+function setBackHandler(enabled: boolean) {
+  shell?.call('setBackHandler', { enabled }).catch((err: unknown) => console.warn('Back handler', err));
 }
 
 /**
@@ -202,13 +188,13 @@ export function setNativeTheme(mode: 'light' | 'dark') {
  */
 export function pushBackHandler(handler: () => void): () => void {
   backStack.push(handler);
-  post({ type: 'backHandler', enabled: true });
+  setBackHandler(true);
   let released = false;
   return () => {
     if (released) return;
     released = true;
     const i = backStack.lastIndexOf(handler);
     if (i >= 0) backStack.splice(i, 1);
-    post({ type: 'backHandler', enabled: backStack.length > 0 });
+    setBackHandler(backStack.length > 0);
   };
 }

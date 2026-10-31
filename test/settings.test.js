@@ -11,27 +11,23 @@ function memoryStorage() {
   };
 }
 
-// Fake shell whose Keystore is a Map, answering `call` RPCs like NativeBridge.kt.
+// Fake shell whose Keystore is a Map, answering plugin calls like BookShelfPlugin.kt.
 function fakeShellWithKeystore() {
   const keystore = new Map();
   const calls = [];
-  let listener = null;
-  const channel = {
-    postMessage(json) {
-      const msg = JSON.parse(json);
-      if (msg.type !== 'call') return;
-      calls.push(msg.method);
-      const { key, value } = msg.params;
-      let result = true;
-      if (msg.method === 'secureGet') result = keystore.has(key) ? keystore.get(key) : null;
-      if (msg.method === 'secureSet') keystore.set(key, value);
-      if (msg.method === 'secureRemove') keystore.delete(key);
-      queueMicrotask(() => listener({ data: JSON.stringify({ type: 'result', id: msg.id, ok: true, value: result }) }));
+  const shell = {
+    call: async (method, { key, value }) => {
+      calls.push(method);
+      if (method === 'secureGet') return keystore.has(key) ? { value: keystore.get(key) } : {};
+      if (method === 'secureSet') keystore.set(key, value);
+      if (method === 'secureRemove') keystore.delete(key);
+      return { value: true };
     },
-    addEventListener: (_type, cb) => (listener = cb)
+    on: () => {},
+    setBarStyle: () => {}
   };
-  const win = { BookShelfNative: channel, fetch: vi.fn(), location: { origin: 'https://appassets.androidwebview.com' } };
-  return { win, keystore, calls };
+  const win = { fetch: vi.fn(), location: { origin: 'https://appassets.androidwebview.com' } };
+  return { win, shell, keystore, calls };
 }
 
 let settings, native;
@@ -55,7 +51,7 @@ describe('settings in a plain browser', () => {
 describe('settings inside the Android shell', () => {
   it('keeps secrets in the Keystore and ordinary settings in localStorage', async () => {
     const shell = fakeShellWithKeystore();
-    native.installNativeBridge(shell.win);
+    native.installNativeBridge(shell.win, shell.shell);
 
     await settings.setSetting('tvdb_api_key', 'secret');
     await settings.setSetting('theme', 'dark');
@@ -73,7 +69,7 @@ describe('settings inside the Android shell', () => {
     localStorage.setItem('bookshelf:google_books_api_key', 'legacy');
     localStorage.setItem('bookshelf:theme', 'light');
     const shell = fakeShellWithKeystore();
-    native.installNativeBridge(shell.win);
+    native.installNativeBridge(shell.win, shell.shell);
 
     expect(await settings.getSetting('google_books_api_key')).toBe('legacy');
     expect(shell.keystore.get('google_books_api_key')).toBe('legacy');
@@ -87,7 +83,7 @@ describe('settings inside the Android shell', () => {
 
   it('caches Keystore reads for the session', async () => {
     const shell = fakeShellWithKeystore();
-    native.installNativeBridge(shell.win);
+    native.installNativeBridge(shell.win, shell.shell);
     shell.keystore.set('tvdb_token', 't');
     await settings.getSetting('tvdb_token');
     await settings.getSetting('tvdb_token');
