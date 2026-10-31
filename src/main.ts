@@ -5,7 +5,7 @@
 import { mount } from 'svelte';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
-import { installNativeBridge, isNativeShell, notifyNativeReady, onNativeEvent } from './platform/native';
+import { installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme';
 import { shelf } from './state/shelf.svelte';
 import { ui } from './state/ui.svelte';
@@ -28,6 +28,7 @@ async function boot(): Promise<void> {
   target.replaceChildren();
   mount(App, { target });
 
+  // Events the shell kept during startup arrive as each listener is added.
   // Text shared from another app (Android share sheet) …
   onNativeEvent('shared', (data) => openShared(data || {}));
   // … the home-screen widget's "+" button …
@@ -50,9 +51,6 @@ async function boot(): Promise<void> {
   shelf.startSync();
   // Refresh episode guides of shows being followed (quietly; needs TheTVDB).
   void refreshFollowedGuides(() => void shelf.refresh());
-
-  // Booted: the shell may now deliver events it queued during startup.
-  notifyNativeReady();
 }
 
 boot().catch((err) => {

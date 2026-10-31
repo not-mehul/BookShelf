@@ -1,16 +1,30 @@
 // A stand-in for the Android shell, injected with page.addInitScript() before
-// the app loads. It mimics NativeBridge.kt: records every message in
-// window.__sent, answers `call` RPCs (Keystore, scanner, sync, widget) and
-// `http` requests, and lets tests push native events.
+// the app loads. It plays the part of Capacitor's native layer: it makes the
+// page look like an Android Capacitor app (window.androidBridge, plugin
+// headers) and answers BookShelf plugin calls the way BookShelfPlugin.kt does.
+//
+// Every call is recorded in window.__sent in a simple shape tests can match:
+//   { type: 'call', method, params }   BookShelf plugin methods
+//   { type: 'http', url, method, … }   native HTTP
+//   { type: 'backHandler', enabled }   claiming Android Back
+//   { type: 'theme', mode }            SystemBars.setStyle
+//   { type: 'export', filename, text } Markdown / JSON exports
+//   { type: 'listen', event }          the page subscribing to an event
+// Events emitted before the page subscribes are kept and delivered on
+// subscribe, as Capacitor does for BookShelfPlugin's events.
 //
 // Runs inside the page, so it must be self-contained (no imports/closures).
-export function installFakeShell({ scanResult = '9780441172719', syncFolder = null, notificationsAllowed = true } = {}) {
+export function installFakeShell({
+  scanResult = '9780441172719',
+  syncFolder = null,
+  notificationsAllowed = true,
+  // [name, data] pairs the shell emits before the page loads (a cold start).
+  pendingEvents = []
+} = {}) {
   const keystore = {};
   let folder = syncFolder;
   window.__sent = [];
   window.__keystore = keystore;
-  let listener = null;
-  const reply = (msg) => setTimeout(() => listener?.({ data: JSON.stringify(msg) }), 0);
 
   const methods = {
     secureGet: ({ key }) => (key in keystore ? keystore[key] : null),
@@ -27,28 +41,72 @@ export function installFakeShell({ scanResult = '9780441172719', syncFolder = nu
     episodeReminders: () => true,
     requestNotificationPermission: () => notificationsAllowed
   };
+  const special = ['http', 'setBackHandler', 'export'];
 
-  window.BookShelfNative = {
-    addEventListener: (type, cb) => {
-      if (type === 'message') listener = cb;
+  const listeners = {};
+  const retained = {};
+  let nextCallbackId = 0;
+
+  const promise = (method) => ({ name: method, rtype: 'promise' });
+  window.androidBridge = { postMessage() {} };
+  window.Capacitor = {
+    PluginHeaders: [
+      {
+        name: 'BookShelf',
+        methods: [...Object.keys(methods), ...special, 'removeListener'].map(promise).concat({ name: 'addListener', rtype: 'callback' })
+      },
+      { name: 'SystemBars', methods: ['setStyle', 'show', 'hide', 'setAnimation'].map(promise) }
+    ],
+
+    nativePromise(plugin, method, options = {}) {
+      return new Promise((resolve, reject) =>
+        setTimeout(() => {
+          if (plugin === 'SystemBars') {
+            if (method === 'setStyle') window.__sent.push({ type: 'theme', mode: options.style === 'DARK' ? 'dark' : 'light' });
+            return resolve(undefined);
+          }
+          if (method === 'removeListener') return resolve(undefined);
+          if (method === 'http') {
+            window.__sent.push({ type: 'http', ...options });
+            // Empty search results for any API (Google Books, Open Library, TheTVDB).
+            return resolve({ status: 200, headers: { 'content-type': 'application/json' }, body: btoa('{"items":[],"docs":[],"data":[]}') });
+          }
+          if (method === 'setBackHandler') {
+            window.__sent.push({ type: 'backHandler', enabled: options.enabled });
+            return resolve({});
+          }
+          if (method === 'export') {
+            window.__sent.push({ type: 'export', ...options });
+            return resolve({ value: true });
+          }
+          window.__sent.push({ type: 'call', method, params: options });
+          const fn = methods[method];
+          if (!fn) return reject(new Error(`Unknown method: ${method}`));
+          const value = fn(options);
+          // Like JSObject.put(key, null): an absent value, not null.
+          resolve(value == null ? {} : { value });
+        }, 0)
+      );
     },
-    postMessage(json) {
-      const msg = JSON.parse(json);
-      window.__sent.push(msg);
-      if (msg.type === 'call') {
-        const fn = methods[msg.method];
-        reply(fn
-          ? { type: 'result', id: msg.id, ok: true, value: fn(msg.params || {}) }
-          : { type: 'result', id: msg.id, ok: false, error: `Unknown method: ${msg.method}` });
-      } else if (msg.type === 'http') {
-        // Empty search results for any API (Google Books, Open Library, TheTVDB).
-        reply({ type: 'http', id: msg.id, status: 200, headers: { 'content-type': 'application/json' },
-          body: btoa('{"items":[],"docs":[],"data":[]}') });
+
+    nativeCallback(plugin, method, options, callback) {
+      const id = String(++nextCallbackId);
+      if (plugin === 'BookShelf' && method === 'addListener') {
+        const event = options.eventName;
+        window.__sent.push({ type: 'listen', event });
+        listeners[event] = callback;
+        for (const data of retained[event] || []) setTimeout(() => callback(data), 0);
+        delete retained[event];
       }
+      return id;
     }
   };
 
-  // Test helpers: push a native → page message.
-  window.__nativeEmit = (name, data) => listener?.({ data: JSON.stringify({ type: 'event', name, data }) });
-  window.__nativeBack = () => listener?.({ data: JSON.stringify({ type: 'back' }) });
+  // Test helpers: push a native → page event (kept until the page listens).
+  window.__nativeEmit = (name, data) => {
+    if (listeners[name]) listeners[name](data ?? {});
+    else (retained[name] ||= []).push(data ?? {});
+  };
+  window.__nativeBack = () => window.__nativeEmit('back', {});
+  for (const [name, data] of pendingEvents) window.__nativeEmit(name, data);
 }

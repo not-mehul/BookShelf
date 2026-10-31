@@ -1,5 +1,5 @@
-// The app as it runs inside the Android shell, with the native side simulated
-// by e2e/fake-shell.js (same message protocol as NativeBridge.kt).
+// The app as it runs inside the Android shell, with Capacitor's native layer
+// and the BookShelf plugin simulated by e2e/fake-shell.js.
 import { test, expect } from '@playwright/test';
 import { installFakeShell } from './fake-shell.js';
 
@@ -11,12 +11,15 @@ async function boot(page, options = {}) {
   await page.addInitScript(installFakeShell, options);
   await page.goto('/index.html');
   await expect(page.locator('.fab')).toBeVisible();
-  await expect.poll(() => lastOf(page, 'ready')).toBeTruthy();
+  // Booted once it has subscribed to the shell's events.
+  await expect.poll(async () => (await sent(page)).filter((m) => m.type === 'listen').length).toBe(4);
 }
 
-test('boot: reports theme, announces ready, no service worker', async ({ page }) => {
+test('boot: reports theme, listens for shell events, no service worker', async ({ page }) => {
   await boot(page);
   expect(await lastOf(page, 'theme')).toEqual({ type: 'theme', mode: 'dark' });
+  const events = (await sent(page)).filter((m) => m.type === 'listen').map((m) => m.event);
+  expect(events.sort()).toEqual(['back', 'openAdd', 'openEntry', 'shared']);
   expect(await page.evaluate(async () => !(await navigator.serviceWorker?.getRegistration()))).toBe(true);
 });
 
@@ -24,11 +27,11 @@ test('system-bar insets pad the shell and clear the FAB', async ({ page }) => {
   await boot(page);
   const padTop = () => page.locator('.app-shell').evaluate((el) => parseFloat(getComputedStyle(el).paddingTop));
   const before = await padTop();
-  // What NativeBridge.updateInsets() injects for a 40px status bar / 24px nav bar.
+  // What Capacitor's SystemBars injects for a 40px status bar / 24px nav bar.
   await page.evaluate(() => {
     const s = document.documentElement.style;
-    s.setProperty('--inset-top', '40px');
-    s.setProperty('--inset-bottom', '24px');
+    s.setProperty('--safe-area-inset-top', '40px');
+    s.setProperty('--safe-area-inset-bottom', '24px');
   });
   expect((await padTop()) - before).toBe(40);
   await expect(page.locator('.fab')).toHaveCSS('bottom', '48px');
@@ -64,6 +67,15 @@ test('text shared from another app opens a prefilled quote', async ({ page }) =>
   await expect(page.locator('#q-text')).toHaveValue('Fear is the mind-killer.');
   await expect(page.locator('#q-author')).toHaveValue('Frank Herbert');
   await expect(page.locator('#q-source')).toHaveValue('Dune');
+});
+
+test('text shared while the app was starting is not lost', async ({ page }) => {
+  // Emitted before the page subscribes (a cold start from the share sheet);
+  // the shell keeps it until the listener is added.
+  await boot(page, {
+    pendingEvents: [['shared', { text: 'So it goes.\nfrom Slaughterhouse-Five by Kurt Vonnegut', subject: '' }]]
+  });
+  await expect(page.locator('dialog[open] .shared-preview-text')).toHaveText('So it goes.');
 });
 
 test('widget "+" opens the add flow', async ({ page }) => {

@@ -18,5 +18,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "proxy/src/**/*.js", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "proxy/src/**/*.js", "vite.config.ts", "capacitor.config.ts"]
 }
