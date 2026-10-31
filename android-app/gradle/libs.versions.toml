@@ -1,5 +1,5 @@
 [versions]
-# 9.4.x: the newest AGP supported by Android Studio 2026.2 (Rabbit).
+# Upgrade together with Android Studio, which only syncs AGP versions it knows.
 agp = "9.5.0"
 androidx-activity = "1.13.0"
 androidx-core = "1.19.1"
