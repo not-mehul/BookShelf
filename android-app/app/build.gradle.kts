@@ -35,6 +35,9 @@ android {
 
     lint {
         abortOnError = true
+        // AGP is pinned to the newest version Android Studio 2026.2 supports;
+        // upgrade it together with Android Studio (the Upgrade Assistant flags it).
+        disable += "AndroidGradlePluginVersion"
     }
 }
 

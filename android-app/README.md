@@ -7,11 +7,19 @@ the built web app is bundled in `app/src/main/assets/` and served inside a
 
 ## Open & run
 
-1. Open a current **Android Studio** release (one that supports AGP 9.5).
+1. Open **Android Studio 2026.2 (Rabbit)** or newer — the project uses AGP 9.4,
+   the newest version that release supports.
 2. **File → Open…** and select this folder (`android-app`).
 3. Let Gradle sync. Android Studio writes `local.properties` with your SDK path
    and offers to install SDK Platform 37 if it is missing — accept.
 4. Pick a device or emulator and press **Run** (▶).
+
+> **Sync fails with "Plugin … was not found" or "Could not resolve …"?** Gradle
+> is probably in **offline mode**, which can only use dependencies already in
+> your local cache. Turn it off — Gradle tool window → the *Toggle Offline Mode*
+> button (or *Settings → Build, Execution, Deployment → Gradle*) — and sync
+> again (*File → Sync Project with Gradle Files*). The first sync downloads
+> everything; offline mode works afterwards.
 
 From the command line (JDK 17+; Gradle provisions JDK 21 for its daemon):
 
@@ -87,7 +95,7 @@ CI fails if the committed assets don't match a fresh build.
 | Application ID         | `app.mehul.bookshelf`                  |
 | minSdk                 | 26 (Android 8.0)                       |
 | compileSdk / targetSdk | 37 (Android 17)                        |
-| AGP                    | 9.5 (built-in Kotlin, new DSL)         |
+| AGP                    | 9.4 (built-in Kotlin, new DSL)         |
 | Kotlin                 | 2.4                                    |
 | Gradle                 | 9.8 (configuration cache on)           |
 | UI extras              | Jetpack Glance 1.2 (Compose compiler plugin), Play services Code Scanner |

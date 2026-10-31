@@ -76,7 +76,8 @@ Android Studio project that bundles the web build inside a `WebView`. See
 [`android-app/README.md`](./android-app/README.md) for how to open, run, and
 build an APK.
 
-The shell is Kotlin on AGP 9.5 / Gradle 9.8, targeting Android 17 (API 37). It
+The shell is Kotlin on AGP 9.4 / Gradle 9.8, targeting Android 17 (API 37), and
+opens in Android Studio 2026.2 (Rabbit) or newer. It
 draws edge-to-edge, supports predictive back (Back closes an open modal), and
 talks to the page over a single origin-scoped message channel
 (`src/platform/native.js` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
