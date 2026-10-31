@@ -16,10 +16,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "check": "node design/build-tokens.mjs --check && npm run lint && npm run typecheck && npm run test && npm run build",
     "android:assets": "vite build && node scripts/sync-android-assets.mjs",
     "typecheck": "tsc -p .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "tokens": "node design/build-tokens.mjs --css src/styles/tokens.css --fonts src/styles/fonts"
   },
   "dependencies": {
     "dexie": "^4.4.7"

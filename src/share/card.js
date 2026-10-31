@@ -16,7 +16,7 @@ import { statusLabel } from '../util/status.js';
  * @property {boolean} [includeNotes]
  */
 
-const SERIF = '"Iowan Old Style", "Apple Garamond", Baskerville, Georgia, "Noto Serif", serif';
+const SERIF = 'Fraunces, "Iowan Old Style", "Apple Garamond", Baskerville, Georgia, "Noto Serif", serif';
 const MONO = 'ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace';
 const TYPE_LABEL = { book: 'Book', movie: 'Film', tv: 'TV Show', quote: 'Quote' };
 

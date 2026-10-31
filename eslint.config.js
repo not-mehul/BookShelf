@@ -29,7 +29,7 @@ export default [
     languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.serviceworker } }
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'design/**/*.mjs'],
     languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node } }
   },
   {
