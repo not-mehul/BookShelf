@@ -8,7 +8,8 @@ import { getSetting, setSetting } from '../util/settings.js';
 import { isNativeShell } from '../platform/native.js';
 import {
   normalizeTvdbSearchHit,
-  enrichFromTvdbDetail
+  enrichFromTvdbDetail,
+  normalizeEpisode
 } from './normalize.js';
 
 const BASE = 'https://api4.thetvdb.com/v4';
@@ -137,4 +138,44 @@ export async function enrichEntry(entry) {
   } catch {
     return entry;
   }
+}
+
+const EPISODE_PAGE_SIZE = 500; // TheTVDB's page size for episode lists
+const MAX_EPISODE_PAGES = 20;
+
+/**
+ * Collect every page of an episode list. Follows `links.next`; if a response
+ * has no links, a full page is taken to mean there may be more.
+ * @param {(page: number) => Promise<any>} fetchPage
+ */
+export async function collectEpisodePages(fetchPage) {
+  /** @type {any[]} */
+  const episodes = [];
+  /** @type {any} */
+  let series = null;
+  for (let page = 0; page < MAX_EPISODE_PAGES; page++) {
+    const json = await fetchPage(page);
+    const batch = json?.data?.episodes || [];
+    series ??= json?.data?.series || null;
+    episodes.push(...batch);
+    const more = json?.links ? Boolean(json.links.next) : batch.length >= EPISODE_PAGE_SIZE;
+    if (!more || !batch.length) break;
+  }
+  return { episodes, series };
+}
+
+/**
+ * Full episode guide for a TheTVDB series (aired order).
+ * @param {string} seriesId
+ * @returns {Promise<import('../types').EpisodeGuide>}
+ */
+export async function getEpisodeGuide(seriesId) {
+  const { episodes, series } = await collectEpisodePages((page) =>
+    tvdbFetch(`/series/${encodeURIComponent(seriesId)}/episodes/default`, { page: String(page) })
+  );
+  return {
+    fetchedAt: new Date().toISOString(),
+    status: series?.status?.name || undefined,
+    episodes: episodes.map(normalizeEpisode).filter((e) => e !== null)
+  };
 }

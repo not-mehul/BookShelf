@@ -38,8 +38,8 @@ export function usesNativeHttp(url) {
 
 /** @type {NativeChannel | null} */
 let channel = null;
-/** @type {(() => void) | null} */
-let backHandler = null;
+/** @type {(() => void)[]} Back handlers, innermost last (e.g. a modal over selection mode). */
+const backStack = [];
 /** @type {Map<number, Pending>} */
 const pending = new Map();
 /** @type {Map<string, EventHandler>} */
@@ -110,7 +110,7 @@ function onMessage(data) {
       break;
     }
     case 'back':
-      backHandler?.();
+      backStack.at(-1)?.();
       break;
     case 'event':
       eventHandlers.get(msg.name)?.(msg.data);
@@ -209,11 +209,21 @@ export function setNativeTheme(mode) {
 }
 
 /**
- * Claim the Android Back gesture while `handler` is set (e.g. a modal is
- * open); pass null to give Back back to the system.
- * @param {(() => void) | null} handler
+ * Claim the Android Back gesture for `handler` (e.g. "close this modal").
+ * Handlers stack: Back goes to the most recent one, and the system gets Back
+ * again once all are released. Returns the release function.
+ * @param {() => void} handler
+ * @returns {() => void}
  */
-export function setNativeBackHandler(handler) {
-  backHandler = handler;
-  post({ type: 'backHandler', enabled: Boolean(handler) });
+export function pushBackHandler(handler) {
+  backStack.push(handler);
+  post({ type: 'backHandler', enabled: true });
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const i = backStack.lastIndexOf(handler);
+    if (i >= 0) backStack.splice(i, 1);
+    post({ type: 'backHandler', enabled: backStack.length > 0 });
+  };
 }

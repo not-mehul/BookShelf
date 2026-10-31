@@ -1,5 +1,6 @@
 import { newEntryId, saveEntry } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
+import { normalizeRating } from '../util/stars.js';
 
 /** @typedef {import('../types').CatalogEntry} CatalogEntry */
 /** @typedef {import('../types').EntryType} EntryType */
@@ -92,9 +93,9 @@ async function parseEntry(text, type) {
         } else if (state === 'quote') {
           quoteLines.push(content);
         }
-      } else if (line.includes('★') || line.includes('☆')) {
-        const match = line.match(/(\d)\/5/);
-        if (match) entry.rating = parseInt(match[1], 10);
+      } else if (/[★☆½]/.test(line)) {
+        const match = line.match(/(\d(?:\.5)?)\/5/);
+        if (match) entry.rating = normalizeRating(parseFloat(match[1]));
       } else if (line.startsWith('_') && line.endsWith('_')) {
         const content = line.slice(1, -1).trim();
         if (content.startsWith('Added')) {
@@ -115,9 +116,9 @@ async function parseEntry(text, type) {
     if (!firstLine.startsWith('###')) return null;
 
     const titlePart = firstLine.slice(3).trim();
-    const ratingMatch = titlePart.match(/—\s*[★☆]+\s*\*\*(\d)\/5\*\*/);
+    const ratingMatch = titlePart.match(/—\s*[★☆½]+\s*\*\*(\d(?:\.5)?)\/5\*\*/);
     if (ratingMatch) {
-      entry.rating = parseInt(ratingMatch[1], 10);
+      entry.rating = normalizeRating(parseFloat(ratingMatch[1]));
     }
 
     const titleNoRating = titlePart.split('—')[0].trim();
@@ -143,6 +144,9 @@ async function parseEntry(text, type) {
         entry.creators = line.slice(1, -1).split(',').map(s => s.trim());
       } else if (line.startsWith('**Genres:**')) {
         entry.genres = line.replace('**Genres:**', '').split(',').map(s => s.trim());
+      } else if (line.startsWith('**Series:**')) {
+        const m = line.replace('**Series:**', '').trim().match(/^(.+?)(?:\s+#(\d+(?:\.\d+)?))?$/);
+        if (m) entry.series = { name: m[1].trim(), position: m[2] ? Number(m[2]) : null };
       } else if (line.startsWith('**Status:**')) {
         const status = line.replace('**Status:**', '').trim();
         if (status === 'want' || status === 'in-progress' || status === 'finished') entry.status = status;

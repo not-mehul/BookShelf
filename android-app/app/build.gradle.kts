@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.play.services.code.scanner)
 

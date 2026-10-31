@@ -3,6 +3,8 @@
 
     <!-- Network access for book / TV search, routed through the native bridge. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- New-episode alerts (asked for only when the user turns alerts on). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"

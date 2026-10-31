@@ -10,6 +10,7 @@ of read-only endpoints:
 | `GET /search?query=&type=&limit=` | `/v4/search` (type `movie`/`series`, limit ≤ 50) |
 | `GET /movies/:id/extended`        | `/v4/movies/:id/extended`             |
 | `GET /series/:id/extended`        | `/v4/series/:id/extended`             |
+| `GET /series/:id/episodes/default?page=` | `/v4/series/:id/episodes/default` (also `official`; page ≤ 50) |
 | `GET /artwork?url=…`              | cover images from `artworks.thetvdb.com` (adds CORS) |
 
 Everything else is `404`; non-GET is `405`. Responses are edge-cached for an

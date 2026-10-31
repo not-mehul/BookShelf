@@ -2,6 +2,8 @@ import { installNativeBridge, isNativeShell, onNativeEvent, notifyNativeReady } 
 import { parseSharedText } from './util/share-intake.js';
 import { startAutoSync } from './sync/sync.js';
 import { pushWidgetSummary } from './platform/widget.js';
+import { pushEpisodeReminders, refreshFollowedGuides } from './api/episode-sync.js';
+import { openEntry } from './ui/detail-modal.js';
 import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
@@ -67,6 +69,7 @@ async function boot() {
   async function refreshStats() {
     const entries = await listEntries();
     void pushWidgetSummary(entries); // keep the home-screen widget current
+    void pushEpisodeReminders(entries); // and the Android new-episode alerts
     const counts = { book: 0, movie: 0, tv: 0, quote: 0 };
     for (const e of entries) if (counts[e.type] != null) counts[e.type]++;
     clear(statsBar);
@@ -112,6 +115,24 @@ async function boot() {
   onNativeEvent('shared', (data) => openAdd(data || {}));
   // … the home-screen widget's "+" button …
   onNativeEvent('openAdd', () => openAdd());
+  // … or a new-episode notification (open that show).
+  onNativeEvent('openEntry', (data) => data?.id && openEntry(String(data.id), { onChanged }));
+  // "Find #4" / "Check for new installments" in a series section.
+  document.addEventListener('bookshelf:find', (ev) => {
+    const { type, query } = /** @type {CustomEvent<{ type: 'book' | 'movie' | 'tv', query: string }>} */ (ev).detail;
+    openAddFlow({
+      onChanged,
+      goToSettings: () => openSettings({ onChanged }),
+      startWith: 'search',
+      searchType: type,
+      prefill: { quoteText: '', author: '', source: '', query, link: null }
+    });
+  });
+  // "Add a quote" on a book / film / show page.
+  document.addEventListener('bookshelf:add-quote', (ev) => {
+    const { linkedEntryId } = /** @type {CustomEvent<{ linkedEntryId: string }>} */ (ev).detail;
+    openAddFlow({ onChanged, goToSettings: () => openSettings({ onChanged }), startWith: 'quote', linkedEntryId });
+  });
   // … or the installed PWA's Web Share Target (manifest share_target).
   const params = new URLSearchParams(location.search);
   if (['share-text', 'share-title', 'share-url'].some((k) => params.has(k))) {
@@ -125,6 +146,8 @@ async function boot() {
   // Encrypted folder sync (Android app, once configured): pull now, push after
   // changes. Incoming changes only refresh the UI — they don't re-trigger sync.
   scheduleSync = startAutoSync(() => { refreshStats(); render(); });
+  // Refresh episode guides of shows being followed (quietly; needs TheTVDB).
+  void refreshFollowedGuides(() => { refreshStats(); render(); });
   // Re-skin the widget when the user switches Dusk/Dawn.
   document.addEventListener('themechange', () => void refreshStats());
 

@@ -97,12 +97,33 @@ describe('shell messages', () => {
     native.installNativeBridge(shell.win);
     const handler = vi.fn();
 
-    native.setNativeBackHandler(handler);
+    const release = native.pushBackHandler(handler);
     expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: true });
     shell.reply({ type: 'back' });
     expect(handler).toHaveBeenCalledOnce();
 
-    native.setNativeBackHandler(null);
+    release();
+    expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: false });
+  });
+
+  it('stacks back handlers: the innermost wins, and releasing restores the outer one', () => {
+    const shell = fakeShell();
+    native.installNativeBridge(shell.win);
+    const outer = vi.fn();
+    const inner = vi.fn();
+    const releaseOuter = native.pushBackHandler(outer);
+    const releaseInner = native.pushBackHandler(inner);
+    shell.reply({ type: 'back' });
+    expect(inner).toHaveBeenCalledOnce();
+    expect(outer).not.toHaveBeenCalled();
+
+    releaseInner();
+    expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: true }); // outer still claims Back
+    shell.reply({ type: 'back' });
+    expect(outer).toHaveBeenCalledOnce();
+
+    releaseOuter();
+    releaseOuter(); // idempotent
     expect(shell.sent.at(-1)).toEqual({ type: 'backHandler', enabled: false });
   });
 
@@ -121,7 +142,7 @@ describe('shell messages', () => {
     // No install → no channel; these must be safe no-ops in a browser.
     expect(() => {
       native.setNativeTheme('dark');
-      native.setNativeBackHandler(() => {});
+      native.pushBackHandler(() => {})();
       native.nativeExport('x.txt', 'x');
     }).not.toThrow();
   });

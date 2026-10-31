@@ -16,6 +16,8 @@ import { searchTvdb, isTvdbConfigured } from '../api/tvdb.js';
 import { findBySource, saveEntry, newEntryId } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
 import { canScanBarcodes, scanBarcode } from '../util/barcode.js';
+import { entryPicker } from './entry-picker.js';
+import { parseSeriesFromTitle } from '../util/series.js';
 
 const MEDIA = [
   { type: 'book',  label: 'Book',  icon: 'book',  blurb: 'Search Google Books' },
@@ -33,11 +35,19 @@ const TYPE_PLURAL = { book: 'books', movie: 'movies', tv: 'TV shows' };
  * @property {() => void} [goToSettings] Opens Settings (e.g. to add an API key).
  * @property {import('../util/share-intake.js').SharePrefill} [prefill] Text shared
  *   into the app: prefills the quote form and the search query.
+ * @property {'quote' | 'search'} [startWith] Skip the medium picker: the quote form
+ *   (e.g. "Add a quote" on a book) or a search (e.g. "Find #4" in a series).
+ * @property {'book' | 'movie' | 'tv'} [searchType] With startWith 'search'.
+ * @property {string} [linkedEntryId] Pre-link a new quote to this entry.
  */
 
 /** @param {AddFlowContext} [ctx] */
 export function openAddFlow(ctx = {}) {
-  openModal((card) => renderMediumPicker(card, ctx));
+  openModal((card) => {
+    if (ctx.startWith === 'quote') renderQuoteForm(card, ctx);
+    else if (ctx.startWith === 'search' && ctx.searchType) renderSearchStep(card, ctx, ctx.searchType);
+    else renderMediumPicker(card, ctx);
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -320,6 +330,7 @@ async function addHit(hit, ctx) {
     pageCount: hit.pageCount || null,
     isbn: hit.isbn || null,
     detailUrl: hit.detailUrl || null,
+    series: parseSeriesFromTitle(hit.title),
     thumbnailUrl: hit.thumbnailUrl || null,
     thumbnailBlob: blob,
     tags: [],
@@ -352,9 +363,24 @@ function renderQuoteForm(card, ctx) {
   const text = fieldTextarea('Quote text', 'q-text', 'The quote…', 5, pre?.quoteText || '');
   const author = fieldInput('Author', 'q-author', 'e.g. George Orwell', pre?.author || '');
   const source = fieldInput('Source / Work', 'q-source', "e.g. 1984, Hamlet, or a person's name", pre?.source || '');
-  form.appendChild(text.field);
-  form.appendChild(author.field);
-  form.appendChild(source.field);
+  const location = fieldInput('Page / time', 'q-location', 'e.g. p. 112 or 1:04:20');
+  // Link to a book/film/show on the shelf; fills author + source if empty.
+  const from = entryPicker({
+    id: 'q-from',
+    selectedId: ctx.linkedEntryId,
+    autoLinkTitle: pre?.source,
+    onSelect: (linked) => {
+      if (!linked) return;
+      if (!author.input.value.trim()) author.input.value = linked.creators?.[0] || '';
+      if (!source.input.value.trim()) source.input.value = linked.title;
+    }
+  });
+  void from.ready.then(() => {
+    const linked = from.selectedEntry();
+    if (linked && !author.input.value.trim()) author.input.value = linked.creators?.[0] || '';
+    if (linked && !source.input.value.trim()) source.input.value = linked.title;
+  });
+  form.append(text.field, from.field, twoCol(author.field, source.field), location.field);
 
   const actions = el('div', { class: 'modal-actions add-form-actions' });
   const saveBtn = el('button', { type: 'submit', class: 'btn btn-primary' });
@@ -380,6 +406,8 @@ function renderQuoteForm(card, ctx) {
       quoteText,
       creators: author.input.value.trim() ? [author.input.value.trim()] : [],
       source: source.input.value.trim() || '',
+      linkedEntryId: from.value(),
+      location: location.input.value.trim(),
       year: null,
       summary: '',
       genres: [],
@@ -467,6 +495,7 @@ function renderManualForm(card, ctx, type) {
       pageCount: null,
       isbn: null,
       detailUrl: null,
+      series: parseSeriesFromTitle(t),
       thumbnailUrl: coverUrl,
       thumbnailBlob: blob,
       tags: [],

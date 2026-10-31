@@ -85,3 +85,17 @@ export function enrichFromTvdbDetail(entry, detail) {
   next.enriched = true;
   return next;
 }
+
+// TheTVDB EpisodeBaseRecord → compact Episode (see types.d.ts).
+/** @param {any} ep @returns {import('../types').Episode | null} */
+export function normalizeEpisode(ep) {
+  if (!ep || ep.id == null || ep.seasonNumber == null || ep.number == null) return null;
+  return {
+    id: Number(ep.id),
+    s: Number(ep.seasonNumber),
+    e: Number(ep.number),
+    name: ep.name || '',
+    aired: typeof ep.aired === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ep.aired) ? ep.aired.slice(0, 10) : null,
+    runtime: Number.isFinite(ep.runtime) ? ep.runtime : null
+  };
+}

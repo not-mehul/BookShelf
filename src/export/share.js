@@ -2,11 +2,8 @@
 // the Web Share API where available, and a clipboard copy as a last resort.
 
 import { isNativeShell, nativeExport } from '../platform/native.js';
+import { starString, ratingLabel } from '../util/stars.js';
 
-function ratingStars(value) {
-  if (value == null) return '';
-  return '★'.repeat(value) + '☆'.repeat(5 - value);
-}
 
 export function entryToText(entry) {
   if (entry.type === 'quote') {
@@ -15,7 +12,7 @@ export function entryToText(entry) {
   }
   const parts = [entry.title + (entry.year ? ` (${entry.year})` : '')];
   if (entry.creators?.length) parts.push(entry.creators.join(', '));
-  if (entry.rating != null) parts.push(`${ratingStars(entry.rating)} ${entry.rating}/5`);
+  if (entry.rating != null) parts.push(`${starString(entry.rating)} ${ratingLabel(entry.rating)}`);
   if (entry.summary) parts.push('\n' + entry.summary.trim());
   return parts.join('\n');
 }

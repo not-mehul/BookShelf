@@ -2,15 +2,11 @@
 
 import { listEntries } from '../db/database.js';
 import { isNativeShell, nativeExport } from '../platform/native.js';
+import { starString, ratingLabel } from '../util/stars.js';
 
 const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV Shows', quote: 'Quotes' };
 const TYPE_ORDER = ['book', 'movie', 'tv', 'quote'];
 
-function ratingStars(value) {
-  if (value == null) return '';
-  const full = Math.round(value);
-  return '★'.repeat(full) + '☆'.repeat(Math.max(0, 5 - full));
-}
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -39,16 +35,16 @@ export async function exportMarkdown() {
       if (type === 'quote') {
         const qText = escapeMd(e.quoteText || e.title).replace(/\n/g, '\n> ');
         md += `> ${qText}\n`;
-        const citeParts = [e.creators?.[0], e.source].filter(Boolean).map(escapeMd);
+        const citeParts = [e.creators?.[0], e.source, e.location].filter(Boolean).map(escapeMd);
         if (citeParts.length) md += `>\n> — ${citeParts.join(', ')}\n\n`;
         else md += '\n';
-        if (e.rating != null) md += `${ratingStars(e.rating)} **${e.rating}/5**\n\n`;
+        if (e.rating != null) md += `${starString(e.rating)} **${ratingLabel(e.rating)}**\n\n`;
         if (e.notes?.trim()) md += `_${escapeMd(e.notes.trim())}_\n\n`;
         md += `_Added ${formatDate(e.dateAdded)}_\n\n---\n\n`;
         continue;
       }
       const year = e.year ? ` (${e.year})` : '';
-      const stars = e.rating != null ? ` — ${ratingStars(e.rating)} **${e.rating}/5**` : '';
+      const stars = e.rating != null ? ` — ${starString(e.rating)} **${ratingLabel(e.rating)}**` : '';
       md += `### ${escapeMd(e.title)}${year}${stars}\n`;
       if (e.thumbnailUrl) md += `![Poster](${e.thumbnailUrl})\n\n`;
       if (e.creators?.length) md += `*${escapeMd(e.creators.join(', '))}*\n\n`;
@@ -57,6 +53,7 @@ export async function exportMarkdown() {
         md += `**Genres:** ${e.genres.map(escapeMd).join(', ')}\n\n`;
       }
       if (e.status) md += `**Status:** ${e.status}\n\n`;
+      if (e.series?.name) md += `**Series:** ${escapeMd(e.series.name)}${e.series.position != null ? ` #${e.series.position}` : ''}\n\n`;
       if (e.summary) md += `${escapeMd(e.summary).trim()}\n\n`;
       if (e.notes?.trim()) md += `> ${escapeMd(e.notes.trim()).replace(/\n/g, '\n> ')}\n\n`;
       md += `_Added ${formatDate(e.dateAdded)}${e.dateRated ? ` · rated ${formatDate(e.dateRated)}` : ''}_\n\n---\n\n`;

@@ -36,6 +36,11 @@ db.version(3)
       })
   );
 
+// v4 — index quotes by the entry they come from, so a book can list its quotes.
+db.version(4).stores({
+  entries: 'id, type, title, rating, year, status, dateAdded, dateRated, sourceId, *tags, linkedEntryId'
+});
+
 export function newEntryId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
@@ -81,6 +86,15 @@ export async function deleteEntry(id, deletedAt = new Date().toISOString()) {
 /** @returns {Promise<Tombstone[]>} */
 export async function listTombstones() {
   return db.tombstones.toArray();
+}
+
+/**
+ * Quotes linked to an entry, oldest first.
+ * @param {string} entryId
+ */
+export async function listQuotesFor(entryId) {
+  const quotes = await db.entries.where('linkedEntryId').equals(entryId).toArray();
+  return quotes.sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''));
 }
 
 /**

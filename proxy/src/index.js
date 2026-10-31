@@ -90,6 +90,11 @@ export function route(url) {
   }
   const detail = path.match(/^\/(movies|series)\/(\d{1,12})\/extended$/);
   if (detail) return { kind: 'api', url: `${TVDB}/${detail[1]}/${detail[2]}/extended` };
+  const episodes = path.match(/^\/series\/(\d{1,12})\/episodes\/(default|official)$/);
+  if (episodes) {
+    const page = Math.min(Math.max(Number.parseInt(url.searchParams.get('page') || '0', 10) || 0, 0), 50);
+    return { kind: 'api', url: `${TVDB}/series/${episodes[1]}/episodes/${episodes[2]}?page=${page}` };
+  }
   if (path === '/artwork') {
     const raw = url.searchParams.get('url') || '';
     try {

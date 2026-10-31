@@ -1,5 +1,6 @@
 package app.mehul.bookshelf
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -8,6 +9,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
@@ -29,6 +31,8 @@ import androidx.glance.appwidget.updateAll
 import androidx.webkit.WebViewAssetLoader
 import app.mehul.bookshelf.widget.BookShelfWidget
 import app.mehul.bookshelf.widget.WidgetData
+import app.mehul.bookshelf.reminders.EpisodeReminders
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -54,6 +58,13 @@ class MainActivity : ComponentActivity() {
 
     // Registers an activity-result launcher, so it must exist before onStart.
     private val folderSync = FolderSync(this)
+
+    private var permissionResult: CompletableDeferred<Boolean>? = null
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            permissionResult?.complete(granted)
+            permissionResult = null
+        }
 
     private val fileChooser =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -125,6 +136,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
             intent.getStringExtra(EXTRA_ACTION) == ACTION_ADD -> bridge.emit("openAdd")
+            intent.hasExtra(EXTRA_OPEN_ENTRY) ->
+                bridge.emit("openEntry", JSONObject().put("id", intent.getStringExtra(EXTRA_OPEN_ENTRY)))
         }
     }
 
@@ -212,11 +225,31 @@ class MainActivity : ComponentActivity() {
         bridge.register("syncRead") { folderSync.read() }
         bridge.register("syncWrite") { p -> folderSync.write(p.getString("text")); true }
 
+        bridge.register("episodeReminders") { p ->
+            withContext(Dispatchers.IO) {
+                EpisodeReminders.update(this@MainActivity, p.getJSONArray("items"))
+                EpisodeReminders.notifyDue(this@MainActivity)
+            }
+            true
+        }
+        bridge.register("requestNotificationPermission") { requestNotificationPermission() }
+
         bridge.register("widgetUpdate") { p ->
             WidgetData.save(this, p.getJSONObject("summary"))
             BookShelfWidget().updateAll(this)
             true
         }
+    }
+
+    /** True if notifications may be posted, asking on Android 13+ if needed. */
+    private suspend fun requestNotificationPermission(): Boolean {
+        if (EpisodeReminders.canNotify(this)) return true
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false // disabled in system settings
+        val deferred = CompletableDeferred<Boolean>()
+        permissionResult?.cancel()
+        permissionResult = deferred
+        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        return deferred.await() && EpisodeReminders.canNotify(this)
     }
 
     // Transparent bars; icon colour follows the page's Dusk/Dawn theme.
@@ -253,6 +286,8 @@ class MainActivity : ComponentActivity() {
         /** Intent extra used by the home-screen widget to request an action. */
         const val EXTRA_ACTION = "app.mehul.bookshelf.action"
         const val ACTION_ADD = "add"
+        /** Set by new-episode notifications: open this entry. */
+        const val EXTRA_OPEN_ENTRY = "app.mehul.bookshelf.openEntry"
 
         // Shared text becomes a quote; cap absurdly large payloads.
         private const val MAX_SHARED_CHARS = 20_000
