@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encryptPayload, decryptPayload, DEFAULT_ITERATIONS } from '../src/sync/crypto.js';
+import { encryptPayload, decryptPayload, DEFAULT_ITERATIONS } from '../src/sync/crypto';
 
 const FAST = { iterations: 1_000 }; // keep tests quick; production uses DEFAULT_ITERATIONS
 

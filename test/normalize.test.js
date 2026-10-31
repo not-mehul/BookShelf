@@ -4,7 +4,7 @@ import {
   normalizeOpenLibraryDoc,
   normalizeTvdbSearchHit,
   enrichFromTvdbDetail
-} from '../src/api/normalize.js';
+} from '../src/api/normalize';
 
 describe('normalizeBook', () => {
   it('maps Google Books volume fields and upgrades http thumbnails to https', () => {
@@ -93,8 +93,8 @@ describe('enrichFromTvdbDetail', () => {
   });
 });
 
-import { normalizeEpisode } from '../src/api/normalize.js';
-import { collectEpisodePages } from '../src/api/tvdb.js';
+import { normalizeEpisode } from '../src/api/normalize';
+import { collectEpisodePages } from '../src/api/tvdb';
 
 describe('episodes from TheTVDB', () => {
   it('normalizes episode records and drops unusable ones', () => {

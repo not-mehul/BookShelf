@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeRating, starString, ratingLabel, ratingDistribution } from '../src/util/stars.js';
+import { normalizeRating, starString, ratingLabel, ratingDistribution } from '../src/util/stars';
 
 describe('star ratings', () => {
   it('snaps to half-star steps within 0.5–5', () => {

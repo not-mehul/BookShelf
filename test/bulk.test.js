@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyTagChanges } from '../src/ui/bulk.js';
+import { applyTagChanges } from '../src/util/bulk';
 
 describe('applyTagChanges', () => {
   it('adds a tag once, trimming whitespace', () => {

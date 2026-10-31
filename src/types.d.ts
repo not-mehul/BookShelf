@@ -1,5 +1,4 @@
-// Shared data types for the JS codebase (checked by `npm run typecheck`).
-// Import into JSDoc with: /** @typedef {import('../types').CatalogEntry} CatalogEntry */
+// Shared data types, imported with `import type { … } from '../types'`.
 
 export type EntryType = 'book' | 'movie' | 'tv' | 'quote';
 export type EntryStatus = 'want' | 'in-progress' | 'finished';
@@ -74,7 +73,10 @@ export interface EpisodeGuide {
 }
 
 /** A search result before it is saved (no id / user fields yet). */
-export type SearchHit = Pick<CatalogEntry, 'type' | 'sourceId' | 'title' | 'creators' | 'year' | 'summary' | 'genres' | 'thumbnailUrl'> &
+export type SearchHit = Pick<
+  CatalogEntry,
+  'type' | 'sourceId' | 'title' | 'creators' | 'year' | 'summary' | 'genres' | 'thumbnailUrl'
+> &
   Partial<Pick<CatalogEntry, 'pageCount' | 'isbn' | 'detailUrl'>> & { raw?: unknown };
 
 /** Record of a deleted entry, kept so deletions propagate through sync. */

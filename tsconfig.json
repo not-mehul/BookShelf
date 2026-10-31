@@ -1,24 +1,22 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "moduleResolution": "bundler",
+    "types": ["vite/client", "svelte"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
-    "strict": true,
-    "noImplicitAny": false,
     "skipLibCheck": true,
-    "types": []
+    "noEmit": true
   },
-  "include": [
-    "src/**/*.js",
-    "src/**/*.d.ts",
-    "proxy/src/**/*.js"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "proxy/src/**/*.js", "vite.config.ts"]
 }

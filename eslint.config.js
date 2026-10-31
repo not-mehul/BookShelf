@@ -1,21 +1,26 @@
 import js from '@eslint/js';
+import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import svelteConfig from './svelte.config.js';
 
-export default [
-  { ignores: ['dist/**', 'android-app/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'] },
+export default tseslint.config(
+  { ignores: ['dist/', 'android-app/', 'node_modules/', 'test-results/', 'playwright-report/'] },
   js.configs.recommended,
+  ...tseslint.configs.recommended,
+  ...svelte.configs.recommended,
   {
-    files: ['src/**/*.js', '*.config.js', 'public/**/*.js'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-      globals: { ...globals.browser }
-    },
+    languageOptions: { globals: { ...globals.browser } },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'smart'],
-      'prefer-const': 'error'
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+    }
+  },
+  {
+    files: ['**/*.svelte', '**/*.svelte.ts'],
+    languageOptions: {
+      parserOptions: { parser: tseslint.parser, extraFileExtensions: ['.svelte'], svelteConfig }
     }
   },
   {
@@ -26,19 +31,20 @@ export default [
   {
     // Cloudflare Worker (proxy/): service-worker style globals (fetch, caches, Request…).
     files: ['proxy/src/**/*.js'],
-    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.serviceworker } }
+    languageOptions: { globals: { ...globals.serviceworker } }
   },
   {
-    files: ['scripts/**/*.mjs', 'design/**/*.mjs'],
-    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node } }
+    files: ['scripts/**', 'design/**', '*.config.{js,ts}'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-console': 'off' }
   },
   {
     // Playwright: specs run in Node; fake-shell.js is injected into the page.
-    files: ['e2e/**/*.js', 'playwright.config.js'],
-    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { ...globals.node, ...globals.browser } }
+    files: ['e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } }
   },
   {
-    files: ['test/**/*.js', '**/*.test.js'],
+    files: ['test/**/*.js', 'proxy/test/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.vitest } }
   }
-];
+);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   episodeProgress, seasons, setWatched, derivedTvState, reminderItems, guideIsStale, episodeCode, localDate
-} from '../src/util/episodes.js';
+} from '../src/util/episodes';
 
 const ep = (id, s, e, aired) => ({ id, s, e, name: `Ep ${s}x${e}`, aired });
 const show = (extra = {}) => ({

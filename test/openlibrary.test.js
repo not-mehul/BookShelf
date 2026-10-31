@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { looksLikeIsbn } from '../src/api/openlibrary.js';
+import { looksLikeIsbn } from '../src/api/openlibrary';
 
 describe('looksLikeIsbn', () => {
   it('accepts ISBN-10 and ISBN-13 with or without separators', () => {
