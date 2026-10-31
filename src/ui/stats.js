@@ -4,6 +4,7 @@ import { el, clear } from './components.js';
 import { icons } from '../util/icons.js';
 import { listEntries } from '../db/database.js';
 import { openModal, closeModal } from './detail-modal.js';
+import { ratingDistribution } from '../util/stars.js';
 
 const TYPE_LABEL = { book: 'Books', movie: 'Movies', tv: 'TV', quote: 'Quotes' };
 
@@ -44,23 +45,22 @@ export function openStats() {
     body.appendChild(tiles);
 
     // ── Ratings ──
-    const rated = entries.filter((e) => e.rating != null);
-    if (rated.length) {
-      const avg = (rated.reduce((s, e) => s + e.rating, 0) / rated.length).toFixed(1);
-      body.appendChild(sectionLabel(`Ratings — avg ${avg}★ across ${rated.length}`));
-      const dist = [0, 0, 0, 0, 0];
-      for (const e of rated) dist[e.rating - 1]++;
-      const max = Math.max(...dist, 1);
+    const ratings = entries.map((e) => e.rating).filter((r) => r != null);
+    if (ratings.length) {
+      const avg = (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(1);
+      body.appendChild(sectionLabel(`Ratings — avg ${avg}★ across ${ratings.length}`));
+      const bins = ratingDistribution(ratings);
+      const max = Math.max(...bins.map((b) => b.count), 1);
       const chart = el('div', { class: 'stats-bars' });
-      for (let i = 5; i >= 1; i--) {
+      for (const { rating, count } of bins) {
         const row = el('div', { class: 'stats-bar-row' });
-        row.appendChild(el('span', { class: 'stats-bar-key' }, `${i}★`));
+        row.appendChild(el('span', { class: 'stats-bar-key' }, `${rating}★`));
         const track = el('div', { class: 'stats-bar-track' });
         const fill = el('div', { class: 'stats-bar-fill' });
-        fill.style.width = `${Math.round((dist[i - 1] / max) * 100)}%`;
+        fill.style.width = `${Math.round((count / max) * 100)}%`;
         track.appendChild(fill);
         row.appendChild(track);
-        row.appendChild(el('span', { class: 'stats-bar-val' }, String(dist[i - 1])));
+        row.appendChild(el('span', { class: 'stats-bar-val' }, String(count)));
         chart.appendChild(row);
       }
       body.appendChild(chart);

@@ -1,10 +1,15 @@
 // TheTVDB v4 client.
-// Login → bearer token (≈1 month lifetime). We cache the token and refresh proactively.
+// Either talks to TheTVDB directly (login → bearer token, ≈1 month lifetime,
+// cached and refreshed proactively), or — when a BookShelf proxy URL is set —
+// to the proxy Worker (proxy/), which holds the API key server-side and
+// exposes the same paths.
 
 import { getSetting, setSetting } from '../util/settings.js';
+import { isNativeShell } from '../platform/native.js';
 import {
   normalizeTvdbSearchHit,
-  enrichFromTvdbDetail
+  enrichFromTvdbDetail,
+  normalizeEpisode
 } from './normalize.js';
 
 const BASE = 'https://api4.thetvdb.com/v4';
@@ -24,7 +29,7 @@ async function refreshToken() {
 
   const body = pin ? { apikey, pin } : { apikey };
   const url = `${BASE}/login`;
-  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
   const finalUrl = proxy ? `${proxy}${url}` : url;
 
   const res = await fetch(finalUrl, {
@@ -43,11 +48,28 @@ async function refreshToken() {
   return token;
 }
 
+/** Base URL of a BookShelf TheTVDB proxy, if configured ('' otherwise). */
+async function proxyBase() {
+  return (await getSetting('tvdb_proxy_url', '')).trim().replace(/\/+$/, '');
+}
+
+/** Movie/TV search works with either a proxy or a TheTVDB API key. */
+export async function isTvdbConfigured() {
+  return Boolean((await proxyBase()) || (await getSetting('tvdb_api_key', '')));
+}
+
+/**
+ * @param {string} path
+ * @param {Record<string, string>} [params]
+ */
 async function tvdbFetch(path, params) {
+  const proxyUrl = await proxyBase();
+  if (proxyUrl) return proxyFetch(proxyUrl, path, params);
+
   let token = await getToken();
   const qs = params ? `?${new URLSearchParams(params)}` : '';
   const url = `${BASE}${path}${qs}`;
-  const proxy = !window.AndroidHttp ? await getSetting('cors_proxy', '') : '';
+  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
   const finalUrl = proxy ? `${proxy}${url}` : url;
 
   let res = await fetch(finalUrl, {
@@ -62,6 +84,22 @@ async function tvdbFetch(path, params) {
   if (!res.ok) {
     throw new Error(`TheTVDB request failed (${res.status})`);
   }
+  return res.json();
+}
+
+/**
+ * @param {string} base
+ * @param {string} path
+ * @param {Record<string, string>} [params]
+ */
+async function proxyFetch(base, path, params) {
+  const proxyToken = await getSetting('tvdb_proxy_token', '');
+  const qs = params ? `?${new URLSearchParams(params)}` : '';
+  const res = await fetch(`${base}${path}${qs}`, {
+    headers: proxyToken ? { authorization: `Bearer ${proxyToken}` } : {}
+  });
+  if (res.status === 401) throw new Error('The TheTVDB proxy rejected the access token. Check it in Settings.');
+  if (!res.ok) throw new Error(`TheTVDB proxy request failed (${res.status})`);
   return res.json();
 }
 
@@ -100,4 +138,44 @@ export async function enrichEntry(entry) {
   } catch {
     return entry;
   }
+}
+
+const EPISODE_PAGE_SIZE = 500; // TheTVDB's page size for episode lists
+const MAX_EPISODE_PAGES = 20;
+
+/**
+ * Collect every page of an episode list. Follows `links.next`; if a response
+ * has no links, a full page is taken to mean there may be more.
+ * @param {(page: number) => Promise<any>} fetchPage
+ */
+export async function collectEpisodePages(fetchPage) {
+  /** @type {any[]} */
+  const episodes = [];
+  /** @type {any} */
+  let series = null;
+  for (let page = 0; page < MAX_EPISODE_PAGES; page++) {
+    const json = await fetchPage(page);
+    const batch = json?.data?.episodes || [];
+    series ??= json?.data?.series || null;
+    episodes.push(...batch);
+    const more = json?.links ? Boolean(json.links.next) : batch.length >= EPISODE_PAGE_SIZE;
+    if (!more || !batch.length) break;
+  }
+  return { episodes, series };
+}
+
+/**
+ * Full episode guide for a TheTVDB series (aired order).
+ * @param {string} seriesId
+ * @returns {Promise<import('../types').EpisodeGuide>}
+ */
+export async function getEpisodeGuide(seriesId) {
+  const { episodes, series } = await collectEpisodePages((page) =>
+    tvdbFetch(`/series/${encodeURIComponent(seriesId)}/episodes/default`, { page: String(page) })
+  );
+  return {
+    fetchedAt: new Date().toISOString(),
+    status: series?.status?.name || undefined,
+    episodes: episodes.map(normalizeEpisode).filter((e) => e !== null)
+  };
 }

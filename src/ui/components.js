@@ -1,5 +1,16 @@
 // Minimal DOM helpers used across all screens.
 
+/** @typedef {Node | string | number | false | null | undefined} Child */
+
+/**
+ * Create an element. `class`, `html`, `dataset` and `onX` handlers are special;
+ * other props become attributes (`true` → empty attribute, false/null → omitted).
+ * @template {keyof HTMLElementTagNameMap} K
+ * @param {K} tag
+ * @param {Record<string, any>} [props]
+ * @param {...(Child | Child[])} children
+ * @returns {HTMLElementTagNameMap[K]}
+ */
 export function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
@@ -19,17 +30,25 @@ export function el(tag, props = {}, ...children) {
   return node;
 }
 
+/** @param {Node} node */
 export function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
 // Wrap a <select> element with the custom-arrow container.
+/** @param {HTMLSelectElement} selectEl */
 export function selectWrap(selectEl, compact = false) {
   const wrap = el('div', { class: compact ? 'select-wrap select-wrap-sm' : 'select-wrap' });
   wrap.appendChild(selectEl);
   return wrap;
 }
 
+/**
+ * @template {string} V
+ * @param {{ value: V, label: string }[]} options
+ * @param {V} currentValue
+ * @param {(value: V) => void} onChange
+ */
 export function segmented(options, currentValue, onChange) {
   // Track current selection internally — the control persists across grid
   // re-renders, so a captured `currentValue` would go stale (and the
@@ -66,57 +85,38 @@ export function segmented(options, currentValue, onChange) {
 // survives revocation, so this frees memory without blanking the image and
 // stops object URLs from piling up across re-renders. `onError` swaps in a
 // placeholder when the source fails to load.
+/**
+ * @param {string} src
+ * @param {{ alt?: string, onError?: (img: HTMLImageElement) => void }} [options]
+ */
 export function coverImage(src, { alt = '', onError } = {}) {
   const img = el('img', { alt, loading: 'lazy' });
   if (src && src.startsWith('blob:')) {
     img.addEventListener('load', () => URL.revokeObjectURL(src), { once: true });
   }
-  if (onError) img.addEventListener('error', onError, { once: true });
+  if (onError) img.addEventListener('error', () => onError(img), { once: true });
   img.src = src;
   return img;
 }
 
-// Trap Tab focus inside a container and restore focus to the previously-active
-// element when released. Returns a release() function.
-export function trapFocus(container) {
-  const previouslyFocused = document.activeElement;
-  const selector =
-    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-  function onKeydown(ev) {
-    if (ev.key !== 'Tab') return;
-    const focusable = [...container.querySelectorAll(selector)].filter(
-      (e) => e.offsetParent !== null || e === document.activeElement
-    );
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (ev.shiftKey && document.activeElement === first) {
-      ev.preventDefault();
-      last.focus();
-    } else if (!ev.shiftKey && document.activeElement === last) {
-      ev.preventDefault();
-      first.focus();
-    }
-  }
-
-  container.addEventListener('keydown', onKeydown);
-  return function release() {
-    container.removeEventListener('keydown', onKeydown);
-    if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-      previouslyFocused.focus();
-    }
-  };
+/**
+ * Human-readable message from anything thrown.
+ * @param {unknown} err
+ */
+export function messageOf(err) {
+  return err instanceof Error ? err.message : String(err);
 }
 
 export function loadingNode(label = 'Loading') {
   return el('div', { class: 'loading-row' }, label);
 }
 
+/** @param {string} html Trusted markup only (constants), never external data. */
 export function noticeNode(html) {
   return el('div', { class: 'notice', html });
 }
 
+/** @param {string} message */
 export function errorNode(message) {
   return el('div', { class: 'msg-error' }, message);
 }

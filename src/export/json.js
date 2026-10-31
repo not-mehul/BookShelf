@@ -7,19 +7,28 @@
 // backup replaces rather than duplicates.
 
 import { listEntries, saveEntry, getEntry } from '../db/database.js';
-import { hasNativeExport, nativeExport } from '../util/android-bridge.js';
+import { isNativeShell, nativeExport } from '../platform/native.js';
+
+/** @typedef {import('../types').CatalogEntry} CatalogEntry */
+/** A CatalogEntry as written to JSON: the cover blob becomes a data URL. */
+/** @typedef {Omit<CatalogEntry, 'thumbnailBlob'> & { thumbnailData?: string | null }} SerializedEntry */
 
 export const BACKUP_VERSION = 1;
 
+/**
+ * @param {Blob} blob
+ * @returns {Promise<string | null>}
+ */
 function blobToDataUrl(blob) {
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+    reader.onload = () => resolve(/** @type {string} */ (reader.result));
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(blob);
   });
 }
 
+/** @param {string} dataUrl */
 async function dataUrlToBlob(dataUrl) {
   try {
     const res = await fetch(dataUrl);
@@ -29,17 +38,30 @@ async function dataUrlToBlob(dataUrl) {
   }
 }
 
+/**
+ * @param {CatalogEntry} entry
+ * @returns {Promise<SerializedEntry>}
+ */
+export async function serializeEntry(entry) {
+  const { thumbnailBlob, ...rest } = entry;
+  /** @type {SerializedEntry} */
+  const copy = { ...rest };
+  if (thumbnailBlob instanceof Blob) copy.thumbnailData = await blobToDataUrl(thumbnailBlob);
+  return copy;
+}
+
+/**
+ * @param {SerializedEntry} raw
+ * @returns {Promise<CatalogEntry>}
+ */
+export async function deserializeEntry(raw) {
+  const { thumbnailData, ...rest } = raw;
+  return { ...rest, thumbnailBlob: thumbnailData ? await dataUrlToBlob(thumbnailData) : null };
+}
+
 export async function exportJson() {
   const entries = await listEntries();
-  const out = [];
-  for (const e of entries) {
-    const { thumbnailBlob, ...rest } = e;
-    const copy = { ...rest };
-    if (thumbnailBlob instanceof Blob) {
-      copy.thumbnailData = await blobToDataUrl(thumbnailBlob);
-    }
-    out.push(copy);
-  }
+  const out = await Promise.all(entries.map(serializeEntry));
   return JSON.stringify(
     { app: 'bookshelf', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries: out },
     null,
@@ -49,6 +71,10 @@ export async function exportJson() {
 
 // Returns { imported, skippedExisting, total }. `merge` keeps existing entries
 // (only adds new ids); otherwise existing ids are overwritten.
+/**
+ * @param {string} text
+ * @param {{ merge?: boolean }} [options]
+ */
 export async function importJson(text, { merge = false } = {}) {
   let parsed;
   try {
@@ -67,9 +93,8 @@ export async function importJson(text, { merge = false } = {}) {
       skippedExisting++;
       continue;
     }
-    const { thumbnailData, ...entry } = raw;
-    if (thumbnailData) entry.thumbnailBlob = await dataUrlToBlob(thumbnailData);
-    await saveEntry(entry);
+    // Keep the backup's own timestamps, so a restore never looks "newer" to sync.
+    await saveEntry(await deserializeEntry(raw), { touch: false });
     imported++;
   }
   return { imported, skippedExisting, total: entries.length };
@@ -80,7 +105,7 @@ export async function saveAndShareJson() {
   const today = new Date().toISOString().slice(0, 10);
   const filename = `bookshelf-backup-${today}.json`;
 
-  if (hasNativeExport()) {
+  if (isNativeShell()) {
     nativeExport(filename, json);
     return { method: 'native', filename };
   }

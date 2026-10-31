@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup rules for Android 8–11 (see data_extraction_rules.xml for 12+).
+     Everything except caches and the Keystore-encrypted secure settings. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="secure_settings.xml" />
+</full-backup-content>

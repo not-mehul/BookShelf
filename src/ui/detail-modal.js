@@ -1,50 +1,52 @@
-import { el, clear, selectWrap, coverImage, trapFocus } from './components.js';
+import { el, clear, selectWrap, coverImage } from './components.js';
+import { pushBackHandler } from '../platform/native.js';
 import { icons } from '../util/icons.js';
-import { ratingControl } from './rating.js';
+import { ratingControl, aspectRatings } from './rating.js';
 import { fieldInput, fieldTextarea, twoCol, splitList } from './forms.js';
-import { saveEntry, deleteEntry, getEntry, thumbnailUrl } from '../db/database.js';
-import { enrichEntry } from '../api/tvdb.js';
+import { saveEntry, deleteEntry, getEntry, thumbnailUrl, listQuotesFor, listEntries } from '../db/database.js';
+import { parseSeriesFromTitle, seriesEntries, nextInSeries } from '../util/series.js';
+import { STATUS_LABEL, statusLabel } from '../util/status.js';
+import { applyStatus } from '../util/apply-status.js';
+import { entryPicker } from './entry-picker.js';
+import { enrichEntry, isTvdbConfigured } from '../api/tvdb.js';
+import { loadEpisodeGuide } from '../api/episode-sync.js';
+import { guideIsStale } from '../util/episodes.js';
+import { episodesSection } from './episodes-section.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
-import { shareEntry } from '../export/share.js';
 
 const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' };
 const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
 const STATUS_OPTS = [
   { v: '', l: '— none —' },
-  { v: 'want', l: 'Want to read' },
-  { v: 'in-progress', l: 'In progress' },
-  { v: 'finished', l: 'Finished' }
+  { v: 'want', l: STATUS_LABEL.want },
+  { v: 'in-progress', l: STATUS_LABEL['in-progress'] },
+  { v: 'finished', l: STATUS_LABEL.finished }
 ];
 const PROGRESS_LABEL = { book: 'Pages read', tv: 'Episodes watched' };
 
-let activeBackdrop = null;
-let escListener = null;
-let releaseTrap = null;
+// One modal at a time, built on the native <dialog> element: showModal()
+// provides the top layer, an inert background (so focus can't escape),
+// Escape handling via `cancel`, and focus restoration on close.
+/** @type {HTMLDialogElement | null} */
+let activeDialog = null;
+/** @type {(() => void) | null} */
+let releaseBack = null;
 
 export function closeModal() {
-  if (!activeBackdrop) return;
-  activeBackdrop.remove();
-  activeBackdrop = null;
-  if (escListener) {
-    document.removeEventListener('keydown', escListener);
-    escListener = null;
-  }
-  if (releaseTrap) {
-    releaseTrap();
-    releaseTrap = null;
-  }
+  const dialog = activeDialog;
+  if (!dialog) return;
+  activeDialog = null;
+  releaseBack?.();
+  releaseBack = null;
+  if (dialog.open) dialog.close();
+  dialog.remove();
 }
 
+// Returns the opened <dialog>, so async callers can check it is still current.
 export function openModal(renderFn) {
   closeModal();
 
-  const card = el('div', {
-    class: 'modal-card',
-    role: 'dialog',
-    'aria-modal': 'true',
-    'aria-labelledby': 'modal-title'
-  });
-
+  const card = el('div', { class: 'modal-card' });
   const closeBtn = el('button', {
     type: 'button',
     class: 'btn-icon modal-close',
@@ -54,33 +56,56 @@ export function openModal(renderFn) {
   closeBtn.innerHTML = icons.x();
   card.appendChild(closeBtn);
 
-  const backdrop = el('div', {
-    class: 'modal-backdrop',
-    onClick: (ev) => {
-      if (ev.target === backdrop) closeModal();
-    }
-  }, card);
-  document.body.appendChild(backdrop);
-  activeBackdrop = backdrop;
+  const dialog = el('dialog', { class: 'modal-dialog', 'aria-labelledby': 'modal-title' }, card);
+  // The dialog box fills the viewport; a click on it outside the card dismisses.
+  dialog.addEventListener('click', (ev) => {
+    if (ev.target === dialog) closeModal();
+  });
+  dialog.addEventListener('cancel', (ev) => {
+    ev.preventDefault();
+    closeModal();
+  });
+  document.body.appendChild(dialog);
+  activeDialog = dialog;
 
-  escListener = (ev) => {
-    if (ev.key === 'Escape') closeModal();
-  };
-  document.addEventListener('keydown', escListener);
-
+  // Open first so views can focus their own inputs while rendering.
+  dialog.showModal();
   renderFn(card);
-  releaseTrap = trapFocus(card);
-  // Move focus into the dialog for keyboard / screen-reader users.
-  (card.querySelector('h2, [autofocus], button, input, textarea') || card).focus?.();
+  // If the view didn't claim focus, land on its title (for screen readers),
+  // or failing that on its first control — never leave focus outside. (The
+  // card itself doesn't count: showModal() may focus it as an empty scroller,
+  // and it stops being focusable once the view renders controls into it.)
+  const active = document.activeElement;
+  if (!card.contains(active) || active === card || active === closeBtn) {
+    /** @type {HTMLElement | null} */ (
+      card.querySelector('#modal-title') || card.querySelector('input, textarea, select, button')
+    )?.focus();
+  }
+  // Android Back closes the modal instead of leaving the app.
+  releaseBack = pushBackHandler(closeModal);
+  return dialog;
 }
 
+/** @typedef {{ onChanged?: () => void }} ChangeListener */
+
+/**
+ * @param {string} id
+ * @param {ChangeListener} [listener]
+ */
 export async function openEntry(id, { onChanged } = {}) {
-  let entry = await getEntry(id);
+  const entry = await getEntry(id);
   if (!entry) return;
-  openModal((card) => renderEntryView(card, entry, { onChanged }));
+  const dialog = openModal((card) => renderEntryView(card, entry, { onChanged }));
 
   // Lazily enrich movies/TV that were saved from a thin search hit (no
-  // director/cast yet). One network round-trip, cached via the `enriched` flag.
+  // director/cast yet), and load / refresh a show's episode guide. Each step
+  // re-renders only if this entry's modal is still the one on screen.
+  /** @param {import('../types').CatalogEntry} updated */
+  const refreshView = (updated) => {
+    if (activeDialog === dialog) renderEntryView(/** @type {HTMLElement} */ (dialog.querySelector('.modal-card')), updated, { onChanged });
+    onChanged?.();
+  };
+  let current = entry;
   if ((entry.type === 'movie' || entry.type === 'tv') && entry.sourceId && !entry.enriched) {
     try {
       const enriched = await enrichEntry(entry);
@@ -88,16 +113,19 @@ export async function openEntry(id, { onChanged } = {}) {
         if (!enriched.thumbnailBlob && enriched.thumbnailUrl && enriched.thumbnailUrl !== entry.thumbnailUrl) {
           enriched.thumbnailBlob = await fetchThumbBlob(enriched.thumbnailUrl);
         }
-        entry = enriched;
-        await saveEntry(entry);
-        if (activeBackdrop) {
-          const card = activeBackdrop.querySelector('.modal-card');
-          if (card) renderEntryView(card, entry, { onChanged });
-        }
-        onChanged?.();
+        await saveEntry(enriched);
+        current = enriched;
+        refreshView(enriched);
       }
     } catch {
       /* offline or no key — keep the thin entry */
+    }
+  }
+  if (current.type === 'tv' && current.sourceId && guideIsStale(current) && (await isTvdbConfigured())) {
+    try {
+      refreshView(await loadEpisodeGuide(current));
+    } catch {
+      /* offline — keep whatever guide we have */
     }
   }
 }
@@ -111,7 +139,7 @@ function buildHero(entry) {
   const src = thumbnailUrl(entry) || entry.thumbnailUrl;
   if (src) {
     poster.appendChild(
-      coverImage(src, { onError: (ev) => { ev.target.remove(); poster.appendChild(posterPlaceholder(entry)); } })
+      coverImage(src, { onError: (img) => { img.remove(); poster.appendChild(posterPlaceholder(entry)); } })
     );
   } else {
     poster.appendChild(posterPlaceholder(entry));
@@ -159,19 +187,35 @@ function renderEntryView(card, entry, { onChanged }) {
     card.appendChild(sec);
   }
 
-  // Rating
-  card.appendChild(
-    section('Rating', ratingControl(entry.rating, async (next) => {
+  // Series: reading/watching order and what's next
+  if (entry.series?.name) card.appendChild(seriesSection(entry, onChanged));
+
+  // Rating (half stars) + optional per-aspect scores
+  {
+    const sec = section('Rating', ratingControl(entry.rating, async (next) => {
       entry.rating = next;
       entry.dateRated = next != null ? new Date().toISOString() : null;
       await saveEntry(entry);
       onChanged?.();
-    }))
-  );
+    }));
+    sec.appendChild(aspectRatings(entry, async (aspects) => {
+      entry.aspectRatings = aspects;
+      await saveEntry(entry);
+      onChanged?.();
+    }));
+    card.appendChild(sec);
+  }
 
-  // Progress (books & TV)
-  if (entry.type === 'book' || entry.type === 'tv') {
+  // TV with an episode guide: per-episode tracking (progress is derived).
+  // Books, and shows without a guide (manual entries): manual progress.
+  if (entry.type === 'tv' && entry.episodeGuide?.episodes.length) {
+    card.appendChild(episodesSection(entry, { onChanged }));
+  } else if (entry.type === 'book' || entry.type === 'tv') {
     card.appendChild(progressSection(entry, onChanged));
+    if (entry.type === 'tv' && entry.sourceId && !entry.episodeGuide) {
+      card.appendChild(el('p', { class: 'field-hint episodes-pending' },
+        'Episode tracking appears here once the episode list loads (needs TheTVDB access in Settings).'));
+    }
   }
 
   // Status + Notes
@@ -187,7 +231,7 @@ function renderEntryView(card, entry, { onChanged }) {
       statusSel.appendChild(o);
     }
     statusSel.addEventListener('change', async () => {
-      entry.status = statusSel.value || null;
+      await applyStatus(entry, /** @type {import('../types').EntryStatus} */ (statusSel.value) || null);
       await saveEntry(entry);
       onChanged?.();
     });
@@ -200,6 +244,9 @@ function renderEntryView(card, entry, { onChanged }) {
     sec.appendChild(grid);
     card.appendChild(sec);
   }
+
+  // Quotes from this book / film / show
+  card.appendChild(linkedQuotesSection(entry, onChanged));
 
   // Tags
   card.appendChild(tagsSection(entry, onChanged));
@@ -218,11 +265,22 @@ function renderQuoteView(card, entry, { onChanged }) {
   quoteBlock.appendChild(
     el('blockquote', { class: 'modal-quote-text', id: 'modal-title', tabindex: '-1' }, entry.quoteText || entry.title)
   );
-  const citeParts = [entry.creators?.[0], entry.source].filter(Boolean);
+  const citeParts = [entry.creators?.[0], entry.source, entry.location].filter(Boolean);
   if (citeParts.length) {
     quoteBlock.appendChild(el('div', { class: 'modal-quote-citation' }, '— ' + citeParts.join(', ')));
   }
   card.appendChild(quoteBlock);
+
+  // Linked book / film / show (if it is still on the shelf).
+  if (entry.linkedEntryId) {
+    void getEntry(entry.linkedEntryId).then((linked) => {
+      if (!linked) return;
+      const link = el('button', { type: 'button', class: 'quote-from-link' });
+      link.append(el('span', { class: 'quote-from-label' }, 'From'), el('span', {}, linked.title));
+      link.addEventListener('click', () => openEntry(linked.id, { onChanged }));
+      quoteBlock.appendChild(link);
+    });
+  }
 
   card.appendChild(
     section('Rating', ratingControl(entry.rating, async (next) => {
@@ -236,7 +294,7 @@ function renderQuoteView(card, entry, { onChanged }) {
   {
     const sec = el('div', { class: 'modal-section' });
     sec.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
-    sec.appendChild(notesCol(entry, onChanged).lastChild);
+    sec.appendChild(notesField(entry, onChanged));
     card.appendChild(sec);
   }
 
@@ -271,7 +329,17 @@ function renderEditForm(card, entry, { onChanged }) {
     const text = fieldTextarea('Quote text', 'e-text', 'The quote…', 5, entry.quoteText || entry.title);
     const author = fieldInput('Author', 'e-author', 'e.g. George Orwell', entry.creators?.[0] || '');
     const source = fieldInput('Source / Work', 'e-source', "e.g. 1984", entry.source || '');
-    form.append(text.field, author.field, source.field, errSlot, submitRow('Save changes'));
+    const location = fieldInput('Page / time', 'e-location', 'e.g. p. 112 or 1:04:20', entry.location || '');
+    const from = entryPicker({
+      id: 'e-from',
+      selectedId: entry.linkedEntryId,
+      onSelect: (linked) => {
+        if (!linked) return;
+        if (!author.input.value.trim()) author.input.value = linked.creators?.[0] || '';
+        if (!source.input.value.trim()) source.input.value = linked.title;
+      }
+    });
+    form.append(text.field, from.field, twoCol(author.field, source.field), location.field, errSlot, submitRow('Save changes'));
     card.appendChild(form);
     text.input.focus();
     form.addEventListener('submit', async (ev) => {
@@ -283,6 +351,8 @@ function renderEditForm(card, entry, { onChanged }) {
       entry.title = qt.slice(0, 100);
       entry.creators = author.input.value.trim() ? [author.input.value.trim()] : [];
       entry.source = source.input.value.trim() || '';
+      entry.location = location.input.value.trim();
+      entry.linkedEntryId = from.value();
       await saveEntry(entry);
       onChanged?.();
       renderEntryView(card, entry, { onChanged });
@@ -300,8 +370,20 @@ function renderEditForm(card, entry, { onChanged }) {
   const cover = fieldInput('Cover image URL', 'e-cover', 'https://…', entry.thumbnailUrl || '');
   cover.input.type = 'url';
   const summary = fieldTextarea('Summary', 'e-summary', 'Optional', 3, entry.summary || '');
+  // Series: suggested from the title until the user sets (or clears) it.
+  const suggested = entry.series === undefined ? parseSeriesFromTitle(entry.title) : null;
+  const current = entry.series || suggested;
+  const seriesName = fieldInput('Series', 'e-series', 'e.g. The Expanse', current?.name || '');
+  const seriesPos = fieldInput('Number in series', 'e-series-pos', 'e.g. 3', current?.position != null ? String(current.position) : '');
+  seriesPos.input.type = 'number';
+  seriesPos.input.step = 'any';
+  seriesPos.input.min = '0';
+  seriesPos.input.setAttribute('inputmode', 'decimal');
 
-  form.append(title.field, creators.field, twoCol(year.field, genres.field), cover.field, summary.field, errSlot, submitRow('Save changes'));
+  form.append(
+    title.field, creators.field, twoCol(year.field, genres.field), twoCol(seriesName.field, seriesPos.field),
+    cover.field, summary.field, errSlot, submitRow('Save changes')
+  );
   card.appendChild(form);
   title.input.focus();
 
@@ -324,6 +406,9 @@ function renderEditForm(card, entry, { onChanged }) {
     entry.genres = splitList(genres.input.value);
     entry.thumbnailUrl = newCover;
     entry.summary = summary.input.value.trim() || '';
+    const sName = seriesName.input.value.trim();
+    const sPos = parseFloat(seriesPos.input.value);
+    entry.series = sName ? { name: sName, position: Number.isFinite(sPos) ? sPos : null } : null;
     await saveEntry(entry);
     onChanged?.();
     renderEntryView(card, entry, { onChanged });
@@ -342,6 +427,12 @@ function section(label, body) {
 function notesCol(entry, onChanged) {
   const col = el('div', {});
   col.appendChild(el('div', { class: 'modal-section-label' }, 'Notes'));
+  col.appendChild(notesField(entry, onChanged));
+  return col;
+}
+
+// Auto-saving private-notes textarea.
+function notesField(entry, onChanged) {
   const notes = el('textarea', { class: 'textarea', placeholder: 'Private notes…', 'aria-label': 'Notes' });
   notes.style.minHeight = '80px';
   notes.value = entry.notes || '';
@@ -354,8 +445,7 @@ function notesCol(entry, onChanged) {
       onChanged?.();
     }, 300);
   });
-  col.appendChild(notes);
-  return col;
+  return notes;
 }
 
 function progressSection(entry, onChanged) {
@@ -395,8 +485,8 @@ function progressSection(entry, onChanged) {
       const tt = Math.max(0, parseInt(total.value, 10) || 0);
       entry.progress = { current: c, total: tt };
       // Derive status from progress so the two stay consistent.
-      if (tt > 0 && c >= tt) entry.status = 'finished';
-      else if (c > 0) entry.status = 'in-progress';
+      if (tt > 0 && c >= tt) await applyStatus(entry, 'finished');
+      else if (c > 0) await applyStatus(entry, 'in-progress');
       update();
       await saveEntry(entry);
       onChanged?.();
@@ -408,6 +498,95 @@ function progressSection(entry, onChanged) {
   row.append(current, el('span', { class: 'progress-of' }, 'of'), total);
   sec.appendChild(row);
   sec.appendChild(bar);
+  return sec;
+}
+
+/**
+ * The entry's series in order, what comes next, and a way to look for the
+ * next or newer installments (opens the add flow's search, via main.js).
+ * @param {import('../types').CatalogEntry} entry
+ * @param {(() => void) | undefined} onChanged
+ */
+function seriesSection(entry, onChanged) {
+  const series = /** @type {{ name: string, position: number | null }} */ (entry.series);
+  const sec = el('div', { class: 'modal-section series-section' });
+  sec.appendChild(el('div', { class: 'modal-section-label' }, 'Series'));
+  const body = el('div', {});
+  sec.appendChild(body);
+
+  /** @param {string} query */
+  const find = (query) =>
+    document.dispatchEvent(new CustomEvent('bookshelf:find', { detail: { type: entry.type, query } }));
+
+  void listEntries().then((all) => {
+    const members = seriesEntries(all, series.name);
+    const { next, nextPosition, onShelf } = nextInSeries(all, entry);
+    body.appendChild(el('p', { class: 'series-heading' },
+      el('span', { class: 'series-name' }, series.name),
+      series.position != null ? ` · #${series.position}` : '',
+      el('span', { class: 'series-count' }, ` · ${members.length} on your shelf`)
+    ));
+
+    const list = el('ol', { class: 'series-list' });
+    for (const m of members) {
+      const isThis = m.id === entry.id;
+      const item = el('button', { type: 'button', class: `series-item${isThis ? ' is-current' : ''}`, disabled: isThis },
+        el('span', { class: 'series-pos' }, m.series?.position != null ? `#${m.series.position}` : '—'),
+        el('span', { class: 'series-title' }, m.title),
+        el('span', { class: 'series-status' }, isThis ? 'this one' : statusLabel(m.status))
+      );
+      if (!isThis) item.addEventListener('click', () => openEntry(m.id, { onChanged }));
+      list.appendChild(el('li', {}, item));
+    }
+    body.appendChild(list);
+
+    const actions = el('div', { class: 'series-actions' });
+    if (next) {
+      actions.appendChild(el('p', { class: 'series-next' }, `Next: #${next.series?.position} ${next.title}`));
+    } else if (nextPosition != null && !onShelf) {
+      const findNext = el('button', { type: 'button', class: 'btn btn-muted btn-sm' }, `Find #${nextPosition}`);
+      findNext.addEventListener('click', () => find(`${series.name} ${nextPosition}`));
+      actions.appendChild(findNext);
+    }
+    // Manual check: search the series; results already on the shelf show a ✓.
+    const check = el('button', { type: 'button', class: 'btn btn-muted btn-sm' }, 'Check for new installments');
+    check.addEventListener('click', () => find(series.name));
+    actions.appendChild(check);
+    body.appendChild(actions);
+  });
+  return sec;
+}
+
+/**
+ * Quotes linked to this entry, plus "Add a quote" (handled by main.js, which
+ * owns the add flow, via a `bookshelf:add-quote` event).
+ * @param {import('../types').CatalogEntry} entry
+ * @param {(() => void) | undefined} onChanged
+ */
+function linkedQuotesSection(entry, onChanged) {
+  const sec = el('div', { class: 'modal-section' });
+  sec.appendChild(el('div', { class: 'modal-section-label' }, 'Quotes'));
+  const list = el('ul', { class: 'linked-quotes' });
+  sec.appendChild(list);
+
+  void listQuotesFor(entry.id).then((quotes) => {
+    for (const q of quotes) {
+      const text = q.quoteText || q.title;
+      const btn = el('button', { type: 'button', class: 'linked-quote' },
+        el('span', { class: 'linked-quote-text' }, `“${text.length > 160 ? `${text.slice(0, 159)}…` : text}”`),
+        q.location ? el('span', { class: 'linked-quote-loc' }, q.location) : null
+      );
+      btn.addEventListener('click', () => openEntry(q.id, { onChanged }));
+      list.appendChild(el('li', {}, btn));
+    }
+  });
+
+  const add = el('button', { type: 'button', class: 'btn btn-muted btn-sm' });
+  add.innerHTML = `${icons.quote()} <span>Add a quote</span>`;
+  add.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('bookshelf:add-quote', { detail: { linkedEntryId: entry.id } }));
+  });
+  sec.appendChild(add);
   return sec;
 }
 
@@ -465,20 +644,17 @@ function actionsRow(card, entry, onChanged) {
   });
   editBtn.innerHTML = `${icons.edit()} <span class="btn-label">Edit</span>`;
 
+  // Share opens the image-card dialog (main.js owns it, avoiding an import cycle).
   const shareBtn = el('button', { type: 'button', class: 'btn btn-muted' });
   shareBtn.innerHTML = `${icons.share()} <span class="btn-label">Share</span>`;
-  shareBtn.addEventListener('click', async () => {
-    const result = await shareEntry(entry);
-    if (result === 'copied') {
-      const prev = shareBtn.innerHTML;
-      shareBtn.innerHTML = `${icons.check()} <span class="btn-label">Copied</span>`;
-      setTimeout(() => { shareBtn.innerHTML = prev; }, 1500);
-    }
+  shareBtn.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('bookshelf:share-card', { detail: { id: entry.id } }));
   });
 
   const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove');
   let armed = false;
-  let timer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
   removeBtn.addEventListener('click', async () => {
     if (!armed) {
       armed = true;

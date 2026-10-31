@@ -1,6 +1,7 @@
 # Android / Gradle build outputs
 *.iml
 .gradle/
+.kotlin/
 /local.properties
 /.idea/
 .DS_Store

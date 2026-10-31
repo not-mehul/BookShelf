@@ -1,12 +1,15 @@
-import { el, clear } from './components.js';
+import { el, clear, messageOf } from './components.js';
 import { icons } from '../util/icons.js';
 import { getSetting, setSetting, removeSetting } from '../util/settings.js';
 import { openModal, closeModal } from './detail-modal.js';
 import { buildThemeToggle } from './theme.js';
+import { isNativeShell } from '../platform/native.js';
 import { importMarkdown } from '../export/import.js';
 import { importJson, saveAndShareJson } from '../export/json.js';
+import { syncSupported, getSyncStatus, chooseSyncFolder, forgetSyncFolder, syncNow } from '../sync/sync.js';
 
 // Open Settings as a modal (the app no longer has a Settings tab).
+/** @param {{ onChanged?: () => void }} [listener] Called after data changes (e.g. an import). */
 export function openSettings({ onChanged } = {}) {
   openModal((card) => {
     clear(card);
@@ -18,7 +21,7 @@ export function openSettings({ onChanged } = {}) {
 
     card.appendChild(el('div', { class: 'add-head' },
       el('div', { class: 'modal-eyebrow' }, 'Settings'),
-      el('h2', { class: 'add-title' }, 'Preferences')
+      el('h2', { class: 'add-title', id: 'modal-title', tabindex: '-1' }, 'Preferences')
     ));
 
     const body = el('div', { class: 'settings-modal-body' });
@@ -27,6 +30,10 @@ export function openSettings({ onChanged } = {}) {
   });
 }
 
+/**
+ * @param {HTMLElement} container
+ * @param {{ onChanged?: () => void }} [listener]
+ */
 export async function renderSettings(container, { onChanged } = {}) {
   clear(container);
 
@@ -59,6 +66,20 @@ export async function renderSettings(container, { onChanged } = {}) {
     label: 'Subscriber PIN',
     hint:  'Your personal subscriber PIN. Leave blank if using a negotiated-license project key.',
     key:   'tvdb_pin',
+    type:  'password'
+  }));
+
+  container.appendChild(await fieldGroup({
+    label: 'Proxy URL (optional)',
+    hint:  'Use a BookShelf TheTVDB proxy (see proxy/ in the repo) instead of entering an API key on this device.',
+    key:   'tvdb_proxy_url',
+    type:  'url'
+  }));
+
+  container.appendChild(await fieldGroup({
+    label: 'Proxy access token',
+    hint:  'Only if your proxy was deployed with a PROXY_TOKEN.',
+    key:   'tvdb_proxy_token',
     type:  'password'
   }));
 
@@ -101,7 +122,7 @@ export async function renderSettings(container, { onChanged } = {}) {
 
   // ── Browser Compatibility ────────────────────────────────────
 
-  if (!window.AndroidHttp) {
+  if (!isNativeShell()) {
     container.appendChild(sectionHeading('Browser Compatibility'));
     container.appendChild(await fieldGroup({
       label: 'CORS Proxy (Browser only)',
@@ -109,6 +130,13 @@ export async function renderSettings(container, { onChanged } = {}) {
       key:   'cors_proxy',
       type:  'url'
     }));
+    container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
+  }
+
+  // ── Sync (Android app) ───────────────────────────────────────
+
+  if (syncSupported()) {
+    await renderSyncSection(container, onChanged);
     container.appendChild(el('hr', { class: 'divider', style: 'margin: 2rem 0' }));
   }
 
@@ -134,7 +162,7 @@ export async function renderSettings(container, { onChanged } = {}) {
       const { method, filename } = await saveAndShareJson();
       say(method === 'native' ? 'Backup shared.' : `Downloaded ${filename}.`);
     } catch (err) {
-      say('Backup failed: ' + err.message, 'err');
+      say('Backup failed: ' + messageOf(err), 'err');
     } finally {
       backupBtn.disabled = false;
     }
@@ -182,11 +210,87 @@ function readFileThen(fileInput, btn, handler, say) {
   const reader = new FileReader();
   reader.onload = async () => {
     try { await handler(reader.result); }
-    catch (err) { say('Import failed: ' + err.message, 'err'); }
+    catch (err) { say('Import failed: ' + messageOf(err), 'err'); }
     finally { done(); }
   };
   reader.onerror = () => { say('Failed to read file.', 'err'); done(); };
   reader.readAsText(file);
+}
+
+/**
+ * Encrypted folder sync: folder picker, passphrase, status and actions.
+ * Re-renders itself in place after each action.
+ * @param {HTMLElement} container
+ * @param {(() => void) | undefined} onChanged
+ */
+async function renderSyncSection(container, onChanged) {
+  const section = el('div', { class: 'sync-section' });
+  container.appendChild(section);
+
+  async function render() {
+    clear(section);
+    section.appendChild(sectionHeading('Sync'));
+    section.appendChild(el('p', { class: 'field-hint' },
+      'Keeps an end-to-end encrypted copy of your shelf in a folder — e.g. one synced by Google Drive, Nextcloud or Syncthing — and merges changes from your other devices.'));
+
+    const status = await getSyncStatus();
+    const folderRow = el('div', { class: 'token-info-row' });
+    const folderText = el('p', { class: 'token-info-text' }, 'Folder: ');
+    folderText.appendChild(el('strong', {}, status ? status.folderName : 'not chosen'));
+    const chooseBtn = el('button', { type: 'button', class: 'btn btn-muted' }, status ? 'Change folder' : 'Choose folder');
+    chooseBtn.addEventListener('click', async () => {
+      chooseBtn.disabled = true;
+      try { await chooseSyncFolder(); } catch (err) { say(messageOf(err), 'err'); }
+      await render();
+    });
+    folderRow.append(folderText, chooseBtn);
+    section.appendChild(folderRow);
+
+    section.appendChild(await fieldGroup({
+      label: 'Sync passphrase',
+      hint: 'Use the same passphrase on every device. It encrypts the sync file and cannot be recovered if lost.',
+      key: 'sync_passphrase',
+      type: 'password'
+    }));
+
+    const notice = el('div', { class: 'settings-notice', role: 'status', 'aria-live': 'polite' });
+    /** @param {string} msg @param {'ok' | 'err'} [kind] */
+    const say = (msg, kind = 'ok') => {
+      notice.className = `settings-notice settings-notice-${kind}`;
+      notice.textContent = msg;
+    };
+    const last = await getSetting('sync_last');
+    const lastError = await getSetting('sync_last_error');
+    if (lastError) say(`Last sync failed: ${lastError}`, 'err');
+    else if (last) say(`Last synced ${new Date(last).toLocaleString()}`);
+
+    if (status) {
+      const syncBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Sync now');
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        say('Syncing…');
+        try {
+          const r = await syncNow();
+          say(r.pulled || r.removed
+            ? `Synced — ${r.pulled} updated, ${r.removed} removed on this device.`
+            : 'Synced — already up to date.');
+          if (r.pulled || r.removed) onChanged?.();
+        } catch (err) {
+          say(messageOf(err), 'err');
+        } finally {
+          syncBtn.disabled = false;
+        }
+      });
+      const stopBtn = el('button', { type: 'button', class: 'btn btn-muted' }, 'Stop syncing');
+      stopBtn.addEventListener('click', async () => {
+        await forgetSyncFolder();
+        await render();
+      });
+      section.appendChild(el('div', { class: 'settings-btn-row' }, syncBtn, stopBtn));
+    }
+    section.appendChild(notice);
+  }
+  await render();
 }
 
 function sectionHeading(label) {

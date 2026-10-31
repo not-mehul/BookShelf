@@ -79,3 +79,21 @@ describe('parseMarkdown', () => {
     expect(ids.size).toBe(entries.length);
   });
 });
+
+describe('parseMarkdown with half-star ratings', () => {
+  it('reads ratings like 3.5/5 on entries and quotes', async () => {
+    const md = `## Books (1)\n\n### Emma (1815) — ★★★½☆ **3.5/5**\n\n*Jane Austen*\n\n---\n\n## Quotes (1)\n\n> Badly done, Emma!\n\n★★★★½ **4.5/5**\n\n---\n`;
+    const entries = await parseMarkdown(md);
+    expect(entries.find((e) => e.type === 'book').rating).toBe(3.5);
+    expect(entries.find((e) => e.type === 'quote').rating).toBe(4.5);
+  });
+});
+
+describe('parseMarkdown with series', () => {
+  it('reads the series line', async () => {
+    const md = `## Books (1)\n\n### Abaddon's Gate (2013)\n\n*James S. A. Corey*\n\n**Series:** The Expanse #3\n\n---\n`;
+    const [book] = await parseMarkdown(md);
+    expect(book.series).toEqual({ name: 'The Expanse', position: 3 });
+    expect(book.summary).toBe('');
+  });
+});

@@ -1,5 +1,9 @@
 import { newEntryId, saveEntry } from '../db/database.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
+import { normalizeRating } from '../util/stars.js';
+
+/** @typedef {import('../types').CatalogEntry} CatalogEntry */
+/** @typedef {import('../types').EntryType} EntryType */
 
 /**
  * Parse the Markdown format produced by exportMarkdown() into entry objects.
@@ -12,6 +16,7 @@ export async function parseMarkdown(text) {
   for (const section of typeSections) {
     const lines = section.split('\n');
     const header = lines[0].toLowerCase();
+    /** @type {EntryType | null} */
     let type = null;
     if (header.includes('books')) type = 'book';
     else if (header.includes('movies')) type = 'movie';
@@ -41,9 +46,15 @@ export async function importMarkdown(text) {
   return entries.length;
 }
 
+/**
+ * @param {string} text
+ * @param {EntryType} type
+ * @returns {Promise<CatalogEntry | null>}
+ */
 async function parseEntry(text, type) {
   if (!text) return null;
 
+  /** @type {CatalogEntry} */
   const entry = {
     id: newEntryId(),
     type,
@@ -65,6 +76,7 @@ async function parseEntry(text, type) {
 
   if (type === 'quote') {
     const lines = text.split('\n');
+    /** @type {string[]} */
     const quoteLines = [];
     let state = 'quote';
 
@@ -81,9 +93,9 @@ async function parseEntry(text, type) {
         } else if (state === 'quote') {
           quoteLines.push(content);
         }
-      } else if (line.includes('★') || line.includes('☆')) {
-        const match = line.match(/(\d)\/5/);
-        if (match) entry.rating = parseInt(match[1], 10);
+      } else if (/[★☆½]/.test(line)) {
+        const match = line.match(/(\d(?:\.5)?)\/5/);
+        if (match) entry.rating = normalizeRating(parseFloat(match[1]));
       } else if (line.startsWith('_') && line.endsWith('_')) {
         const content = line.slice(1, -1).trim();
         if (content.startsWith('Added')) {
@@ -104,9 +116,9 @@ async function parseEntry(text, type) {
     if (!firstLine.startsWith('###')) return null;
 
     const titlePart = firstLine.slice(3).trim();
-    const ratingMatch = titlePart.match(/—\s*[★☆]+\s*\*\*(\d)\/5\*\*/);
+    const ratingMatch = titlePart.match(/—\s*[★☆½]+\s*\*\*(\d(?:\.5)?)\/5\*\*/);
     if (ratingMatch) {
-      entry.rating = parseInt(ratingMatch[1], 10);
+      entry.rating = normalizeRating(parseFloat(ratingMatch[1]));
     }
 
     const titleNoRating = titlePart.split('—')[0].trim();
@@ -132,8 +144,12 @@ async function parseEntry(text, type) {
         entry.creators = line.slice(1, -1).split(',').map(s => s.trim());
       } else if (line.startsWith('**Genres:**')) {
         entry.genres = line.replace('**Genres:**', '').split(',').map(s => s.trim());
+      } else if (line.startsWith('**Series:**')) {
+        const m = line.replace('**Series:**', '').trim().match(/^(.+?)(?:\s+#(\d+(?:\.\d+)?))?$/);
+        if (m) entry.series = { name: m[1].trim(), position: m[2] ? Number(m[2]) : null };
       } else if (line.startsWith('**Status:**')) {
-        entry.status = line.replace('**Status:**', '').trim();
+        const status = line.replace('**Status:**', '').trim();
+        if (status === 'want' || status === 'in-progress' || status === 'finished') entry.status = status;
       } else if (line.startsWith('>')) {
         entry.notes += (entry.notes ? '\n' : '') + line.slice(1).trim();
       } else if (line.startsWith('_Added')) {

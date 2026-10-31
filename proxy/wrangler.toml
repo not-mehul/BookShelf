@@ -1,0 +1,14 @@
+# Cloudflare Worker that proxies TheTVDB for BookShelf. See README.md.
+name = "bookshelf-tvdb-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Browser origins allowed to call the proxy (comma-separated). The Android
+# app's WebView origin is included; add your PWA's origin if you host one.
+ALLOWED_ORIGINS = "https://appassets.androidwebview.com"
+
+# Secrets — set with `npx wrangler secret put <NAME>`, never commit them:
+#   TVDB_API_KEY  (required)
+#   TVDB_PIN      (optional)
+#   PROXY_TOKEN   (optional, recommended) — clients send it as a Bearer token

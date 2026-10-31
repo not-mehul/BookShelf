@@ -2,18 +2,28 @@
 
 A personal catalog for books, films, TV shows, and quotes — searchable, ratable, exportable. A web app (installable as a PWA) that also ships as a native Android application via a thin WebView shell (no Capacitor). Styled with *Editorial Dusk & Dawn* — a warm, two-theme editorial aesthetic.
 
-- **Books** — Google Books search, with an Open Library fallback and ISBN lookup
-- **Movies & TV** — TheTVDB v4 (cast/genre enrichment on open)
-- **Quotes** — manual entry with author + source
+- **Books** — Google Books search, with an Open Library fallback, ISBN lookup and **barcode scanning**
+- **Movies & TV** — TheTVDB v4 (cast/genre enrichment on open), directly or through your own **hosted proxy** ([`proxy/`](./proxy))
+- **Quotes** — manual entry with author, source and page/time, **linked to the book, film or show** they come from (each entry lists its quotes)
 - **Manual entry** — add anything by hand when search comes up empty, and edit any entry afterward
-- **Organize** — 5-star ratings, status, reading/watching progress bars, free-form notes, and tags/collections
+- **Organize** — **half-star ratings** with optional aspect scores (story, writing, acting…), status, progress, notes, tags/collections
+- **TV episode tracking** — tick episodes and seasons, "Up next" on the library, progress and status follow automatically, and (Android) **new-episode alerts**
+- **Series** — detected from titles or set by hand: reading/watching order, what's next, gaps, "check for new installments"
+- **Ranked queue** — your Wishlist in order (drag, keyboard or buttons), plus "pick something for me" by type, length or genre
+- **Bulk edit** — select several entries (button or long-press) to change status, add/remove tags, or delete
 - **Statistics** — totals, rating distribution, top genres, activity
 - **Storage** — local IndexedDB (Dexie) with cached cover thumbnails; nothing leaves the device
 - **Backup** — lossless JSON export/import (re-importable without duplicates) plus human-readable Markdown export
-- **Share** — share a single entry via the system share sheet / Web Share API
+- **Share cards** — any book, film, show or quote as a Dusk or Dawn styled image (post, square or story), or as text
+- **Share *into* BookShelf** — share a highlight, title or link from any app (Android share sheet, or the installed PWA's share target) to get a prefilled quote or search
+- **Encrypted sync** (Android) — end-to-end encrypted sync through a folder you choose (Google Drive, Nextcloud, Syncthing…)
+- **Home-screen widget** (Android) — resizable: shelf count, what you're reading/watching with progress, latest quote
+- **Secrets in the Android Keystore** — API keys, tokens and the sync passphrase are encrypted with a hardware-backed key
 - **Themes** — Dusk (dark) / Dawn (light), honoring `prefers-color-scheme` on first load
 
 ## Quick start (development)
+
+Requires **Node 22.12+** (Node 24 LTS recommended — see `.nvmrc`).
 
 ```bash
 npm install
@@ -26,25 +36,38 @@ Open the shown localhost URL. Open **Settings** (gear, top-right) and paste:
 - Your **TheTVDB subscriber PIN** (if your project key uses end-user subscription funding)
 - Optionally a **Google Books API key** (raises the daily quota)
 
-> **Privacy:** API keys, the cached TheTVDB token, and all catalog data are stored
-> locally (localStorage + IndexedDB) in plain form on the device. They are never
-> transmitted anywhere except directly to the respective API when you search.
+Or, instead of a TheTVDB key on every device, deploy the [TheTVDB proxy](./proxy)
+and enter its URL (and access token) under Settings → TheTVDB.
 
-In a plain browser, TheTVDB blocks cross-origin requests; set a CORS proxy base
-URL under Settings → Browser Compatibility to enable movie/TV search. The Android
-app does not need this.
+> **Privacy:** catalog data lives locally in IndexedDB. In the Android app, API
+> keys, the TheTVDB token and the sync passphrase are encrypted with an Android
+> Keystore key; in a plain browser they sit in localStorage. Nothing is sent
+> anywhere except to the respective API when you search — and, if you enable
+> sync, an end-to-end encrypted file to the folder you chose.
+
+In a plain browser, TheTVDB blocks cross-origin requests: use the TheTVDB proxy,
+or set a generic CORS proxy under Settings → Browser Compatibility. The Android
+app needs neither.
 
 ## Scripts
 
 ```bash
 npm run dev          # Vite dev server
 npm run build        # production build (single self-contained index.html)
-npm run test         # Vitest unit tests
+npm run test         # Vitest unit tests (web + proxy)
+npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
+npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
 npm run lint         # ESLint
 npm run format       # Prettier (write)
-npm run check        # lint + test + build (what CI runs)
-npm run android:assets  # build, then copy dist/ into the Android assets
+npm run check        # lint + typecheck + test + build
+npm run android:assets  # build, then copy dist/ into the Android assets (cross-platform)
 ```
+
+Toolchain: Vite 8 (Rolldown), TypeScript 7 (type-checking only), Vitest 5,
+Playwright, ESLint 10 (flat config), Prettier 3, Dexie 4.
+
+For `test:e2e`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
+or point `PW_CHROMIUM_PATH` at an existing Chromium.
 
 ## Android
 
@@ -53,10 +76,15 @@ Android Studio project that bundles the web build inside a `WebView`. See
 [`android-app/README.md`](./android-app/README.md) for how to open, run, and
 build an APK.
 
-The shell provides two native bridges (`src/util/android-bridge.js` wires them up):
-native HTTP to bypass WebView CORS (restricted to the app's API hosts), and a
-file export/share path. Both are feature-detected, so the same build runs
-unchanged in a plain browser.
+The shell is Kotlin on AGP 9.4 / Gradle 9.8, targeting Android 17 (API 37), and
+opens in Android Studio 2026.2 (Rabbit) or newer. It
+draws edge-to-edge, supports predictive back (Back closes an open modal), and
+talks to the page over a single origin-scoped message channel
+(`src/platform/native.js` ↔ `NativeBridge.kt`): native HTTP to bypass WebView
+CORS (restricted to the app's API hosts), file export/share, theme / back
+signalling, and RPCs for the Keystore, barcode scanner, folder sync and the
+widget. Everything is feature-detected, so the same build runs unchanged in a
+plain browser.
 
 ## Project structure
 
@@ -68,34 +96,63 @@ src/
     tvdb.js          TheTVDB v4 client (login, token cache, extended enrichment)
     normalize.js     API responses → unified CatalogEntry shape
   db/
-    database.js      Dexie schema (v2) + CRUD + tag index
+    database.js      Dexie schema (v3: tags index, tombstones) + CRUD
   ui/
     theme.js         Dusk/Dawn toggle
     library.js       Library grid (sort, filter, full-text search, tag chips)
     add-flow.js      Add modal: choose medium → search / manual / quote
-    detail-modal.js  Entry detail + edit + rating + progress + tags + share
+    detail-modal.js  Modal system (native <dialog>) + entry detail/edit, series, quotes, tags
+    episodes-section.js  TV episodes: next up, seasons, alerts toggle
+    queue.js         Ranked Wishlist queue + pick-for-me
+    bulk.js          Multi-select bulk edit / delete
+    share-card.js    Share-card preview dialog
+    entry-picker.js  "From (on your shelf)" combobox for quotes
     stats.js         Statistics overview modal
-    settings.js      API keys + JSON/Markdown backup & restore
+    settings.js      API keys, proxy, sync setup, JSON/Markdown backup & restore
     forms.js         Shared form-field builders
-    components.js    DOM helpers, segmented control, focus trap, cover images
-    rating.js        5-star rating control (radiogroup)
+    components.js    DOM helpers, segmented control, cover images
+    rating.js        Half-star rating slider + aspect ratings
+  share/
+    card.js          Canvas share-card renderer (palette read from tokens.css)
+    layout.js        Text wrapping / fit-to-box (pure)
+    share-image.js   Native share sheet, Web Share (files) or download
+  api/
+    episode-sync.js  Episode-guide refresh + Android reminder schedule
   export/
     markdown.js      DB → Markdown serializer
     import.js        Markdown parser (best-effort)
     json.js          Lossless JSON backup / restore
     share.js         Single-entry share
+  platform/
+    native.js        Android shell bridge: native HTTP, RPC, events, export, theme, back
+    widget.js        Builds the home-screen widget's summary
+  sync/
+    crypto.js        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
+    merge.js         Last-writer-wins merge with deletion tombstones (pure)
+    sync.js          Pull → merge → push orchestration, auto-sync
   util/
-    settings.js      localStorage-backed settings
-    android-bridge.js Native HTTP + export bridges (no-op in a browser)
+    settings.js      Settings; secrets routed to the Android Keystore
+    share-intake.js  Parses text shared into the app into prefill values
+    barcode.js       ISBN scanning (native scanner / BarcodeDetector)
+    stars.js         Half-star formatting and histogram
+    series.js        Series detection, order, next-in-series
+    queue.js         Fractional queue ranks + weighted pick
+    episodes.js      Episode progress, seasons, reminder window
+    status.js        Status labels (Wishlist / Progressing / Completed)
     icons.js         Inlined Lucide icons
     thumbs.js        Cover blob fetch + downscale
   styles/
     tokens.css       Both theme blocks (Dusk + Dawn)
     app.css          Component styles, glow layer
-  main.js            Boot + service-worker registration
+  types.d.ts         Shared data types (CatalogEntry, …) for type-checking
+  main.js            Boot, share/widget events, auto-sync, service worker
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
+scripts/
+  sync-android-assets.mjs  Copies dist/ into the Android app's assets
 test/                Vitest unit tests
+e2e/                 Playwright smoke tests (+ a simulated Android shell)
+proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
 index.html
 android-app/         Native Android Studio project (WebView shell)
 ```
@@ -108,7 +165,26 @@ android-app/         Native Android Studio project (WebView shell)
 
 ## Testing & CI
 
-Unit tests (Vitest) cover the pure logic: API normalization, ISBN detection, the Markdown parser, and single-entry share formatting. GitHub Actions (`.github/workflows/ci.yml`) runs lint + tests + build on every push and PR.
+- **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
+  detection, Markdown parsing, share intake, the native bridge protocol and
+  back-handler stack, Keystore routing, sync encryption and merge (plus an
+  end-to-end sync between two simulated devices), the widget summary, half-star
+  ratings, series detection, queue ranking and picks, episode progress,
+  share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
+- **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
+  simulated Android shell (`e2e/fake-shell.js`), with a fixture shelf
+  (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
+  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
+  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
+- **Android (JVM)** — bridge host allowlist, filename sanitizing and MIME types,
+  Keystore name validation, the widget summary contract, and which new-episode
+  alerts are due.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
+
+- **Web** — lint, typecheck, unit tests, build, and a check that the committed Android assets match a fresh build.
+- **E2E** — Playwright smoke tests (report uploaded on failure).
+- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the widget UI and the reminder worker.
 
 ## Design system
 

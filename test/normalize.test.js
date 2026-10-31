@@ -92,3 +92,35 @@ describe('enrichFromTvdbDetail', () => {
     expect(enrichFromTvdbDetail(base, null)).toBe(base);
   });
 });
+
+import { normalizeEpisode } from '../src/api/normalize.js';
+import { collectEpisodePages } from '../src/api/tvdb.js';
+
+describe('episodes from TheTVDB', () => {
+  it('normalizes episode records and drops unusable ones', () => {
+    expect(normalizeEpisode({ id: 7, seasonNumber: 2, number: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 }))
+      .toEqual({ id: 7, s: 2, e: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 });
+    expect(normalizeEpisode({ id: 8, seasonNumber: 1, number: 1, aired: null }).aired).toBeNull();
+    expect(normalizeEpisode({ id: 9, number: 1 })).toBeNull();
+  });
+
+  it('follows links.next across pages', async () => {
+    const pages = [
+      { data: { series: { status: { name: 'Continuing' } }, episodes: [{ id: 1 }] }, links: { next: 'x' } },
+      { data: { episodes: [{ id: 2 }] }, links: { next: null } }
+    ];
+    const r = await collectEpisodePages(async (p) => pages[p]);
+    expect(r.episodes.map((e) => e.id)).toEqual([1, 2]);
+    expect(r.series.status.name).toBe('Continuing');
+  });
+
+  it('without links, keeps going only while pages are full', async () => {
+    let calls = 0;
+    const r = await collectEpisodePages(async (p) => {
+      calls++;
+      return { data: { episodes: p === 0 ? Array.from({ length: 500 }, (_, i) => ({ id: i })) : [{ id: 999 }] } };
+    });
+    expect(calls).toBe(2);
+    expect(r.episodes).toHaveLength(501);
+  });
+});

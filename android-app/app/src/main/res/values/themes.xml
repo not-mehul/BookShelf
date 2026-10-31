@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- No ActionBar; the web app renders its own chrome. Dusk-colored window so
-         the brief pre-WebView frame matches the app instead of flashing white. -->
-    <style name="Theme.BookShelf" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/dusk_bg</item>
-        <item name="android:statusBarColor">@color/dusk_bg</item>
-        <item name="android:navigationBarColor">@color/dusk_bg</item>
-        <item name="android:windowLightStatusBar">false</item>
+    <!-- Light (Dawn) by default; values-night switches to Dusk. The WebView's
+         prefers-color-scheme follows this theme, which is what the web app
+         uses to pick its initial theme. System-bar colours are not set here:
+         the activity draws edge-to-edge with transparent bars. -->
+    <style name="Theme.BookShelf" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/dawn_bg</item>
     </style>
 </resources>
