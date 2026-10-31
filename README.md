@@ -4,13 +4,17 @@ A personal catalog for books, films, TV shows, and quotes — searchable, ratabl
 
 - **Books** — Google Books search, with an Open Library fallback, ISBN lookup and **barcode scanning**
 - **Movies & TV** — TheTVDB v4 (cast/genre enrichment on open), directly or through your own **hosted proxy** ([`proxy/`](./proxy))
-- **Quotes** — manual entry with author + source
+- **Quotes** — manual entry with author, source and page/time, **linked to the book, film or show** they come from (each entry lists its quotes)
 - **Manual entry** — add anything by hand when search comes up empty, and edit any entry afterward
-- **Organize** — 5-star ratings, status, reading/watching progress bars, free-form notes, and tags/collections
+- **Organize** — **half-star ratings** with optional aspect scores (story, writing, acting…), status, progress, notes, tags/collections
+- **TV episode tracking** — tick episodes and seasons, "Up next" on the library, progress and status follow automatically, and (Android) **new-episode alerts**
+- **Series** — detected from titles or set by hand: reading/watching order, what's next, gaps, "check for new installments"
+- **Ranked queue** — your Wishlist in order (drag, keyboard or buttons), plus "pick something for me" by type, length or genre
+- **Bulk edit** — select several entries (button or long-press) to change status, add/remove tags, or delete
 - **Statistics** — totals, rating distribution, top genres, activity
 - **Storage** — local IndexedDB (Dexie) with cached cover thumbnails; nothing leaves the device
 - **Backup** — lossless JSON export/import (re-importable without duplicates) plus human-readable Markdown export
-- **Share** — share a single entry via the system share sheet / Web Share API
+- **Share cards** — any book, film, show or quote as a Dusk or Dawn styled image (post, square or story), or as text
 - **Share *into* BookShelf** — share a highlight, title or link from any app (Android share sheet, or the installed PWA's share target) to get a prefilled quote or search
 - **Encrypted sync** (Android) — end-to-end encrypted sync through a folder you choose (Google Drive, Nextcloud, Syncthing…)
 - **Home-screen widget** (Android) — resizable: shelf count, what you're reading/watching with progress, latest quote
@@ -96,12 +100,23 @@ src/
     theme.js         Dusk/Dawn toggle
     library.js       Library grid (sort, filter, full-text search, tag chips)
     add-flow.js      Add modal: choose medium → search / manual / quote
-    detail-modal.js  Modal system (native <dialog>) + entry detail/edit/rating/progress/tags/share
+    detail-modal.js  Modal system (native <dialog>) + entry detail/edit, series, quotes, tags
+    episodes-section.js  TV episodes: next up, seasons, alerts toggle
+    queue.js         Ranked Wishlist queue + pick-for-me
+    bulk.js          Multi-select bulk edit / delete
+    share-card.js    Share-card preview dialog
+    entry-picker.js  "From (on your shelf)" combobox for quotes
     stats.js         Statistics overview modal
     settings.js      API keys, proxy, sync setup, JSON/Markdown backup & restore
     forms.js         Shared form-field builders
     components.js    DOM helpers, segmented control, cover images
-    rating.js        5-star rating control (radiogroup)
+    rating.js        Half-star rating slider + aspect ratings
+  share/
+    card.js          Canvas share-card renderer (palette read from tokens.css)
+    layout.js        Text wrapping / fit-to-box (pure)
+    share-image.js   Native share sheet, Web Share (files) or download
+  api/
+    episode-sync.js  Episode-guide refresh + Android reminder schedule
   export/
     markdown.js      DB → Markdown serializer
     import.js        Markdown parser (best-effort)
@@ -118,6 +133,11 @@ src/
     settings.js      Settings; secrets routed to the Android Keystore
     share-intake.js  Parses text shared into the app into prefill values
     barcode.js       ISBN scanning (native scanner / BarcodeDetector)
+    stars.js         Half-star formatting and histogram
+    series.js        Series detection, order, next-in-series
+    queue.js         Fractional queue ranks + weighted pick
+    episodes.js      Episode progress, seasons, reminder window
+    status.js        Status labels (Wishlist / Progressing / Completed)
     icons.js         Inlined Lucide icons
     thumbs.js        Cover blob fetch + downscale
   styles/
@@ -144,21 +164,26 @@ android-app/         Native Android Studio project (WebView shell)
 
 ## Testing & CI
 
-- **Unit (Vitest)** — API normalization, ISBN detection, Markdown parsing, share
-  formatting and share intake, the native bridge protocol, Keystore routing,
-  sync encryption and merge (plus an end-to-end sync between two simulated
-  devices), the widget summary, and the TheTVDB proxy Worker.
+- **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
+  detection, Markdown parsing, share intake, the native bridge protocol and
+  back-handler stack, Keystore routing, sync encryption and merge (plus an
+  end-to-end sync between two simulated devices), the widget summary, half-star
+  ratings, series detection, queue ranking and picks, episode progress,
+  share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
 - **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
-  simulated Android shell (`e2e/fake-shell.js`): modals and focus, adding
-  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync.
-- **Android (JVM)** — bridge host allowlist and filename sanitizing, Keystore
-  name validation, and the widget summary contract.
+  simulated Android shell (`e2e/fake-shell.js`), with a fixture shelf
+  (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
+  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
+  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
+- **Android (JVM)** — bridge host allowlist, filename sanitizing and MIME types,
+  Keystore name validation, the widget summary contract, and which new-episode
+  alerts are due.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
 
 - **Web** — lint, typecheck, unit tests, build, and a check that the committed Android assets match a fresh build.
 - **E2E** — Playwright smoke tests (report uploaded on failure).
-- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the widget UI.
+- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the widget UI and the reminder worker.
 
 ## Design system
 

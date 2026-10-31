@@ -1,7 +1,10 @@
 /* Editorial Dusk & Dawn — semantic tokens. */
 /* All component rules reference var(--token). Literal colors outside these blocks are a bug. */
 
-:root {
+/* Dusk is also addressable as [data-theme='dark'], so share cards can read
+   either palette from a probe element whatever the page theme is. */
+:root,
+[data-theme='dark'] {
   color-scheme: dark;
   /* Camera viewfinder — deliberately black in both themes (Dawn inherits these). */
   --scanner-bg: #000;

@@ -37,5 +37,6 @@ class NativeBridgeTest {
         assertEquals("application/json", NativeBridge.mimeFor("backup.JSON"))
         assertEquals("text/markdown", NativeBridge.mimeFor("catalog.md"))
         assertEquals("text/plain", NativeBridge.mimeFor("quote.txt"))
+        assertEquals("image/png", NativeBridge.mimeFor("dune-card.PNG"))
     }
 }

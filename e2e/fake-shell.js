@@ -4,7 +4,7 @@
 // `http` requests, and lets tests push native events.
 //
 // Runs inside the page, so it must be self-contained (no imports/closures).
-export function installFakeShell({ scanResult = '9780441172719', syncFolder = null } = {}) {
+export function installFakeShell({ scanResult = '9780441172719', syncFolder = null, notificationsAllowed = true } = {}) {
   const keystore = {};
   let folder = syncFolder;
   window.__sent = [];
@@ -22,7 +22,10 @@ export function installFakeShell({ scanResult = '9780441172719', syncFolder = nu
     syncForget: () => ((folder = null), true),
     syncRead: () => window.__syncFile ?? null,
     syncWrite: ({ text }) => ((window.__syncFile = text), true),
-    widgetUpdate: () => true
+    widgetUpdate: () => true,
+    shareFile: () => true,
+    episodeReminders: () => true,
+    requestNotificationPermission: () => notificationsAllowed
   };
 
   window.BookShelfNative = {

@@ -93,7 +93,7 @@ class NativeBridge(
                 proxy.send(reply.toString())
             }
             "export" -> activity.lifecycleScope.launch {
-                exportFile(msg.optString("filename"), msg.optString("text"))
+                shareFile(msg.optString("filename"), msg.optString("text").toByteArray(Charsets.UTF_8))
             }
             "call" -> activity.lifecycleScope.launch { proxy.send(invoke(msg).toString()) }
             "theme" -> onThemeChanged(msg.optString("mode") != "light")
@@ -209,15 +209,19 @@ class NativeBridge(
 
     // ── Export / share ─────────────────────────────────────────────
 
-    private suspend fun exportFile(filename: String, text: String) {
+    /**
+     * Write `bytes` to cacheDir/exports and open the system share sheet for it
+     * (Markdown/JSON exports, share-card images). Failures are shown as a toast.
+     */
+    suspend fun shareFile(filename: String, bytes: ByteArray, mime: String = mimeFor(filename)) {
         try {
             val file = withContext(Dispatchers.IO) {
                 val dir = File(activity.cacheDir, "exports").apply { mkdirs() }
-                File(dir, sanitize(filename)).apply { writeText(text, Charsets.UTF_8) }
+                File(dir, sanitize(filename)).apply { writeBytes(bytes) }
             }
             val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
             val share = Intent(Intent.ACTION_SEND).apply {
-                type = mimeFor(filename)
+                type = mime
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(Intent.EXTRA_TITLE, filename)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -258,6 +262,7 @@ class NativeBridge(
         internal fun mimeFor(name: String): String = when {
             name.endsWith(".json", ignoreCase = true) -> "application/json"
             name.endsWith(".md", ignoreCase = true) -> "text/markdown"
+            name.endsWith(".png", ignoreCase = true) -> "image/png"
             else -> "text/plain"
         }
     }

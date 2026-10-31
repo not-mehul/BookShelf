@@ -4,13 +4,14 @@ import { startAutoSync } from './sync/sync.js';
 import { pushWidgetSummary } from './platform/widget.js';
 import { pushEpisodeReminders, refreshFollowedGuides } from './api/episode-sync.js';
 import { openEntry } from './ui/detail-modal.js';
+import { openShareCard } from './ui/share-card.js';
 import { initTheme } from './ui/theme.js';
 import { el, clear } from './ui/components.js';
 import { icons } from './util/icons.js';
 import { renderLibrary } from './ui/library.js';
 import { openSettings } from './ui/settings.js';
 import { openAddFlow } from './ui/add-flow.js';
-import { listEntries } from './db/database.js';
+import { listEntries, getEntry } from './db/database.js';
 
 // Must run before anything fetches: routes cross-origin calls through the
 // Android shell's native HTTP. A no-op in a plain browser.
@@ -127,6 +128,12 @@ async function boot() {
       searchType: type,
       prefill: { quoteText: '', author: '', source: '', query, link: null }
     });
+  });
+  // "Share" on an entry: the image-card dialog.
+  document.addEventListener('bookshelf:share-card', async (ev) => {
+    const { id } = /** @type {CustomEvent<{ id: string }>} */ (ev).detail;
+    const entry = await getEntry(id);
+    if (entry) openShareCard(entry, { onChanged });
   });
   // "Add a quote" on a book / film / show page.
   document.addEventListener('bookshelf:add-quote', (ev) => {

@@ -13,7 +13,6 @@ import { loadEpisodeGuide } from '../api/episode-sync.js';
 import { guideIsStale } from '../util/episodes.js';
 import { episodesSection } from './episodes-section.js';
 import { fetchThumbBlob } from '../util/thumbs.js';
-import { shareEntry } from '../export/share.js';
 
 const TYPE_LABEL = { book: 'Book', movie: 'Movie', tv: 'TV Show', quote: 'Quote' };
 const TYPE_ICON = { book: 'book', movie: 'film', tv: 'tv', quote: 'quote' };
@@ -645,15 +644,11 @@ function actionsRow(card, entry, onChanged) {
   });
   editBtn.innerHTML = `${icons.edit()} <span class="btn-label">Edit</span>`;
 
+  // Share opens the image-card dialog (main.js owns it, avoiding an import cycle).
   const shareBtn = el('button', { type: 'button', class: 'btn btn-muted' });
   shareBtn.innerHTML = `${icons.share()} <span class="btn-label">Share</span>`;
-  shareBtn.addEventListener('click', async () => {
-    const result = await shareEntry(entry);
-    if (result === 'copied') {
-      const prev = shareBtn.innerHTML;
-      shareBtn.innerHTML = `${icons.check()} <span class="btn-label">Copied</span>`;
-      setTimeout(() => { shareBtn.innerHTML = prev; }, 1500);
-    }
+  shareBtn.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('bookshelf:share-card', { detail: { id: entry.id } }));
   });
 
   const removeBtn = el('button', { type: 'button', class: 'btn btn-danger' }, 'Remove');

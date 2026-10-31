@@ -60,6 +60,8 @@ For a signed release: **Build → Generate Signed App Bundle / APK** (or add a
 | **Barcode scanning** | `BarcodeScanner.kt` | Google Code Scanner (Play services) — full camera UI, **no CAMERA permission**, EAN/UPC only. The module is fetched at install time. |
 | **Secrets in the Keystore** | `SecureStore.kt` | AES-256-GCM key generated in the Android Keystore; prefs hold only `iv‖ciphertext`, with the setting name as associated data. Excluded from backup (the key never leaves the device). |
 | **Encrypted folder sync** | `FolderSync.kt` | Storage Access Framework folder picker with a persisted permission; reads/writes `bookshelf-sync.json` via a temp-file swap. Encryption and merging happen in the page — this class only moves ciphertext. |
+| **New-episode alerts** | `reminders/` | The page sends upcoming episodes of shows with alerts on; a WorkManager job (every 12 h) posts a notification on air day, works with the app closed, no network needed. `POST_NOTIFICATIONS` is requested only when alerts are turned on; tapping opens the show. |
+| **Share images** | `NativeBridge.shareFile` | Share-card PNGs (and Markdown/JSON exports) are written to the cache and handed to the share sheet via `FileProvider`. |
 | **Home-screen widget** | `widget/` | Jetpack Glance, `SizeMode.Responsive` (small / medium / large), Dusk/Dawn colours, "+" opens the add flow. The page pushes a summary (`widgetUpdate`) after every change. |
 
 > **R8 note:** release builds keep `BookShelfWidget.provideGlance` via

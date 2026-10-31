@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -233,6 +234,13 @@ class MainActivity : ComponentActivity() {
             true
         }
         bridge.register("requestNotificationPermission") { requestNotificationPermission() }
+        // Share-card images (base64 PNG from the page).
+        bridge.register("shareFile") { p ->
+            val bytes = withContext(Dispatchers.Default) { Base64.decode(p.getString("base64"), Base64.NO_WRAP) }
+            val filename = p.getString("filename")
+            bridge.shareFile(filename, bytes, p.optString("mime").ifEmpty { NativeBridge.mimeFor(filename) })
+            true
+        }
 
         bridge.register("widgetUpdate") { p ->
             WidgetData.save(this, p.getJSONObject("summary"))

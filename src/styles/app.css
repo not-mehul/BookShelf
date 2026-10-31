@@ -606,7 +606,16 @@ img { display: block; }
 
 @media (max-width: 640px) {
   /* Show export as icon-only on mobile to save toolbar space */
-  .btn-label { display: none; }
+  /* Icon-only on phones, but keep the text as the button's accessible name
+     (display:none would hide it from screen readers too). */
+  .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 /* ─── Entry card grid ─────────────────────────────────────────── */
@@ -1975,7 +1984,7 @@ body:has(.modal-dialog[open]) { overflow: hidden; }
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.queue-body { padding: 0 2rem 1.5rem; }
+.queue-body { padding: 0.75rem 2rem 1.5rem; }
 .queue-filters { margin-bottom: 0.9rem; }
 .queue-pick { margin-bottom: 1rem; }
 .queue-pick-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
@@ -2151,6 +2160,33 @@ body.is-selecting .app-shell { padding-bottom: calc(8rem + var(--inset-bottom));
 .up-next-ep { font-size: 0.8rem; color: var(--text-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .up-next-when { font-size: 0.7rem; color: var(--text-muted); }
 .up-next-check { flex: none; color: var(--accent-amber); }
+
+/* ─── Share card ──────────────────────────────────────────────── */
+
+.share-card-body { padding: 0 2rem 1.5rem; }
+.share-card-frame {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--panel-bg-faint);
+  border: 1px solid var(--border-soft);
+}
+.share-card-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 52dvh;
+  height: auto;
+  box-shadow: 0 16px 40px rgba(var(--shadow-rgb), calc(0.5 * var(--shadow-strength)));
+}
+.share-card-preview:not([src]) { width: 60%; aspect-ratio: 4 / 5; background: var(--chip-bg); }
+.share-card-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.6rem 1rem; margin-bottom: 0.5rem; }
+.share-card-toggle { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text-body); }
+.share-card-actions { justify-content: center; flex-wrap: wrap; }
+.share-card-status { text-align: center; min-height: 1.2em; }
+@media (max-width: 640px) {
+  .share-card-body { padding: 0 1.25rem 1.25rem; }
+}
 
 /* ─── Reduced motion ──────────────────────────────────────────── */
 
