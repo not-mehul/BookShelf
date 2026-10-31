@@ -151,6 +151,7 @@ function kotlin(pkg) {
     const name = theme[0].toUpperCase() + theme.slice(1) + 'Tokens';
     out.push(`internal object ${name} {`);
     for (const [k, v] of Object.entries(tokens.color)) out.push(`    val ${camel(k)} = Color(${argb(v[theme])})`);
+    for (const [k, v] of Object.entries(tokens.rgb)) out.push(`    val ${camel(k)} = Color(${argb(`rgb(${v[theme]})`)})`);
     for (const [k, v] of Object.entries(tokens.number)) out.push(`    const val ${camel(k)} = ${v[theme]}f`);
     out.push('}', '');
   }
