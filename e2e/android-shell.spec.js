@@ -53,8 +53,9 @@ test('secrets typed in Settings go to the Keystore, not localStorage', async ({ 
   await expect.poll(() => page.evaluate(() => window.__keystore.tvdb_api_key)).toBe('tvdb-secret');
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('tvdb-secret');
 
-  await page.getByRole('switch', { name: 'Toggle theme' }).click();
+  await page.getByRole('radio', { name: 'Dawn' }).click();
   expect(await lastOf(page, 'theme')).toEqual({ type: 'theme', mode: 'light' });
+  await expect(page.getByRole('switch', { name: 'Dawn theme' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('text shared from another app opens a prefilled quote', async ({ page }) => {

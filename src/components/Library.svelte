@@ -4,24 +4,25 @@
   import { pushBackHandler } from '../platform/native';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
-  import { deleteEntries } from '../util/bulk';
+  import { deleteEntries, restoreEntries } from '../util/bulk';
+  import { messageOf } from '../util/errors';
   import { plural, TYPE_ICON } from '../util/labels';
   import { compareSeriesOrder, seriesSortKey } from '../util/series';
   import type { CatalogEntry, EntryType } from '../types';
   import EntryCard from './EntryCard.svelte';
   import Icon from './Icon.svelte';
-  import Segmented from './Segmented.svelte';
+  import TabRail from './ui/TabRail.svelte';
   import UpNext from './UpNext.svelte';
 
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
 
-  const TYPE_OPTS: { value: TypeFilter; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'book', label: 'Books' },
-    { value: 'movie', label: 'Movies' },
-    { value: 'tv', label: 'TV' },
-    { value: 'quote', label: 'Quotes' }
+  const TYPE_TABS: { id: TypeFilter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'book', label: 'Books' },
+    { id: 'movie', label: 'Movies' },
+    { id: 'tv', label: 'TV' },
+    { id: 'quote', label: 'Quotes' }
   ];
   const SORT_OPTS: { value: SortKey; label: string }[] = [
     { value: 'dateAdded', label: 'Recently added' },
@@ -80,8 +81,6 @@
   let selecting = $state(false);
   const selected = new SvelteSet<string>();
   let releaseBack: (() => void) | null = null;
-  let deleteArmed = $state(false);
-  let armTimer: ReturnType<typeof setTimeout> | undefined;
 
   function enterSelection(firstId?: string) {
     if (!selecting) {
@@ -96,7 +95,6 @@
     selected.clear();
     releaseBack?.();
     releaseBack = null;
-    deleteArmed = false;
   }
 
   function toggle(id: string) {
@@ -104,17 +102,19 @@
     else selected.add(id);
   }
 
+  // Deleting can be undone for a few seconds instead of being confirmed (style.md §8.12).
   async function deleteSelected() {
-    if (!deleteArmed) {
-      deleteArmed = true;
-      clearTimeout(armTimer);
-      armTimer = setTimeout(() => (deleteArmed = false), 3000);
-      return;
-    }
-    clearTimeout(armTimer);
-    await deleteEntries([...selected]);
+    const removed = await deleteEntries([...selected]);
     exitSelection();
     shelf.changed();
+    ui.notify(`Deleted ${plural(removed.length, 'entry', 'entries')}.`, 'info', {
+      label: 'Undo',
+      run: () =>
+        void restoreEntries(removed).then(
+          () => shelf.changed(),
+          (err: unknown) => ui.notify(`Couldn't restore them: ${messageOf(err)}`, 'error')
+        )
+    });
   }
 
   // Drop selected ids that no longer exist (deleted, or synced away).
@@ -149,7 +149,7 @@
 
 <div class="lib-header">
   <div class="lib-types-row">
-    <Segmented options={TYPE_OPTS} bind:value={type} />
+    <TabRail tabs={TYPE_TABS} value={type} label="Show" onselect={(id) => (type = id)} />
     <div class="lib-count">{visible.length ? plural(visible.length, 'entry', 'entries') : ''}</div>
   </div>
 
@@ -209,13 +209,11 @@
 
   {#if shelf.tags.length}
     <div class="lib-tags-row">
-      <button type="button" class="lib-tag-chip" class:active={tag === null} onclick={() => (tag = null)}>
+      <button type="button" class="chip" aria-pressed={tag === null} onclick={() => (tag = null)}>
         All tags
       </button>
       {#each shelf.tags as t (t)}
-        <button type="button" class="lib-tag-chip" class:active={tag === t} onclick={() => (tag = t)}
-          >{t}</button
-        >
+        <button type="button" class="chip" aria-pressed={tag === t} onclick={() => (tag = t)}>{t}</button>
       {/each}
     </div>
   {/if}
@@ -235,25 +233,47 @@
       onlongpress={enterSelection}
     />
   {:else}
-    <div class="empty-state">
-      {#if query}
-        <Icon name="search" />
-        <h3>No matches</h3>
-        <p>Try different words or clear the filter.</p>
-      {:else if type === 'all'}
-        <Icon name="bookmark" />
-        <h3>The shelf is empty</h3>
-        <p>Tap the + button to add a book, film, show, or quote.</p>
-      {:else if type === 'quote'}
-        <Icon name="quote" />
-        <h3>No quotes yet</h3>
-        <p>Tap the + button to add a quote.</p>
-      {:else}
-        <Icon name={TYPE_ICON[type]} />
-        <h3>No {EMPTY_LABEL[type]} yet</h3>
-        <p>Tap the + button to add one.</p>
-      {/if}
-    </div>
+    {#if query || tag}
+      <!-- style.md §8.14: a filter found nothing. -->
+      <div class="empty-match">
+        <p class="t-hint">Nothing on the shelf matches that filter.</p>
+        <button
+          type="button"
+          class="btn btn-muted"
+          onclick={() => {
+            query = '';
+            tag = null;
+          }}>Clear filter</button
+        >
+      </div>
+    {:else}
+      <!-- style.md §8.14: nothing here yet. -->
+      <div class="empty-state">
+        {#if type === 'all'}
+          <Icon name="bookmark" />
+          <p class="empty-title">The shelf is empty</p>
+          <p class="empty-text">Books, films, shows and quotes you keep will live here.</p>
+        {:else if type === 'quote'}
+          <Icon name="quote" />
+          <p class="empty-title">No quotes yet</p>
+          <p class="empty-text">Lines worth keeping, from anything you read or watch.</p>
+        {:else}
+          <Icon name={TYPE_ICON[type]} />
+          <p class="empty-title">No {EMPTY_LABEL[type]} yet</p>
+          <p class="empty-text">Add one and it will appear here.</p>
+        {/if}
+        <button
+          type="button"
+          class="btn btn-secondary"
+          onclick={() =>
+            type === 'quote'
+              ? ui.openAdd({ startWith: 'quote' })
+              : type === 'all'
+                ? ui.openAdd()
+                : ui.openAdd({ startWith: 'search', searchType: type })}>Add the first one</button
+        >
+      </div>
+    {/if}
   {/each}
 </div>
 
@@ -279,7 +299,7 @@
       disabled={selected.size === 0}
       onclick={deleteSelected}
     >
-      {deleteArmed ? `Tap again to delete ${selected.size}` : 'Delete'}
+      Delete
     </button>
     <button type="button" class="btn btn-muted btn-sm" onclick={exitSelection}>Done</button>
   {/if}

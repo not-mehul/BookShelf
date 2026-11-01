@@ -1,7 +1,15 @@
 // Render share cards (quote / book / film / show) to a canvas, in the app's
 // Dusk or Dawn palette. Colours are read from tokens.css via a probe element,
-// so the cards always match the app.
+// so the cards always match the app. The frame, eyebrow and footer are the
+// shared ones (style.md §8.16, card-frame.ts).
 
+import {
+  cardFontsReady,
+  drawEyebrow,
+  drawFooter,
+  drawFrame,
+  readPalette as readFramePalette
+} from './card-frame';
 import { fitText, wrapLines, FORMATS, type Measure } from './layout';
 import { fetchThumbBlob } from '../util/thumbs';
 import { normalizeRating, ratingLabel } from '../util/stars';
@@ -18,6 +26,12 @@ export interface CardOptions {
 const SERIF = 'Fraunces, "Iowan Old Style", "Apple Garamond", Baskerville, Georgia, "Noto Serif", serif';
 const MONO = 'ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace';
 const TYPE_LABEL = { book: 'Book', movie: 'Film', tv: 'TV Show', quote: 'Quote' };
+const TAGLINE = {
+  book: 'On my shelf',
+  movie: 'On my shelf',
+  tv: 'On my shelf',
+  quote: 'Worth keeping'
+};
 
 export function readPalette(theme: 'dark' | 'light') {
   const probe = document.createElement('div');
@@ -48,12 +62,16 @@ export async function renderCard(entry: CatalogEntry, options: CardOptions): Pro
   canvas.height = H;
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
   const p = readPalette(options.theme);
-  await document.fonts?.ready;
+  const frame = readFramePalette(options.theme);
+  await cardFontsReady();
 
-  drawBackground(ctx, W, H, p);
+  drawFrame(ctx, frame);
+  const added = entry.dateAdded ? new Date(entry.dateAdded) : new Date();
+  const when = added.toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  drawEyebrow(ctx, frame, `BookShelf · ${when}`);
   if (entry.type === 'quote') drawQuote(ctx, entry, W, H, p);
   else await drawEntry(ctx, entry, W, H, p, options);
-  drawWordmark(ctx, W, H, p);
+  drawFooter(ctx, frame, 'BookShelf', TAGLINE[entry.type]);
   return canvas;
 }
 
@@ -70,56 +88,6 @@ export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 export type Palette = ReturnType<typeof readPalette>;
 
-function drawBackground(ctx: CanvasRenderingContext2D, W: number, H: number, p: Palette) {
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, p.top);
-  bg.addColorStop(0.5, p.mid);
-  bg.addColorStop(1, p.bottom);
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  const glow = ctx.createRadialGradient(W * 0.2, H * 0.12, 0, W * 0.2, H * 0.12, W * 0.9);
-  glow.addColorStop(0, `rgba(${p.accentRgb}, 0.16)`);
-  glow.addColorStop(1, `rgba(${p.accentRgb}, 0)`);
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  // Frame + corner brackets, echoing the app's modal cards.
-  ctx.strokeStyle = `rgba(${p.accentRgb}, 0.32)`;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(44, 44, W - 88, H - 88);
-  ctx.strokeStyle = `rgba(${p.accentRgb}, 0.8)`;
-  ctx.lineWidth = 3;
-  const b = 64;
-  const len = 54;
-  ctx.beginPath();
-  ctx.moveTo(b, b + len);
-  ctx.lineTo(b, b);
-  ctx.lineTo(b + len, b);
-  ctx.moveTo(W - b, H - b - len);
-  ctx.lineTo(W - b, H - b);
-  ctx.lineTo(W - b - len, H - b);
-  ctx.stroke();
-}
-
-function drawWordmark(ctx: CanvasRenderingContext2D, W: number, H: number, p: Palette) {
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = `44px ${SERIF}`;
-  const book = 'Book';
-  ctx.font = `italic 44px ${SERIF}`;
-  const shelfW = ctx.measureText('Shelf').width;
-  ctx.font = `44px ${SERIF}`;
-  const bookW = ctx.measureText(book).width;
-  const x = (W - bookW - shelfW) / 2;
-  const y = H - 104;
-  ctx.textAlign = 'left';
-  ctx.fillStyle = p.heading;
-  ctx.fillText(book, x, y);
-  ctx.font = `italic 44px ${SERIF}`;
-  ctx.fillStyle = p.accent;
-  ctx.fillText('Shelf', x + bookW, y);
-}
-
 function drawQuote(ctx: CanvasRenderingContext2D, entry: CatalogEntry, W: number, H: number, p: Palette) {
   const pad = 130;
   ctx.fillStyle = `rgba(${p.accentRgb}, 0.9)`;
@@ -129,7 +97,7 @@ function drawQuote(ctx: CanvasRenderingContext2D, entry: CatalogEntry, W: number
   ctx.fillText('“', pad - 20, pad + 210);
 
   const top = pad + 250;
-  const bottom = H - 330;
+  const bottom = H - 360;
   const measure = measurer(ctx, (s) => `italic ${s}px ${SERIF}`);
   const fit = fitText({
     text: entry.quoteText || entry.title,
@@ -175,8 +143,8 @@ async function drawEntry(
 ) {
   const pad = 120;
   const contentW = W - pad * 2;
-  const footerTop = H - 170;
-  let y = pad + 40;
+  const footerTop = H - 200;
+  let y = pad + 90;
 
   // Cover (or a placeholder in the palette).
   const maxCoverH = H * (options.format === 'story' ? 0.4 : options.format === 'square' ? 0.36 : 0.4);

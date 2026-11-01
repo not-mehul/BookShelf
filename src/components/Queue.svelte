@@ -128,7 +128,7 @@
 <div class="queue-body">
   <div class="visually-hidden" role="status" aria-live="polite">{announcement}</div>
   <div class="queue-filters">
-    <Segmented options={TYPE_OPTS} bind:value={type} />
+    <Segmented options={TYPE_OPTS} bind:value={type} label="Show" />
   </div>
 
   <div class="queue-pick">

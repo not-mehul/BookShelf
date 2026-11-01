@@ -6,7 +6,7 @@ import { mount } from 'svelte';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
 import { installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
-import { initTheme } from './platform/theme';
+import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
@@ -21,7 +21,8 @@ function openShared(shared: SharedInput) {
 }
 
 async function boot(): Promise<void> {
-  await initTheme();
+  // The home-screen widget follows the theme, so it re-skins on a change.
+  await initTheme(() => void shelf.refresh());
   await shelf.refresh();
 
   const target = document.getElementById('app')!;
