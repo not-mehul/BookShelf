@@ -19,7 +19,7 @@ A personal catalog for books, films, TV shows, and quotes — searchable, ratabl
 - **Encrypted sync** (Android) — end-to-end encrypted sync through a folder you choose (Google Drive, Nextcloud, Syncthing…)
 - **Home-screen widget** (Android) — resizable: shelf count, what you're reading/watching with progress, latest quote
 - **Secrets in the Android Keystore** — API keys, tokens and the sync passphrase are encrypted with a hardware-backed key
-- **Themes** — Dusk (dark) / Dawn (light), honoring `prefers-color-scheme` on first load
+- **Themes** — System, Dusk (dark) or Dawn (light), set in Settings; System follows the OS live, and the header switch flips to the other side
 
 ## Quick start (development)
 
@@ -118,7 +118,7 @@ src/
     share.ts         Single-entry share
   platform/
     native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
-    theme.ts         Dusk/Dawn: saved choice, else the OS setting
+    theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
     widget.ts        Builds the home-screen widget's summary
   sync/
     crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)

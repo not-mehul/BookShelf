@@ -42,6 +42,21 @@ export async function applyBulkChanges(ids: string[], changes: BulkChanges): Pro
   return changed;
 }
 
-export async function deleteEntries(ids: string[]): Promise<void> {
-  for (const id of ids) await deleteEntry(id);
+/** Deletes the entries and returns them as they were, so they can be put back. */
+export async function deleteEntries(ids: string[]): Promise<CatalogEntry[]> {
+  const removed: CatalogEntry[] = [];
+  for (const id of ids) {
+    const entry = await getEntry(id);
+    if (entry) removed.push(entry);
+    await deleteEntry(id);
+  }
+  return removed;
+}
+
+/**
+ * Undoes `deleteEntries`. Saving clears each tombstone and gives the entry a
+ * newer timestamp than its deletion, so sync keeps it too.
+ */
+export async function restoreEntries(entries: CatalogEntry[]): Promise<void> {
+  for (const entry of entries) await saveEntry({ ...entry });
 }

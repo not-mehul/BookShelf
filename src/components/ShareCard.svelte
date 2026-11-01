@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { getEntry } from '../db/database';
   import { shareEntry } from '../export/share';
-  import { currentTheme, type ThemeMode } from '../platform/theme';
+  import { currentTheme, type ThemeMode } from '../platform/theme.svelte';
   import { canvasToBlob, renderCard } from '../share/card';
   import { FORMATS } from '../share/layout';
   import { canDownload, cardFilename, downloadImage, shareImage } from '../share/share-image';
@@ -95,8 +95,8 @@
       <img class="share-card-preview" alt="Preview of the share card" src={url || undefined} />
     </div>
     <div class="share-card-controls">
-      <Segmented options={THEME_OPTS} bind:value={theme} />
-      <Segmented options={FORMAT_OPTS} bind:value={format} />
+      <Segmented options={THEME_OPTS} bind:value={theme} label="Card theme" />
+      <Segmented options={FORMAT_OPTS} bind:value={format} label="Card format" />
       {#if e.type !== 'quote'}
         {#if e.rating != null}
           <label class="share-card-toggle" for="card-rating">

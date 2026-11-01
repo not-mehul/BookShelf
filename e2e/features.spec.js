@@ -90,13 +90,16 @@ test.describe('in the browser', () => {
     await page.getByRole('button', { name: 'Edit…' }).click();
     await page.getByLabel('Add tag').fill('Weekend');
     await page.getByRole('button', { name: 'Apply to 2' }).click();
-    await page.locator('.lib-tag-chip', { hasText: 'Weekend' }).click();
+    await page.locator('.lib-tags-row .chip', { hasText: 'Weekend' }).click();
     await expect(page.locator('.entry-card')).toHaveCount(2);
 
+    // Deleting offers an undo instead of asking first.
     await page.getByRole('button', { name: 'Delete' }).click();
-    await page.getByRole('button', { name: 'Tap again to delete 2' }).click();
     await expect(page.locator('.stats-bar')).toContainText('5 entries');
     await expect(page.locator('.select-bar')).toBeHidden();
+    await expect(page.locator('#toast')).toContainText('Deleted 2 entries.');
+    await page.locator('#toast').getByRole('button', { name: 'Undo' }).click();
+    await expect(page.locator('.stats-bar')).toContainText('7 entries');
   });
 
   test('TV episodes: up next, mark watched, seasons', async ({ page }) => {
@@ -148,7 +151,7 @@ test.describe('in the Android shell', () => {
     await page.addInitScript(installFakeShell, {});
     await page.goto('/index.html');
     await importFixture(page);
-    await page.locator('.lib-types-row .segmented button', { hasText: 'Quotes' }).click();
+    await page.getByRole('tab', { name: 'Quotes' }).click();
     await page.locator('.quote-card').first().click();
     await page.locator('dialog[open]').getByRole('button', { name: 'Share' }).click();
     await expect(page.locator('.share-card-preview')).toHaveAttribute('src', /^blob:/);

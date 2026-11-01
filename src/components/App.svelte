@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { theme, toggleTheme } from '../platform/theme.svelte';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { plural } from '../util/labels';
@@ -6,6 +7,8 @@
   import Library from './Library.svelte';
   import Modal from './Modal.svelte';
   import ModalContent from './ModalContent.svelte';
+  import ThemeToggle from './ui/ThemeToggle.svelte';
+  import Toast from './ui/Toast.svelte';
 
   const counts = $derived.by(() => {
     const c = { book: 0, movie: 0, tv: 0, quote: 0 };
@@ -24,10 +27,11 @@
 
 <header class="site-header">
   <div class="title-block">
-    <h1 class="site-title">Book<em>Shelf</em></h1>
-    <p class="site-subtitle">-by Mehul</p>
+    <h1 class="t-page-title">Book<em>Shelf</em></h1>
+    <p class="t-tagline">by Mehul</p>
   </div>
   <div class="header-controls">
+    <ThemeToggle dawn={theme.shown === 'light'} label="Dawn theme" ontoggle={() => void toggleTheme()} />
     <button
       type="button"
       class="btn-icon"
@@ -65,6 +69,13 @@
 >
   <Icon name="plus" />
 </button>
+
+<Toast
+  toast={ui.toast}
+  onpause={() => ui.pauseToast()}
+  onresume={() => ui.resumeToast()}
+  onaction={() => ui.actOnToast()}
+/>
 
 {#if ui.modal}
   <Modal contentKey={ui.modalKey} onclose={() => ui.close()}>

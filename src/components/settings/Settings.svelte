@@ -10,7 +10,8 @@
   import ModalHead from '../ModalHead.svelte';
   import SettingField from './SettingField.svelte';
   import SyncSection from './SyncSection.svelte';
-  import ThemeToggle from './ThemeToggle.svelte';
+  import { setTheme, theme, type ThemeChoice } from '../../platform/theme.svelte';
+  import Segmented from '../Segmented.svelte';
 
   type Def = { key: string; label: string; hint: string; type: 'password' | 'url' };
   const TVDB: Def[] = [
@@ -119,6 +120,12 @@
       input.value = '';
     }
   }
+
+  const THEMES: { value: ThemeChoice; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'dark', label: 'Dusk' },
+    { value: 'light', label: 'Dawn' }
+  ];
 </script>
 
 <ModalHead eyebrow="Settings" title="Preferences" />
@@ -127,10 +134,15 @@
   <div class="settings-section-heading">Appearance</div>
   <div class="theme-setting-row">
     <div class="theme-setting-text">
-      <div class="theme-setting-label">Theme</div>
-      <div class="theme-setting-sub">Dusk (dark) or Dawn (light)</div>
+      <div class="theme-setting-label" id="themeLabel">Theme</div>
+      <div class="theme-setting-sub">System follows your device.</div>
     </div>
-    <ThemeToggle />
+    <Segmented
+      options={THEMES}
+      value={theme.choice}
+      label="Theme"
+      onchange={(choice) => void setTheme(choice)}
+    />
   </div>
 
   {#if values}
