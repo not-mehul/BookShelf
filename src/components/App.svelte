@@ -7,8 +7,7 @@
   import Library from './Library.svelte';
   import Modal from './Modal.svelte';
   import ModalContent from './ModalContent.svelte';
-  import ThemeToggle from './ui/ThemeToggle.svelte';
-  import Toast from './ui/Toast.svelte';
+  import { ThemeToggle, Toast } from 'dusk-dawn';
 
   const counts = $derived.by(() => {
     const c = { book: 0, movie: 0, tv: 0, quote: 0 };

@@ -11,7 +11,7 @@
   import type { CatalogEntry, EntryType } from '../types';
   import EntryCard from './EntryCard.svelte';
   import Icon from './Icon.svelte';
-  import TabRail from './ui/TabRail.svelte';
+  import { TabRail } from 'dusk-dawn';
   import UpNext from './UpNext.svelte';
 
   type TypeFilter = 'all' | EntryType;
