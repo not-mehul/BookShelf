@@ -36,8 +36,9 @@ import kotlinx.coroutines.withContext
  *
  * Every method resolves `{ value }`, so the page's `callNative(name, params)`
  * can stay generic. Events, all kept until the page subscribes so nothing
- * from a cold start is lost: `shared` (text shared into the app), `openAdd`
- * (widget), `openEntry` (new-episode alert), and `back`.
+ * from a cold start is lost: `shared` (text shared into the app), `link` (a
+ * bookshelf:// link from another app), `openAdd` (widget), `openEntry`
+ * (new-episode alert), and `back`.
  */
 @CapacitorPlugin(
     name = "BookShelf",
@@ -81,10 +82,13 @@ class BookShelfPlugin : Plugin() {
         super.handleOnDestroy()
     }
 
-    /** Forward shared text and widget / alert taps to the page. */
+    /** Forward shared text, bookshelf:// links and widget / alert taps to the page. */
     private fun handleIntent(intent: Intent?) {
         when {
             intent == null -> return
+            // Another app's hand-off (style.md §14.1). The page reads it.
+            intent.action == Intent.ACTION_VIEW && intent.data?.scheme == MainActivity.LINK_SCHEME ->
+                emit("link", JSObject().put("url", intent.dataString.orEmpty().take(MAX_LINK_CHARS)))
             intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
                 val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
@@ -257,5 +261,8 @@ class BookShelfPlugin : Plugin() {
 
         // Shared text becomes a quote; cap absurdly large payloads.
         private const val MAX_SHARED_CHARS = 20_000
+
+        // Matches MAX_LINK_LENGTH in src/platform/links.ts; longer links are dropped there.
+        private const val MAX_LINK_CHARS = 8_192
     }
 }

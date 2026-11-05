@@ -48,6 +48,7 @@
     <SearchStep
       {type}
       query={options.prefill?.query ?? ''}
+      seed={options.seed}
       onback={() => go({ name: 'pick' })}
       onmanual={() => go({ name: 'manual', type })}
     />

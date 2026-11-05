@@ -5,14 +5,14 @@
   import { isTvdbConfigured, searchTvdb } from '../../api/tvdb';
   import { findBySource, saveEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
-  import { ui } from '../../state/ui.svelte';
+  import { ui, type AddSeed } from '../../state/ui.svelte';
   import { canScanBarcodes, scanBarcode } from '../../util/barcode';
   import { messageOf } from '../../util/errors';
   import { TYPE_ICON, TYPE_LABEL } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
   import { parseSeriesFromTitle } from '../../util/series';
   import { fetchThumbBlob } from '../../util/thumbs';
-  import type { EntryType, SearchHit } from '../../types';
+  import type { CatalogEntry, EntryType, SearchHit } from '../../types';
   import CoverImage from '../CoverImage.svelte';
   import Icon from '../Icon.svelte';
   import ModalHead from '../ModalHead.svelte';
@@ -21,11 +21,13 @@
     type: Exclude<EntryType, 'quote'>;
     /** Search for this straight away. */
     query: string;
+    /** Status and progress from another app's link, for the entry this adds. */
+    seed?: AddSeed;
     onback: () => void;
     onmanual: () => void;
   }
 
-  let { type, query: initialQuery, onback, onmanual }: Props = $props();
+  let { type, query: initialQuery, seed, onback, onmanual }: Props = $props();
   const PLURAL = { book: 'books', movie: 'movies', tv: 'TV shows' } as const;
 
   type Results =
@@ -113,6 +115,14 @@
     }
   }
 
+  function seeded(hit: SearchHit): Partial<CatalogEntry> {
+    if (!seed) return {};
+    const total = hit.pageCount || 0;
+    const progress =
+      seed.progress !== undefined && total ? { current: Math.round(seed.progress * total), total } : null;
+    return { status: seed.status, ...(progress ? { progress } : {}) };
+  }
+
   async function add(hit: SearchHit) {
     const existing = await findBySource(hit.type, hit.sourceId);
     if (existing) {
@@ -131,7 +141,8 @@
       detailUrl: hit.detailUrl || null,
       series: parseSeriesFromTitle(hit.title),
       thumbnailUrl: hit.thumbnailUrl || null,
-      thumbnailBlob: await fetchThumbBlob(hit.thumbnailUrl)
+      thumbnailBlob: await fetchThumbBlob(hit.thumbnailUrl),
+      ...seeded(hit)
     });
     await saveEntry(entry);
     shelf.changed();

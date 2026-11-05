@@ -1,6 +1,6 @@
 // BookShelf — app entry point: applies the theme, loads the shelf and mounts
 // the Svelte UI, then wires up everything that arrives from outside (the
-// Android shell, the PWA share target, sync).
+// Android shell, links from the sibling apps, the PWA share target, sync).
 
 import { mount } from 'svelte';
 import App from './components/App.svelte';
@@ -10,6 +10,7 @@ import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
+import { readBookShelfLink } from './util/link-intake';
 import { parseSharedText, type SharedInput } from './util/share-intake';
 
 // Must run before anything fetches: routes cross-origin calls through the
@@ -18,6 +19,12 @@ installNativeBridge();
 
 function openShared(shared: SharedInput) {
   ui.openAdd({ prefill: parseSharedText(shared) });
+}
+
+/** A bookshelf:// link from another app (style.md §14.1). `open` just shows the shelf. */
+function openLink(url: string) {
+  const intake = readBookShelfLink(url);
+  if (intake?.kind === 'add') ui.openAdd(intake.options);
 }
 
 async function boot(): Promise<void> {
@@ -32,6 +39,8 @@ async function boot(): Promise<void> {
   // Events the shell kept during startup arrive as each listener is added.
   // Text shared from another app (Android share sheet) …
   onNativeEvent('shared', (data) => openShared(data || {}));
+  // … a bookshelf:// link from Rosetta, Colophon or another sibling app …
+  onNativeEvent('link', (data) => typeof data?.url === 'string' && openLink(data.url));
   // … the home-screen widget's "+" button …
   onNativeEvent('openAdd', () => ui.openAdd());
   // … or a new-episode notification (open that show).
