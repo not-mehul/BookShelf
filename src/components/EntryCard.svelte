@@ -112,7 +112,10 @@
         <div class="entry-rating-line unrated">unrated</div>
       {/if}
       {#if entry.status}
-        <span class="entry-status-chip" class:is-active={entry.status === 'in-progress'}
+        <span
+          class="entry-status-chip"
+          class:is-active={entry.status === 'in-progress'}
+          class:is-planned={entry.status === 'want'}
           >{statusLabel(entry.status) || entry.status}{#if entry.status === 'finished' && times > 1}<span
               class="entry-times"
               aria-hidden="true">&nbsp;×{times}</span

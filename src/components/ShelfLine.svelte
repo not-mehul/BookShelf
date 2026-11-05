@@ -24,8 +24,13 @@
   <section class="shelf-line" aria-label="A line from the shelf">
     <button type="button" class="shelf-line-open" onclick={() => ui.openEntry(quote.id)}>
       <span class="t-field-label">A line from the shelf</span>
-      <span class="shelf-line-text">{quote.quoteText || quote.title}</span>
-      {#if citation}<span class="shelf-line-cite">{citation}</span>{/if}
+      <!-- A new line fades in when asked for; the first one is simply there. -->
+      {#key quote.id}
+        <span class="shelf-line-body" class:is-fresh={offset > 0}>
+          <span class="shelf-line-text">{quote.quoteText || quote.title}</span>
+          {#if citation}<span class="shelf-line-cite">{citation}</span>{/if}
+        </span>
+      {/key}
     </button>
     {#if quotes.length > 1}
       <button
@@ -68,6 +73,14 @@
   }
   .shelf-line-open:hover {
     background: var(--hover-bg);
+  }
+  .shelf-line-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .shelf-line-body.is-fresh {
+    animation: fade-in var(--dur-settle) var(--ease-settle);
   }
   .shelf-line-text {
     font-family: var(--font-serif);

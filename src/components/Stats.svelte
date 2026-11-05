@@ -435,8 +435,31 @@
     border-radius: 2px;
     overflow: hidden;
   }
+  /* Bars rise to their value once, when the chart appears (style.md §8.15). */
   .stats-month-seg {
     width: 100%;
+    transform-origin: bottom;
+    animation: stats-rise var(--dur-settle) var(--ease-settle) both;
+  }
+  @keyframes stats-rise {
+    from {
+      transform: scaleY(0);
+    }
+  }
+  .stats-bar-fill {
+    transform-origin: left;
+    animation: stats-grow var(--dur-settle) var(--ease-settle) both;
+  }
+  @keyframes stats-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stats-month-seg,
+    .stats-bar-fill {
+      animation: none;
+    }
   }
   .stats-month-key {
     font-family: var(--font-mono);
@@ -444,6 +467,9 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--text-faint);
+  }
+  .stats-month.is-now .stats-month-col {
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-amber-rgb), 0.4);
   }
   .stats-month.is-now .stats-month-key {
     color: var(--accent-amber);

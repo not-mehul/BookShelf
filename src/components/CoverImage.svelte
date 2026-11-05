@@ -10,12 +10,14 @@
 
   let { src, alt = '', fallback }: Props = $props();
   let failed = $state(false);
+  let loaded = $state(false);
 
   // A blob: URL (a locally cached cover) is revoked once decoded: the bitmap
   // survives, and object URLs don't pile up across re-renders.
   $effect(() => {
     const url = src;
     failed = false;
+    loaded = false;
     return () => {
       if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
     };
@@ -27,7 +29,13 @@
     {src}
     {alt}
     loading="lazy"
-    onload={() => src?.startsWith('blob:') && URL.revokeObjectURL(src)}
+    decoding="async"
+    class="cover-img"
+    class:is-loaded={loaded}
+    onload={() => {
+      loaded = true;
+      if (src?.startsWith('blob:')) URL.revokeObjectURL(src);
+    }}
     onerror={() => (failed = true)}
   />
 {:else}
