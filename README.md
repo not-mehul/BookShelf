@@ -109,7 +109,7 @@ src/
   db/
     database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD
   share/
-    card.ts          Canvas share-card renderer (palette read from tokens.css)
+    card.ts          Canvas share-card renderer (palette read from the tokens)
     layout.ts        Text wrapping / fit-to-box (pure)
     share-image.ts   Native share sheet, Web Share (files) or download
   export/
@@ -128,8 +128,7 @@ src/
   util/              Pure helpers: settings, share intake, barcode, stars, series,
                      queue ranks, episodes, bulk edits, entry matching, icons, covers
   styles/
-    tokens.css       Generated from design/tokens.json (npm run tokens)
-    app.css          Component styles, glow layer
+    app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first
   types.d.ts         Shared data types (CatalogEntry, …)
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
@@ -176,4 +175,4 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
 
 ## Design system
 
-Every color is a semantic CSS variable defined in `src/styles/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). A literal hex outside those blocks is a bug. See `style.md` for the full reference.
+BookShelf uses Editorial Dusk & Dawn from the [`dusk-dawn`](https://github.com/not-mehul/dusk-dawn) package, shared with Waymark, Ledger, Colophon and Rosetta: the tokens, Fraunces, the shared component styles and the `TabRail`, `ThemeToggle` and `Toast` components. Every color is a semantic CSS variable from `dusk-dawn/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). `dusk-dawn colours` (part of `npm run lint`) fails on any literal color in `src/`, and `dusk-dawn check` tests contrast in both themes. To change the design, change the package and move its tag in `package.json` (`style.md` §18 in the package).

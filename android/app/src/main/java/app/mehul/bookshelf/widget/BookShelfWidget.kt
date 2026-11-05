@@ -72,7 +72,7 @@ class BookShelfWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = BookShelfWidget()
 }
 
-// ── Palette (from src/styles/tokens.css) ───────────────────────────
+// ── Palette (from dusk-dawn tokens.json) ────────────────────────────
 
 private class Palette(dark: Boolean) {
     val background = ColorProvider(if (dark) Color(0xFF14110E) else Color(0xFFF3ECE0))
