@@ -3,7 +3,7 @@
 //
 //   web → native: plugin methods (http, secure*, sync*, scanBarcode, …), each
 //                 resolving { value }
-//   native → web: plugin events: shared, openAdd, openEntry, back. Capacitor
+//   native → web: plugin events: shared, link, openAdd, openEntry, back. Capacitor
 //                 keeps them until a listener is added, so nothing that
 //                 arrives during a cold start is lost.
 //

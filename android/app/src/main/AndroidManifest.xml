@@ -40,6 +40,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- bookshelf:// links from Rosetta, Colophon and the other apps
+                 (style.md §14.1). Every action is read by src/util/link-intake.ts. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="bookshelf" />
+            </intent-filter>
         </activity>
 
         <!-- Ask Play services to fetch the Code Scanner module at install time, so
@@ -73,4 +81,24 @@
         </provider>
     </application>
 
+    <!-- Lets the app ask whether a sibling app is installed before handing
+         off to it (style.md §14.1). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="waymark" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="ledger" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="colophon" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="rosetta" />
+        </intent>
+    </queries>
 </manifest>

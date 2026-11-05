@@ -27,5 +27,8 @@ class MainActivity : BridgeActivity() {
 
         /** Set by new-episode notifications: open this entry. */
         const val EXTRA_OPEN_ENTRY = "app.mehul.bookshelf.openEntry"
+
+        /** `bookshelf://log?…` and `bookshelf://open` from the sibling apps (style.md §14.1). */
+        const val LINK_SCHEME = "bookshelf"
     }
 }

@@ -1,7 +1,14 @@
 // Which dialog is open. One at a time: opening another replaces it.
 
 import type { SharePrefill } from '../util/share-intake';
-import type { EntryType } from '../types';
+import type { EntryStatus, EntryType } from '../types';
+
+/** What a link from another app knows about the book (style.md §14.1). */
+export interface AddSeed {
+  status: EntryStatus;
+  /** 0–1 through the book; becomes pages read once the edition's page count is known. */
+  progress?: number;
+}
 
 export interface AddOptions {
   /** Text shared into the app: prefills the quote form and the search query. */
@@ -11,6 +18,8 @@ export interface AddOptions {
   searchType?: Exclude<EntryType, 'quote'>;
   /** Pre-link a new quote to this entry. */
   linkedEntryId?: string;
+  /** Status (and progress) for the entry the search adds. */
+  seed?: AddSeed;
 }
 
 export type Modal =
