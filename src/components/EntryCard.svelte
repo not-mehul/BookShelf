@@ -31,6 +31,13 @@
   }
 
   const src = $derived(entry.type === 'quote' ? null : thumbnailUrl(entry) || entry.thumbnailUrl);
+  // A thin meter for things under way, and a count for things returned to.
+  const progressPct = $derived(
+    entry.status === 'in-progress' && entry.progress?.total
+      ? Math.min(100, Math.round((entry.progress.current / entry.progress.total) * 100))
+      : null
+  );
+  const times = $derived(entry.finishes?.length ?? 0);
   const attribution = $derived([entry.creators?.[0], entry.source].filter(Boolean).join(', '));
 </script>
 
@@ -105,13 +112,30 @@
         <div class="entry-rating-line unrated">unrated</div>
       {/if}
       {#if entry.status}
-        <span class="entry-status-chip">{statusLabel(entry.status) || entry.status}</span>
+        <span class="entry-status-chip" class:is-active={entry.status === 'in-progress'}
+          >{statusLabel(entry.status) || entry.status}{#if entry.status === 'finished' && times > 1}<span
+              class="entry-times"
+              aria-hidden="true">&nbsp;×{times}</span
+            ><span class="visually-hidden">, {times} times</span>{/if}</span
+        >
+      {/if}
+      {#if progressPct != null}
+        <div class="meter entry-meter" title="{progressPct}%" aria-hidden="true">
+          <div class="meter-fill" style:width="{progressPct}%"></div>
+        </div>
       {/if}
     </div>
   {/if}
 </button>
 
 <style>
+  .entry-meter {
+    margin-top: var(--space-2);
+    height: 2px;
+  }
+  .entry-times {
+    font-variant-numeric: tabular-nums;
+  }
   .entry-thumb-icon {
     color: var(--text-faint);
     opacity: 0.45;

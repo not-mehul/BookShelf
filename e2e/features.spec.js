@@ -35,6 +35,49 @@ test.describe('in the browser', () => {
     await expect(card(page, "Rocannon's World").locator('.entry-rating-line')).toHaveText('★★★½☆');
   });
 
+  test('journal: progress starts and finishes a book, and the year in review counts it', async ({ page }) => {
+    await expect(page.locator('.shelf-line')).toContainText('Light is the left hand of darkness');
+
+    await card(page, 'The Hobbit').click();
+    const dialog = page.locator('dialog[open]');
+    // The edition's page count fills the total; a quick step starts it.
+    await expect(dialog.getByRole('spinbutton', { name: 'Total' })).toHaveValue('290');
+    await dialog.getByRole('button', { name: 'Add 50 pages' }).click();
+    await expect(dialog.locator('.progress-left')).toHaveText('240 pages left · 17%');
+    await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('in-progress');
+    await expect(dialog.locator('.journal input[type=date]').first()).not.toHaveValue('');
+
+    await dialog.getByRole('spinbutton', { name: 'Current' }).fill('290');
+    await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('finished');
+    await expect(dialog.locator('.journal')).toContainText('Started and finished on the same day.');
+    await expect(dialog.getByRole('button', { name: 'Read again' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(card(page, 'The Hobbit').locator('.entry-status-chip')).toHaveText('Completed');
+
+    await page.getByRole('button', { name: 'View statistics' }).click();
+    await expect(dialog.locator('.stats-grid').first()).toContainText('290');
+    await expect(dialog.locator('.stats-undated')).toContainText('2 entries were finished before BookShelf kept dates');
+    await dialog.getByRole('button', { name: 'Set a goal' }).click();
+    await expect(dialog.locator('.stats-goal-figure')).toHaveText(/1\s*of 12 books/);
+    await dialog.getByRole('button', { name: 'Raise the goal by one' }).click();
+    await expect(dialog.locator('.stats-goal-figure')).toHaveText(/1\s*of 13 books/);
+    await expect(dialog.locator('.stats-highlight')).toContainText(['Longest book']);
+  });
+
+  test('the library remembers its tab and sort, and / focuses the filter', async ({ page }) => {
+    await page.getByRole('tab', { name: 'Books' }).click();
+    await page.getByRole('combobox', { name: 'Sort by' }).selectOption('title');
+    await page.reload();
+    await expect(page.getByRole('tab', { name: 'Books' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveValue('title');
+    await page.keyboard.press('/');
+    await expect(page.getByRole('searchbox', { name: 'Filter library' })).toBeFocused();
+    await page.keyboard.type('hob');
+    await expect(page.locator('.entry-card')).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('searchbox', { name: 'Filter library' })).toHaveValue('');
+  });
+
   test('quotes link to their book, both ways', async ({ page }) => {
     await card(page, 'The Left Hand of Darkness').click();
     const quote = page.locator('dialog[open] .linked-quote');

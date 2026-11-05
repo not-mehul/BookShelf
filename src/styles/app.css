@@ -500,6 +500,7 @@ img {
 /* Status chip on card */
 .entry-status-chip {
   display: inline-block;
+  align-self: flex-start;
   margin-top: 0.35rem;
   font-family: var(--font-mono);
   font-size: 0.58rem;
@@ -509,6 +510,10 @@ img {
   border: 1px solid rgba(var(--accent-sage-rgb), 0.35);
   border-radius: 2px;
   padding: 0.1rem 0.35rem;
+}
+.entry-status-chip.is-active {
+  color: var(--accent-amber);
+  border-color: rgba(var(--accent-amber-rgb), 0.35);
 }
 
 /* ─── Empty state ─────────────────────────────────────────────── */
@@ -1404,16 +1409,49 @@ img {
 }
 .progress-bar {
   margin-top: 0.6rem;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--chip-bg);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--chart-track);
   overflow: hidden;
 }
 .progress-bar-fill {
   height: 100%;
   width: 0;
   background: var(--accent-sage);
-  transition: width 0.25s ease;
+  transition: width var(--dur-settle) var(--ease-settle);
+}
+.progress-steps {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.progress-step {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  justify-content: center;
+}
+.progress-meter {
+  margin-top: var(--space-3);
+}
+.progress-meter .meter-fill {
+  transition: width var(--dur-settle) var(--ease-settle);
+}
+.progress-left {
+  margin-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.progress-forecast {
+  margin-top: var(--space-1);
+}
+@media (max-width: 480px) {
+  .progress-edit-row {
+    flex-wrap: wrap;
+  }
+  .progress-steps {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* ─── Tag editor (detail modal) ───────────────────────────────── */
@@ -1476,77 +1514,7 @@ img {
   color: var(--danger);
 }
 
-/* ─── Statistics modal ────────────────────────────────────────── */
-
-.stats-body {
-  padding: 0.25rem 0 0.5rem;
-}
-.stats-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-}
-.stat-tile {
-  text-align: center;
-  padding: 0.85rem 0.5rem;
-  border: 1px solid var(--border-soft);
-  border-radius: 2px;
-  background: var(--panel-bg-faint);
-}
-.stat-tile-value {
-  font-family: var(--font-serif);
-  font-size: 1.7rem;
-  color: var(--accent-amber);
-  line-height: 1;
-}
-.stat-tile-label {
-  margin-top: 0.3rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.stats-section-label {
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin: 1rem 0 0.6rem;
-}
-.stats-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.stats-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.stats-bar-key {
-  width: 1.8rem;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-}
-.stats-bar-track {
-  flex: 1;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--chip-bg);
-  overflow: hidden;
-}
-.stats-bar-fill {
-  height: 100%;
-  background: var(--accent-amber);
-  border-radius: 2px;
-}
-.stats-bar-val {
-  width: 1.6rem;
-  text-align: right;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
+/* ─── Statistics modal: see Stats.svelte ─────────────────────── */
 
 /* ─── Shared-text preview (add flow) ─────────────────────────── */
 

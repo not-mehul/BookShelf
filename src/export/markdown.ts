@@ -59,6 +59,11 @@ export async function exportMarkdown() {
       if (e.status) md += `**Status:** ${e.status}\n\n`;
       if (e.series?.name)
         md += `**Series:** ${escapeMd(e.series.name)}${e.series.position != null ? ` #${e.series.position}` : ''}\n\n`;
+      const journal = [
+        e.dateStarted ? `started ${formatDate(e.dateStarted)}` : '',
+        e.finishes?.length ? `finished ${e.finishes.map(formatDate).join(', ')}` : ''
+      ].filter(Boolean);
+      if (journal.length) md += `**Journal:** ${journal.join(' · ')}\n\n`;
       if (e.summary) md += `${escapeMd(e.summary).trim()}\n\n`;
       if (e.notes?.trim()) md += `> ${escapeMd(e.notes.trim()).replace(/\n/g, '\n> ')}\n\n`;
       md += `_Added ${formatDate(e.dateAdded)}${e.dateRated ? ` · rated ${formatDate(e.dateRated)}` : ''}_\n\n---\n\n`;

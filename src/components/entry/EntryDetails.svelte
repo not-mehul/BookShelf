@@ -7,6 +7,7 @@
   import EntryActions from './EntryActions.svelte';
   import EpisodesSection from './EpisodesSection.svelte';
   import Hero from './Hero.svelte';
+  import JournalSection from './JournalSection.svelte';
   import LinkedQuotes from './LinkedQuotes.svelte';
   import NotesField from './NotesField.svelte';
   import ProgressEditor from './ProgressEditor.svelte';
@@ -62,7 +63,10 @@
 {#if hasGuide}
   <EpisodesSection {entry} {update} />
 {:else if entry.type === 'book' || entry.type === 'tv'}
-  <ProgressEditor {entry} {update} />
+  <!-- Remounts when a re-read starts, so the fields show the fresh count. -->
+  {#key entry.dateStarted}
+    <ProgressEditor {entry} {update} />
+  {/key}
   {#if entry.type === 'tv' && entry.sourceId && !entry.episodeGuide}
     <p class="field-hint episodes-pending">
       Episode tracking appears here once the episode list loads (needs TheTVDB access in Settings).
@@ -96,6 +100,8 @@
     </div>
   </div>
 </div>
+
+<JournalSection {entry} {update} />
 
 <LinkedQuotes {entry} />
 
