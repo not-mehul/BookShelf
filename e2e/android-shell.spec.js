@@ -5,27 +5,29 @@ import { installFakeShell } from './fake-shell.js';
 
 const sent = (page) => page.evaluate(() => window.__sent);
 const lastOf = async (page, type) => (await sent(page)).filter((m) => m.type === type).at(-1);
-const calls = async (page, method) => (await sent(page)).filter((m) => m.type === 'call' && m.method === method);
+const calls = async (page, method) =>
+  (await sent(page)).filter((m) => m.type === 'call' && m.method === method);
 
 async function boot(page, options = {}) {
   await page.addInitScript(installFakeShell, options);
   await page.goto('/index.html');
   await expect(page.locator('.fab')).toBeVisible();
   // Booted once it has subscribed to the shell's events.
-  await expect.poll(async () => (await sent(page)).filter((m) => m.type === 'listen').length).toBe(4);
+  await expect.poll(async () => (await sent(page)).filter((m) => m.type === 'listen').length).toBe(5);
 }
 
 test('boot: reports theme, listens for shell events, no service worker', async ({ page }) => {
   await boot(page);
   expect(await lastOf(page, 'theme')).toEqual({ type: 'theme', mode: 'dark' });
   const events = (await sent(page)).filter((m) => m.type === 'listen').map((m) => m.event);
-  expect(events.sort()).toEqual(['back', 'openAdd', 'openEntry', 'shared']);
+  expect(events.sort()).toEqual(['back', 'link', 'openAdd', 'openEntry', 'shared']);
   expect(await page.evaluate(async () => !(await navigator.serviceWorker?.getRegistration()))).toBe(true);
 });
 
 test('system-bar insets pad the shell and clear the FAB', async ({ page }) => {
   await boot(page);
-  const padTop = () => page.locator('.app-shell').evaluate((el) => parseFloat(getComputedStyle(el).paddingTop));
+  const padTop = () =>
+    page.locator('.app-shell').evaluate((el) => parseFloat(getComputedStyle(el).paddingTop));
   const before = await padTop();
   // What Capacitor's SystemBars injects for a 40px status bar / 24px nav bar.
   await page.evaluate(() => {
@@ -61,7 +63,10 @@ test('secrets typed in Settings go to the Keystore, not localStorage', async ({ 
 test('text shared from another app opens a prefilled quote', async ({ page }) => {
   await boot(page);
   await page.evaluate(() =>
-    window.__nativeEmit('shared', { text: 'Fear is the mind-killer.\nfrom Dune by Frank Herbert', subject: '' })
+    window.__nativeEmit('shared', {
+      text: 'Fear is the mind-killer.\nfrom Dune by Frank Herbert',
+      subject: ''
+    })
   );
   await expect(page.locator('dialog[open] .shared-preview-text')).toHaveText('Fear is the mind-killer.');
   await page.locator('.medium-choice', { hasText: 'Quote' }).click();
@@ -74,9 +79,28 @@ test('text shared while the app was starting is not lost', async ({ page }) => {
   // Emitted before the page subscribes (a cold start from the share sheet);
   // the shell keeps it until the listener is added.
   await boot(page, {
-    pendingEvents: [['shared', { text: 'So it goes.\nfrom Slaughterhouse-Five by Kurt Vonnegut', subject: '' }]]
+    pendingEvents: [
+      ['shared', { text: 'So it goes.\nfrom Slaughterhouse-Five by Kurt Vonnegut', subject: '' }]
+    ]
   });
   await expect(page.locator('dialog[open] .shared-preview-text')).toHaveText('So it goes.');
+});
+
+test('a bookshelf:// link from another app opens a book search', async ({ page }) => {
+  // What Rosetta sends when a book is finished (style.md §14.1).
+  await boot(page, {
+    pendingEvents: [
+      ['link', { url: 'bookshelf://log?title=Dune&author=Frank+Herbert&finished=2026-11-01&source=rosetta' }]
+    ]
+  });
+  await expect(page.getByRole('searchbox', { name: /^Search books/ })).toHaveValue('Dune Frank Herbert');
+  await expect.poll(async () => (await sent(page)).some((m) => m.type === 'http')).toBe(true);
+});
+
+test('a bookshelf://open link just opens the shelf', async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__nativeEmit('link', { url: 'bookshelf://open?source=ledger' }));
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
 });
 
 test('widget "+" opens the add flow', async ({ page }) => {
@@ -92,7 +116,9 @@ test('scanning a barcode fills the ISBN and searches', async ({ page }) => {
   await page.getByRole('button', { name: 'Scan barcode' }).click();
   await expect(page.getByRole('searchbox', { name: /^Search books/ })).toHaveValue('9780441172719');
   // ISBNs go to Open Library first (via native HTTP); the fake returns no hits.
-  await expect.poll(async () => (await sent(page)).some((m) => m.type === 'http' && m.url.includes('openlibrary.org'))).toBe(true);
+  await expect
+    .poll(async () => (await sent(page)).some((m) => m.type === 'http' && m.url.includes('openlibrary.org')))
+    .toBe(true);
   await expect(page.locator('.add-empty')).toBeVisible();
 });
 
@@ -118,7 +144,9 @@ test('sync settings: choose a folder, then Sync now writes an encrypted file', a
   await expect(section).toContainText('Folder: Drive/BookShelf');
 
   await section.getByLabel('Sync passphrase').fill('correct horse battery');
-  await expect.poll(() => page.evaluate(() => window.__keystore.sync_passphrase)).toBe('correct horse battery');
+  await expect
+    .poll(() => page.evaluate(() => window.__keystore.sync_passphrase))
+    .toBe('correct horse battery');
   await page.keyboard.press('Escape');
 
   // Something to sync.
