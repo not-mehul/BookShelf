@@ -12,7 +12,9 @@
   import EntryCard from './EntryCard.svelte';
   import Icon from './Icon.svelte';
   import { TabRail } from 'dusk-dawn';
+  import ShelfLine from './ShelfLine.svelte';
   import UpNext from './UpNext.svelte';
+  import { loadView, saveView } from '../util/view-prefs';
 
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
@@ -45,8 +47,14 @@
     tv: 'shows'
   };
 
-  let type = $state<TypeFilter>('all');
-  let sort = $state<SortKey>('dateAdded');
+  // The tab and sort come back as they were left (this device only).
+  const saved = loadView();
+  let type = $state<TypeFilter>(
+    TYPE_TABS.some((t) => t.id === saved.type) ? (saved.type as TypeFilter) : 'all'
+  );
+  let sort = $state<SortKey>(saved.sort && saved.sort in SORTERS ? (saved.sort as SortKey) : 'dateAdded');
+  $effect(() => saveView({ type, sort }));
+  let filterInput = $state<HTMLInputElement>();
   let query = $state('');
   let tag = $state<string | null>(null);
 
@@ -143,7 +151,15 @@
 <svelte:document
   onkeydown={(ev) => {
     // Escape leaves selection mode (when no dialog is open).
-    if (ev.key === 'Escape' && selecting && !document.querySelector('dialog[open]')) exitSelection();
+    if (document.querySelector('dialog[open]')) return;
+    if (ev.key === 'Escape' && selecting) exitSelection();
+    // "/" jumps to the filter, as on most catalogs (not while typing elsewhere).
+    const typing =
+      ev.target instanceof HTMLElement && ev.target.closest('input, textarea, select, [contenteditable]');
+    if (ev.key === '/' && !typing && !ev.metaKey && !ev.ctrlKey && !ev.altKey) {
+      ev.preventDefault();
+      filterInput?.focus();
+    }
   }}
 />
 
@@ -159,7 +175,16 @@
       class="input filter-input"
       placeholder="Filter…"
       aria-label="Filter library"
+      aria-keyshortcuts="/"
+      enterkeyhint="search"
+      bind:this={filterInput}
       bind:value={query}
+      onkeydown={(ev) => {
+        if (ev.key === 'Escape' && query) {
+          ev.stopPropagation();
+          query = '';
+        }
+      }}
     />
     <div class="select-wrap select-wrap-sm">
       <select class="select select-sm" aria-label="Sort by" bind:value={sort}>
@@ -221,6 +246,10 @@
 
 {#if showUpNext}
   <UpNext />
+{/if}
+
+{#if !query && !tag && !selecting && type === 'all'}
+  <ShelfLine />
 {/if}
 
 <div class="entry-grid" class:quote-grid={type === 'quote'}>

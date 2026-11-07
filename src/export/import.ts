@@ -1,5 +1,6 @@
 import { newEntryId, saveEntry } from '../db/database';
 import { fetchThumbBlob } from '../util/thumbs';
+import { fromDay } from '../util/journal';
 import { normalizeRating } from '../util/stars';
 import type { CatalogEntry, EntryType } from '../types';
 
@@ -144,6 +145,15 @@ async function parseEntry(text: string, type: EntryType): Promise<CatalogEntry |
           .trim()
           .match(/^(.+?)(?:\s+#(\d+(?:\.\d+)?))?$/);
         if (m) entry.series = { name: m[1]!.trim(), position: m[2] ? Number(m[2]) : null };
+      } else if (line.startsWith('**Journal:**')) {
+        const text = line.replace('**Journal:**', '');
+        const started = text.match(/started (\d{4}-\d{2}-\d{2})/);
+        if (started) entry.dateStarted = fromDay(started[1]!);
+        const finished = text.match(/finished ([\d\-, ]+)/);
+        if (finished)
+          entry.finishes = (finished[1]!.match(/\d{4}-\d{2}-\d{2}/g) || [])
+            .map(fromDay)
+            .filter((d): d is string => d != null);
       } else if (line.startsWith('**Status:**')) {
         const status = line.replace('**Status:**', '').trim();
         if (status === 'want' || status === 'in-progress' || status === 'finished') entry.status = status;

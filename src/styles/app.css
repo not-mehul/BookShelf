@@ -381,14 +381,24 @@ img {
   flex-direction: column;
   position: relative;
   transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+    border-color var(--dur-hover),
+    background-color var(--dur-hover);
 }
+/* style.md §7.2: a tappable card answers with a wash, never a lift or shadow. */
 .entry-card:hover {
+  border-color: rgba(var(--accent-amber-rgb), 0.45);
+  background-color: var(--hover-bg);
+}
+.entry-card:active:not(.is-selectable) {
+  background-color: var(--hover-bg);
   border-color: rgba(var(--accent-amber-rgb), 0.6);
-  box-shadow:
-    0 8px 24px rgba(var(--shadow-rgb), calc(0.25 * var(--shadow-strength))),
-    0 0 0 1px rgba(var(--accent-amber-rgb), 0.12);
+}
+/* The cover warms slightly under the pointer: a colour shift, not a transform. */
+.entry-thumb img {
+  transition: filter var(--dur-hover);
+}
+.entry-card:hover .entry-thumb img {
+  filter: brightness(1.06);
 }
 .entry-card:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -397,7 +407,8 @@ img {
 
 .entry-thumb {
   aspect-ratio: 2 / 3;
-  background: var(--input-bg);
+  background: var(--panel-bg-faint);
+  border-bottom: 1px solid var(--border-faint);
   position: relative;
   overflow: hidden;
 }
@@ -500,6 +511,7 @@ img {
 /* Status chip on card */
 .entry-status-chip {
   display: inline-block;
+  align-self: flex-start;
   margin-top: 0.35rem;
   font-family: var(--font-mono);
   font-size: 0.58rem;
@@ -509,6 +521,14 @@ img {
   border: 1px solid rgba(var(--accent-sage-rgb), 0.35);
   border-radius: 2px;
   padding: 0.1rem 0.35rem;
+}
+.entry-status-chip.is-planned {
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+.entry-status-chip.is-active {
+  color: var(--accent-amber);
+  border-color: rgba(var(--accent-amber-rgb), 0.35);
 }
 
 /* ─── Empty state ─────────────────────────────────────────────── */
@@ -800,7 +820,7 @@ img {
   width: 0;
   overflow: hidden;
   color: var(--accent-bright);
-  transition: width 0.1s;
+  transition: width var(--dur-hover) var(--ease-standard);
 }
 .rating-star-fill svg {
   fill: currentColor;
@@ -1404,16 +1424,49 @@ img {
 }
 .progress-bar {
   margin-top: 0.6rem;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--chip-bg);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--chart-track);
   overflow: hidden;
 }
 .progress-bar-fill {
   height: 100%;
   width: 0;
   background: var(--accent-sage);
-  transition: width 0.25s ease;
+  transition: width var(--dur-settle) var(--ease-settle);
+}
+.progress-steps {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.progress-step {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  justify-content: center;
+}
+.progress-meter {
+  margin-top: var(--space-3);
+}
+.progress-meter .meter-fill {
+  transition: width var(--dur-settle) var(--ease-settle);
+}
+.progress-left {
+  margin-top: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.progress-forecast {
+  margin-top: var(--space-1);
+}
+@media (max-width: 480px) {
+  .progress-edit-row {
+    flex-wrap: wrap;
+  }
+  .progress-steps {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* ─── Tag editor (detail modal) ───────────────────────────────── */
@@ -1476,77 +1529,7 @@ img {
   color: var(--danger);
 }
 
-/* ─── Statistics modal ────────────────────────────────────────── */
-
-.stats-body {
-  padding: 0.25rem 0 0.5rem;
-}
-.stats-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-}
-.stat-tile {
-  text-align: center;
-  padding: 0.85rem 0.5rem;
-  border: 1px solid var(--border-soft);
-  border-radius: 2px;
-  background: var(--panel-bg-faint);
-}
-.stat-tile-value {
-  font-family: var(--font-serif);
-  font-size: 1.7rem;
-  color: var(--accent-amber);
-  line-height: 1;
-}
-.stat-tile-label {
-  margin-top: 0.3rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.stats-section-label {
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin: 1rem 0 0.6rem;
-}
-.stats-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.stats-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.stats-bar-key {
-  width: 1.8rem;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-}
-.stats-bar-track {
-  flex: 1;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--chip-bg);
-  overflow: hidden;
-}
-.stats-bar-fill {
-  height: 100%;
-  background: var(--accent-amber);
-  border-radius: 2px;
-}
-.stats-bar-val {
-  width: 1.6rem;
-  text-align: right;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
+/* ─── Statistics modal: see Stats.svelte ─────────────────────── */
 
 /* ─── Shared-text preview (add flow) ─────────────────────────── */
 
@@ -2334,5 +2317,22 @@ body.is-selecting .app-shell {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Images arrive softly ────────────────────────────────────── */
+
+/* A cover fades in once decoded instead of popping over its placeholder
+   (opacity only, so reduced motion keeps a short fade, style.md §11). */
+img.cover-img {
+  opacity: 0;
+  transition: opacity var(--dur-settle) var(--ease-settle);
+}
+img.cover-img.is-loaded {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  img.cover-img {
+    transition: opacity 100ms linear !important;
   }
 }

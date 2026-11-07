@@ -23,6 +23,10 @@ export interface CatalogEntry {
   notes: string;
   dateAdded: string;
   dateRated: string | null;
+  /** When it was last started (status became in-progress). */
+  dateStarted?: string | null;
+  /** Every time it was finished, oldest first (re-reads and rewatches add one). */
+  finishes?: string[];
   /** Last local modification (ISO); drives sync conflict resolution. */
   updatedAt?: string;
   // Optional / type-specific fields (older records may lack them).

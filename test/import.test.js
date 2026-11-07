@@ -97,3 +97,19 @@ describe('parseMarkdown with series', () => {
     expect(book.summary).toBe('');
   });
 });
+
+describe('Markdown journal line', () => {
+  it('reads start and finish dates back', async () => {
+    const [book] = await parseMarkdown(`## Books (1)
+
+### Dune (1965)
+
+**Journal:** started 2026-03-03 · finished 2025-01-10, 2026-03-18
+
+---
+`);
+    expect(book.dateStarted?.slice(0, 7)).toBe('2026-03');
+    expect(book.finishes).toHaveLength(2);
+    expect(book.summary).toBe('');
+  });
+});
