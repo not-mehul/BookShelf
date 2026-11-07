@@ -16,7 +16,7 @@ A personal catalog for books, films, TV shows, and quotes — searchable, ratabl
 - **Backup** — lossless JSON export/import (re-importable without duplicates) plus human-readable Markdown export
 - **Share cards** — any book, film, show or quote as a Dusk or Dawn styled image (post, square or story), or as text
 - **Share *into* BookShelf** — share a highlight, title or link from any app (Android share sheet, or the installed PWA's share target) to get a prefilled quote or search
-- **Links from the sibling apps** — Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick as finished or in progress. `bookshelf://open` just opens it. The scheme and its actions are shared by all five apps (`src/platform/links.ts`, style.md §14.1)
+- **Links from the sibling apps** — Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick as finished or in progress. `bookshelf://open` just opens it. The scheme and its actions are shared by all six apps (`src/platform/links.ts`, style.md §14.1)
 - **Encrypted sync** (Android) — end-to-end encrypted sync through a folder you choose (Google Drive, Nextcloud, Syncthing…)
 - **Home-screen widget** (Android) — resizable: shelf count, what you're reading/watching with progress, latest quote
 - **Secrets in the Android Keystore** — API keys, tokens and the sync passphrase are encrypted with a hardware-backed key
