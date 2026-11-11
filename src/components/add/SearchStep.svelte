@@ -187,15 +187,21 @@
     <div class="loading-row"><LoadingIndicator label="Searching" size={32} />Searching</div>
   {:else if results.state === 'no-tvdb'}
     <div class="notice">
-      TheTVDB isn’t set up — add an API key or a proxy URL for movies and TV.
-      <a
-        href="#settings"
-        onclick={(ev) => {
-          ev.preventDefault();
-          ui.open({ kind: 'settings' });
-        }}>Open Settings</a
-      >
-      to add it, or enter details manually below.
+      <Icon name="settings" />
+      <div class="notice-text">
+        <span class="notice-title">TheTVDB isn’t set up.</span>
+        <span class="notice-detail">
+          Add an API key or a proxy URL in
+          <a
+            href="#settings"
+            onclick={(ev) => {
+              ev.preventDefault();
+              ui.open({ kind: 'settings' });
+            }}>Settings</a
+          >
+          to search movies and TV, or enter the details by hand below.
+        </span>
+      </div>
     </div>
   {:else if results.state === 'error'}
     <div class="msg-error">{results.message}</div>

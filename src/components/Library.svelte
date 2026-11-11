@@ -28,11 +28,11 @@
     { id: 'quote', label: 'Quotes' }
   ];
   const SORT_OPTS: { value: SortKey; label: string }[] = [
-    { value: 'dateAdded', label: 'Recently added' },
-    { value: 'rating', label: 'Highest rated' },
-    { value: 'title', label: 'Title (A–Z)' },
-    { value: 'year', label: 'Year (newest)' },
-    { value: 'series', label: 'Series order' }
+    { value: 'dateAdded', label: 'Recent' },
+    { value: 'rating', label: 'Rating' },
+    { value: 'title', label: 'Title' },
+    { value: 'year', label: 'Year' },
+    { value: 'series', label: 'Series' }
   ];
   const SORTERS: Record<SortKey, (a: CatalogEntry, b: CatalogEntry) => number> = {
     dateAdded: (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''),
@@ -179,7 +179,12 @@
 <div class="lib-header">
   <div class="lib-types-row">
     <TabRail tabs={TYPE_TABS} value={type} label="Show" onselect={(id) => (type = id)} />
-    <div class="lib-count">{visible.length ? plural(visible.length, 'entry', 'entries') : ''}</div>
+    <!-- The header already counts the whole shelf; this counts what a filter leaves. -->
+    <div class="lib-count">
+      {visible.length && visible.length !== shelf.entries.length
+        ? plural(visible.length, 'entry', 'entries')
+        : ''}
+    </div>
   </div>
 
   <div class="lib-tools-row">

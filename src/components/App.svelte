@@ -69,8 +69,8 @@
   {#if shelf.entries.length}
     <span class="stat-accent">{plural(shelf.entries.length, 'entry', 'entries')}</span>
     {#each parts as part (part)}
-      <span class="stat-sep"></span>
-      <span>{part}</span>
+      <!-- The rule travels with its count, so a wrapped line never ends on one. -->
+      <span class="stat-item"><span class="stat-sep"></span>{part}</span>
     {/each}
   {:else}
     <span>0 entries</span>
