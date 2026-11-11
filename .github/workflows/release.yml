@@ -114,6 +114,18 @@ jobs:
           ./gradlew --no-daemon :app:testDebugUnitTest
           ./gradlew --no-daemon -PbookShelfVersion=${{ steps.version.outputs.name }} assembleRelease
 
+      # R8 once stripped the Glance widget's UI from release builds only (see
+      # proguard-rules.pro); fail if it, the plugin or the reminder worker
+      # (which WorkManager instantiates by class name) ever goes missing.
+      - name: Check the release build kept the plugin, widget UI and reminder worker
+        run: |
+          apk=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          dex() { unzip -p "$apk" 'classes*.dex'; }
+          dex | grep -q -a "Lapp/mehul/bookshelf/MainActivity;"
+          dex | grep -q -a "Lapp/mehul/bookshelf/BookShelfPlugin;"
+          dex | grep -q -a "Nothing in progress right now"
+          dex | grep -q -a "Lapp/mehul/bookshelf/reminders/EpisodeReminderWorker;"
+
       - name: Name the APK after the tag
         id: apk
         run: |

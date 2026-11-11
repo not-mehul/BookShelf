@@ -1,7 +1,6 @@
 ext {
     minSdkVersion = 26
-    // Android 17. CI runs the instrumented tests and a minified release smoke
-    // test on an API 37 emulator (.github/workflows/ci.yml).
+    // Android 17.
     compileSdkVersion = 37
     targetSdkVersion = 37
     androidxActivityVersion = '1.13.0'

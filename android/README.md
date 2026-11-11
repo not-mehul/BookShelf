@@ -51,10 +51,7 @@ update and the shelf, settings, saved keys and sync folder carry over:
 - the Keystore key and preference names of `SecureStore`, `FolderSync`, the
   widget and the reminders.
 
-CI proves it on every push: the emulator job installs a debug build of the old
-shell (pinned by `OLD_SHELL_REF` in `.github/workflows/ci.yml`), stores a book, a
-setting and an API key, installs the new build over it and checks all three
-(`scripts/android-upgrade-test.mjs`).
+Keep these unchanged in any later change, or an update will open an empty shelf.
 
 ## How it works
 
@@ -86,8 +83,7 @@ setting and an API key, installs the new build over it and checks all three
 
 > **R8 note:** release builds keep `BookShelfWidget.provideGlance` via
 > `proguard-rules.pro`; without it R8 strips the widget's whole UI from release
-> builds only. CI checks the release APK for it and smoke-tests the minified
-> build on an emulator.
+> builds only. The release workflow checks the release APK for it.
 
 ## Configuration
 
