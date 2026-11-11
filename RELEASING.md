@@ -50,6 +50,14 @@ git push origin v1.0.0
 APK around it, signs it, uploads it as a build artifact, and opens a **draft**
 GitHub release with the APK attached. Write the notes and press publish.
 
+You can also start on GitHub instead: **Releases → Draft a new release**, type a
+new `vX.Y.Z` tag under _Choose a tag_, write the notes, and press **Publish
+release**. Publishing creates the tag and runs the same workflow, which adds the
+APK to that release a few minutes later and leaves your notes alone. Saving it as
+a draft starts nothing (GitHub runs no workflows for drafts), so publish it. If the
+signing secrets are missing, the run fails rather than attach an unsigned APK to a
+published release.
+
 If any of the four secrets is missing, the workflow still finishes. It warns,
 naming the missing ones, and names the file `bookshelf-<version>-unsigned.apk` so an
 unsigned build cannot be mistaken for one you can install.
