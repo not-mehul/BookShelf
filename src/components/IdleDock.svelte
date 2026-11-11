@@ -59,6 +59,10 @@
 {/if}
 
 <style>
+  /* While the dock is up, a toast (an easter egg's, say) sits above it, as it does above a FAB. */
+  :global(html body:has(.idle-dock)) {
+    --toast-lift: 96px;
+  }
   .idle-dock {
     position: fixed;
     left: calc(var(--space-5) + var(--inset-left));

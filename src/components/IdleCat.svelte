@@ -23,9 +23,7 @@
   const line = $derived(
     pets === 0
       ? 'The library cat is asleep on the returns.'
-      : pets >= LIVES
-        ? 'Nine pets, nine lives. The library cat is yours now.'
-        : PURRS[(pets - 1) % PURRS.length]
+      : PURRS[(pets - 1) % PURRS.length]
   );
 
   function pet() {
