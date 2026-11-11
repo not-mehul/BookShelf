@@ -13,18 +13,26 @@ An Android APK must be signed to install, and every later version must be
 signed by **the same key**, or the phone refuses the upgrade. Losing the key
 means every install has to be uninstalled and reinstalled from scratch, which
 wipes its catalog. Make it once and keep it somewhere you will still have it in
-five years:
+five years.
+
+This makes the key with OpenSSL, as a PKCS#12 file that Gradle and Android's
+signing tools read directly (no Java needed). It works the same in Termux on
+Android (`pkg install openssl`) as on a computer:
 
 ```bash
-keytool -genkeypair -v \
-  -keystore bookshelf.jks \
-  -alias bookshelf \
-  -keyalg RSA -keysize 4096 -validity 10000
+openssl req -x509 -newkey rsa:4096 -sha256 -days 10000 -noenc \
+  -keyout bookshelf.key -out bookshelf.crt -subj "/CN=BookShelf"
+openssl pkcs12 -export -inkey bookshelf.key -in bookshelf.crt -name bookshelf -out bookshelf.p12
+rm bookshelf.key bookshelf.crt
 ```
 
-It asks for a keystore password, a name (any of it can be left blank) and a key
-password. Keep both passwords. `*.jks`, `*.keystore` and `keystore.properties`
-are in `.gitignore`; do not take them out.
+The second command asks for a password twice. Keep it: in a PKCS#12 file it is
+both the keystore password and the key password. `-name bookshelf` is the key alias.
+`*.p12`, `*.jks`, `*.keystore` and `keystore.properties` are in `.gitignore`; do
+not take them out.
+
+(`keytool -genkeypair -keystore bookshelf.jks -alias bookshelf -keyalg RSA -keysize 4096
+-validity 10000` makes an equivalent key if you have a JDK.)
 
 ---
 
@@ -32,12 +40,12 @@ are in `.gitignore`; do not take them out.
 
 Add four repository secrets under **Settings → Secrets and variables → Actions**:
 
-| Secret              | What goes in it                                            |
-| ------------------- | ---------------------------------------------------------- |
-| `KEYSTORE_BASE64`   | `base64 -w0 bookshelf.jks`, the whole keystore on one line |
-| `KEYSTORE_PASSWORD` | the keystore password                                      |
-| `KEY_ALIAS`         | `bookshelf`, or whatever `-alias` you used                 |
-| `KEY_PASSWORD`      | the key password                                           |
+| Secret              | What goes in it                                             |
+| ------------------- | ----------------------------------------------------------- |
+| `KEYSTORE_BASE64`   | `base64 -w0 bookshelf.p12`, the whole keystore on one line  |
+| `KEYSTORE_PASSWORD` | the keystore password                                       |
+| `KEY_ALIAS`         | `bookshelf`, the `-name` (or `-alias`) you used             |
+| `KEY_PASSWORD`      | the key password (for a `.p12`, the same as the keystore's) |
 
 Then tag and push:
 
