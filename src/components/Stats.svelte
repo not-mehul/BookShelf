@@ -365,7 +365,7 @@
     margin-bottom: var(--space-4);
     background: var(--panel-bg-faint);
     border: 1px solid var(--border-soft);
-    border-radius: 2px;
+    border-radius: var(--corner-lg);
   }
   .stats-goal-row {
     display: flex;
@@ -432,7 +432,7 @@
     display: flex;
     flex-direction: column-reverse;
     background: var(--chart-track);
-    border-radius: 2px;
+    border-radius: var(--corner-xs);
     overflow: hidden;
   }
   /* Bars rise to their value once, when the chart appears (style.md §8.15). */
@@ -493,7 +493,7 @@
   .stats-swatch {
     width: 10px;
     height: 10px;
-    border-radius: 2px;
+    border-radius: var(--corner-xs);
   }
 
   /* Highlights */
@@ -504,7 +504,7 @@
     margin-top: var(--space-5);
     background: var(--border-faint);
     border: 1px solid var(--border-faint);
-    border-radius: 2px;
+    border-radius: var(--corner-lg);
     overflow: hidden;
   }
   .stats-highlight {
@@ -564,7 +564,7 @@
   }
   .stats-bar-track {
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--corner-full);
     background: var(--chart-track);
     overflow: hidden;
   }

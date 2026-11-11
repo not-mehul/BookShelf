@@ -81,3 +81,50 @@ test('phone layout: filter gets its own row; sync is app-only', async ({ page })
   await expect(page.locator('.sync-section')).toHaveCount(0);
   await expect(page.getByLabel('Proxy URL (optional)')).toBeVisible();
 });
+
+test('hides easter eggs, counts them once, and lists the count in Settings', async ({ page }) => {
+  for (const key of [
+    'ArrowUp',
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowLeft',
+    'ArrowRight',
+    'b',
+    'a'
+  ]) {
+    await page.keyboard.press(key);
+  }
+  await expect(page.locator('.toast[data-kind="celebrate"]')).toHaveText(
+    'Every cover, turned face out. Easter egg found: 1 of 4.'
+  );
+
+  for (let i = 0; i < 7; i++) await page.locator('.t-page-title').click();
+  await expect(page.locator('.toast[data-kind="celebrate"]')).toHaveText(
+    'Shh. This is a library. Easter egg found: 2 of 4.'
+  );
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.locator('#eggCount')).toHaveText('Easter eggs: 2 of 4 found');
+});
+
+test('left alone, the library cat can be petted; nine pets and it is yours', async ({ page }) => {
+  await page.clock.install();
+  await page.reload();
+  await expect(page.locator('.fab')).toBeVisible();
+  await page.clock.runFor(41_000);
+  const dock = page.getByTestId('idle-dock');
+  await expect(dock).toBeVisible();
+  await expect(dock.locator('.idle-line')).toHaveText('The library cat is asleep on the returns.');
+  const cat = dock.getByRole('button', { name: 'Pet the library cat' });
+  await cat.click();
+  await expect(dock.locator('.idle-line')).toHaveText('Prrrr.');
+  for (let i = 1; i < 9; i++) await cat.click();
+  await expect(page.locator('.toast[data-kind="celebrate"]')).toHaveText(
+    'Nine pets, nine lives. The library cat is yours now. Easter egg found: 1 of 4.'
+  );
+  await page.locator('.fab').click();
+  await expect(dock).toHaveCount(0);
+});

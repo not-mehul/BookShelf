@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { EGGS, eggsFound } from '../../util/delight';
   import { importMarkdown } from '../../export/import';
   import { importJson, saveAndShareJson } from '../../export/json';
   import { isNativeShell } from '../../platform/native';
@@ -202,6 +203,9 @@
         {busy === 'md' ? 'Importing…' : 'Import Markdown'}
       </button>
     </div>
+    <hr class="divider settings-divider" />
+    <div class="settings-section-heading">About</div>
+    <p class="field-hint" id="eggCount">Easter eggs: {eggsFound()} of {EGGS.length} found</p>
     <div
       class="settings-notice {notice ? `settings-notice-${notice.kind}` : ''}"
       role="status"

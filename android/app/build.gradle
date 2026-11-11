@@ -11,13 +11,33 @@ if ((findProperty('android.builtInKotlin') ?: '').toString().trim().equalsIgnore
         "Remove that line from gradle.properties (this project's, or ~/.gradle/gradle.properties) and sync again.")
 }
 
-// Release signing is read from android/keystore.properties (gitignored).
-// See keystore.properties.example. Without it, release builds are unsigned.
-def keystorePropertiesFile = rootProject.file('keystore.properties')
+// The version comes from the release tag (.github/workflows/release.yml):
+// `-PbookShelfVersion=1.2.3` gives versionName 1.2.3 and versionCode 10203, so
+// codes always rise. Without the property it is 0.5.0, the last version
+// shipped by hand.
+def bookShelfVersion = (findProperty('bookShelfVersion') ?: '').toString().replaceFirst(/^v/, '')
+if (!(bookShelfVersion ==~ /\d+\.\d+\.\d+/)) bookShelfVersion = '0.5.0'
+def bookShelfVersionCode = Math.max(1, bookShelfVersion.tokenize('.').collect { it as int }
+    .with { it[0] * 10000 + it[1] * 100 + it[2] })
+
+// The release key, read from android/keystore.properties (gitignored; see
+// keystore.properties.example) or the BOOKSHELF_KEYSTORE… environment that the
+// release workflow sets from repository secrets (RELEASING.md). Every
+// release must be signed with the same key, or Android refuses the update.
 def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
 }
+def signingValue = { String key, String env ->
+    def value = keystoreProperties.getProperty(key) ?: System.getenv(env)
+    value?.trim() ?: null
+}
+def releaseStoreFile = signingValue('storeFile', 'BOOKSHELF_KEYSTORE')
+def releaseStorePassword = signingValue('storePassword', 'BOOKSHELF_KEYSTORE_PASSWORD')
+def releaseKeyAlias = signingValue('keyAlias', 'BOOKSHELF_KEY_ALIAS')
+def releaseKeyPassword = signingValue('keyPassword', 'BOOKSHELF_KEY_PASSWORD')
+def canSign = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it != null }
 
 android {
     namespace = "app.mehul.bookshelf"
@@ -27,8 +47,8 @@ android {
         applicationId = "app.mehul.bookshelf"
         minSdk = rootProject.ext.minSdkVersion
         targetSdk = rootProject.ext.targetSdkVersion
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = bookShelfVersionCode
+        versionName = bookShelfVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     androidResources {
@@ -41,11 +61,11 @@ android {
     }
     signingConfigs {
         release {
-            if (keystorePropertiesFile.exists()) {
-                storeFile = rootProject.file(keystoreProperties['storeFile'])
-                storePassword = keystoreProperties['storePassword']
-                keyAlias = keystoreProperties['keyAlias']
-                keyPassword = keystoreProperties['keyPassword']
+            if (canSign) {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -56,7 +76,7 @@ android {
             minifyEnabled = true
             shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            if (keystorePropertiesFile.exists()) {
+            if (canSign) {
                 signingConfig = signingConfigs.release
             }
         }

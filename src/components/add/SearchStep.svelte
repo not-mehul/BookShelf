@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { LoadingIndicator } from 'dusk-dawn';
   import { untrack } from 'svelte';
   import { searchBooks } from '../../api/books';
   import { looksLikeIsbn, searchOpenLibrary } from '../../api/openlibrary';
@@ -183,7 +184,7 @@
 
 <div class="add-results-zone">
   {#if results.state === 'loading'}
-    <div class="loading-row">Searching</div>
+    <div class="loading-row"><LoadingIndicator label="Searching" size={32} />Searching</div>
   {:else if results.state === 'no-tvdb'}
     <div class="notice">
       TheTVDB isn’t set up — add an API key or a proxy URL for movies and TV.

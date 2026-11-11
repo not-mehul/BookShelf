@@ -230,7 +230,7 @@ img {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--border-soft);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   overflow: hidden;
   margin-bottom: 1.5rem;
 }
@@ -373,7 +373,7 @@ img {
 .entry-card {
   background: var(--panel-bg);
   border: 1px solid var(--border-faint);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   overflow: hidden;
   cursor: pointer;
   text-align: left;
@@ -503,7 +503,7 @@ img {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   padding: 0.2rem 0.45rem;
-  border-radius: 2px;
+  border-radius: var(--corner-full);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -519,7 +519,7 @@ img {
   text-transform: uppercase;
   color: var(--accent-sage);
   border: 1px solid rgba(var(--accent-sage-rgb), 0.35);
-  border-radius: 2px;
+  border-radius: var(--corner-full);
   padding: 0.1rem 0.35rem;
 }
 .entry-status-chip.is-planned {
@@ -567,7 +567,7 @@ img {
 
 .notice {
   padding: 0.9rem 1.1rem;
-  border-radius: 2px;
+  border-radius: var(--corner-md);
   background: var(--notice-bg);
   border: 1px solid rgba(var(--accent-amber-rgb), 0.3);
   color: var(--text-body);
@@ -584,7 +584,7 @@ img {
 
 .msg-error {
   padding: 0.9rem 1.1rem;
-  border-radius: 2px;
+  border-radius: var(--corner-md);
   background: var(--error-bg);
   border: 1px solid rgba(var(--accent-amber-rgb), 0.2);
   border-left: 3px solid var(--danger);
@@ -605,21 +605,6 @@ img {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-dim);
-}
-.loading-row::before {
-  content: '';
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid var(--accent-amber);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.75s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ─── Modal ───────────────────────────────────────────────────── */
@@ -658,7 +643,7 @@ img {
   aspect-ratio: 2 / 3;
   background: var(--input-bg);
   border: 1px solid var(--border-faint);
-  border-radius: 2px;
+  border-radius: var(--corner-sm);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -720,7 +705,7 @@ img {
   border: 1px solid var(--border-faint);
   color: var(--text-muted);
   padding: 0.2rem 0.5rem;
-  border-radius: 2px;
+  border-radius: var(--corner-full);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.14em;
@@ -792,7 +777,7 @@ img {
   display: inline-flex;
   gap: 4px;
   padding: 3px;
-  border-radius: 2px;
+  border-radius: var(--corner-sm);
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -1105,7 +1090,7 @@ img {
   padding: 1.25rem;
   background: var(--panel-bg-faint);
   border: 1px solid var(--border-soft);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   text-align: left;
   transition:
     border-color 0.15s,
@@ -1173,7 +1158,7 @@ img {
   padding: 0.625rem;
   background: var(--panel-bg-faint);
   border: 1px solid var(--border-faint);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   text-align: left;
   width: 100%;
   transition:
@@ -1197,7 +1182,7 @@ img {
   height: 66px;
   flex-shrink: 0;
   background: var(--input-bg);
-  border-radius: 2px;
+  border-radius: var(--corner-sm);
   overflow: hidden;
 }
 .add-result-thumb img {
@@ -1253,7 +1238,7 @@ img {
   justify-content: center;
   color: var(--accent-bright);
   border: 1px solid rgba(var(--accent-amber-rgb), 0.4);
-  border-radius: 2px;
+  border-radius: var(--corner-full);
 }
 .add-result-action svg {
   width: 16px;
@@ -1425,7 +1410,7 @@ img {
 .progress-bar {
   margin-top: 0.6rem;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--corner-full);
   background: var(--chart-track);
   overflow: hidden;
 }
@@ -1483,7 +1468,7 @@ img {
   gap: 0.3rem;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem 0.25rem 0.65rem;
-  border-radius: 2px;
+  border-radius: var(--corner-full);
   background: rgba(var(--accent-amber-rgb), 0.14);
   border: 1px solid var(--border-soft);
   color: var(--text-heading);
@@ -1592,7 +1577,7 @@ img {
   height: min(32vw, 140px);
   transform: translate(-50%, -50%);
   border: 2px solid var(--accent-amber);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   box-shadow: 0 0 0 100vmax var(--scanner-scrim);
 }
 .scanner-hint {
@@ -1625,14 +1610,14 @@ img {
   padding: 4px;
   background: var(--modal-bg);
   border: 1px solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
   box-shadow: 0 12px 30px rgba(var(--shadow-rgb), calc(0.5 * var(--shadow-strength)));
 }
 .picker-option {
   display: flex;
   flex-direction: column;
   padding: 0.5rem 0.65rem;
-  border-radius: 2px;
+  border-radius: var(--corner-sm);
   cursor: pointer;
 }
 .picker-option:hover,
@@ -1655,7 +1640,7 @@ img {
   border: 1px solid var(--border-soft);
   border-left: 2px solid var(--accent-amber);
   background: var(--panel-bg-faint);
-  border-radius: 2px;
+  border-radius: var(--corner-full);
 }
 .picker-chip-type {
   font-size: 0.62rem;
@@ -1888,7 +1873,7 @@ img {
   padding: 0.35rem 0.4rem;
   background: var(--panel-bg-faint);
   border: 1px solid transparent;
-  border-radius: 2px;
+  border-radius: var(--corner-lg);
 }
 .queue-item.dragging {
   border-color: var(--accent-amber);
@@ -1917,7 +1902,7 @@ img {
   width: 2.4rem;
   height: 3.4rem;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--corner-sm);
   background: var(--chip-bg);
 }
 .queue-thumb img {
@@ -2335,4 +2320,9 @@ img.cover-img.is-loaded {
   img.cover-img {
     transition: opacity 100ms linear !important;
   }
+}
+
+/* The title word that moves in an easter egg (style.md §11.3). */
+.title-word {
+  display: inline-block;
 }

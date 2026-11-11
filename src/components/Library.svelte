@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { hatch } from '../util/delight';
   import { SvelteSet } from 'svelte/reactivity';
   import { saveAndShareMarkdown } from '../export/markdown';
   import { pushBackHandler } from '../platform/native';
@@ -146,6 +147,18 @@
   }
 
   const showUpNext = $derived(!query && !selecting && (type === 'all' || type === 'tv'));
+
+  // An easter egg: the word for a pile of books bought and not yet read.
+  let piled = false;
+  $effect(() => {
+    const said = query.trim().toLowerCase() === 'tsundoku';
+    if (said && !piled)
+      hatch(
+        'tsundoku',
+        'Tsundoku: the art of owning more books than you will read. You are in good company.'
+      );
+    piled = said;
+  });
 </script>
 
 <svelte:document

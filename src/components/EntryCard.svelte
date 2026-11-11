@@ -43,7 +43,7 @@
 
 <button
   type="button"
-  class="entry-card"
+  class="entry-card dd-pressable dd-lift"
   class:quote-card={entry.type === 'quote'}
   class:is-selectable={selecting}
   class:is-selected={selecting && selected}

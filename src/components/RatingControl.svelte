@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { play } from 'dusk-dawn';
   import { normalizeRating } from '../util/stars';
   import Icon from './Icon.svelte';
 
@@ -26,7 +27,12 @@
 
   function commit(next: number | null) {
     const n = normalizeRating(next);
-    if (n !== value) onchange(n);
+    if (n === value) return;
+    onchange(n);
+    // The stars light up one after another, up to the new rating.
+    if (n == null) return;
+    const stars = slider.querySelectorAll('.rating-star');
+    for (let i = 0; i < Math.ceil(n); i++) setTimeout(() => play(stars[i], 'pop'), i * 40);
   }
 
   /** Rating under the pointer, from its x position across the five stars. */
