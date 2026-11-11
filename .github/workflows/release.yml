@@ -1,0 +1,138 @@
+name: Release
+
+# Publishing is a tag push:
+#
+#     git tag v1.0.0 && git push origin v1.0.0
+#
+# which runs the web app's checks, builds the release APK (the Svelte
+# app in its Capacitor shell), signs it if the
+# repository has a keystore in its secrets, and attaches it to a GitHub
+# release as a draft for you to write notes on and publish.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - run: npm ci
+
+      # Written outside the workspace so a stray `git add -A` in a later step
+      # can never stage it. The build signs only when all four secrets are
+      # present, so "signed" says so only then: a keystore without its
+      # passwords used to be reported as a signed build that was not one.
+      - name: Restore the signing key
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$KEYSTORE_BASE64" ] || missing="$missing KEYSTORE_BASE64"
+          [ -n "$KEYSTORE_PASSWORD" ] || missing="$missing KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ] || missing="$missing KEY_ALIAS"
+          [ -n "$KEY_PASSWORD" ] || missing="$missing KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Missing secrets:$missing — the APK will be unsigned and cannot be installed. See RELEASING.md."
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/bookshelf.jks"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # v1.4.2 → 1.4.2, which the build turns into the version name and code.
+      - name: Read the version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::warning::'$GITHUB_REF_NAME' is not a vX.Y.Z tag; building as 0.0.0."
+            version="0.0.0"
+          fi
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+
+      # The checks every push gets: tokens, formatting, lint, types, the unit
+      # suite and a production build.
+      - run: npm run check
+
+      # package.json carries the same version as the APK, set from the tag
+      # here before the build that ships.
+      - name: Set the web app's version
+        run: npm version --no-git-tag-version --allow-same-version "${{ steps.version.outputs.name }}"
+
+      - name: Build the page into the Android project
+        run: npm run sync
+
+      - name: Build the release APK
+        working-directory: android
+        env:
+          BOOKSHELF_KEYSTORE: ${{ runner.temp }}/bookshelf.jks
+          BOOKSHELF_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BOOKSHELF_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          BOOKSHELF_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon :app:testDebugUnitTest
+          ./gradlew --no-daemon -PbookShelfVersion=${{ steps.version.outputs.name }} assembleRelease
+
+      - name: Name the APK after the tag
+        id: apk
+        run: |
+          version="${{ steps.version.outputs.name }}"
+          suffix=""
+          [ "${{ steps.keystore.outputs.signed }}" = "true" ] || suffix="-unsigned"
+          source=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          [ -n "$source" ] || { echo "No APK was produced"; exit 1; }
+          target="bookshelf-${version}${suffix}.apk"
+          cp "$source" "$target"
+          echo "path=$target" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the APK as a build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bookshelf-apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+
+      # A draft, not a publish: the release notes are yours to write, and an
+      # unsigned build should never go out without somebody noticing it.
+      - name: Draft the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          name: BookShelf ${{ github.ref_name }}
+          files: ${{ steps.apk.outputs.path }}
+          body: |
+            BookShelf ${{ github.ref_name }} — a personal catalog for books, movies, TV and quotes.
+
+            **Install:** download the APK below and open it on the phone. Android
+            will ask you to allow installing from this source the first time.
+
+            Requires Android 8.0 (API 26) or later.
