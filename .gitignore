@@ -18,3 +18,9 @@ dist/
 # Playwright
 test-results/
 playwright-report/
+
+# Signing keys
+*.jks
+*.p12
+*.keystore
+keystore.properties
