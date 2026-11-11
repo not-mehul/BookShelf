@@ -348,6 +348,6 @@
     >
       Delete
     </button>
-    <button type="button" class="btn btn-muted btn-sm" onclick={exitSelection}>Done</button>
+    <button type="button" class="btn btn-muted btn-sm select-done" onclick={exitSelection}>Done</button>
   {/if}
 </div>

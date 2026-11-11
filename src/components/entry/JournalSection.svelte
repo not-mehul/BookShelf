@@ -11,6 +11,7 @@
     toDay
   } from '../../util/journal';
   import type { CatalogEntry } from '../../types';
+  import DateField from '../DateField.svelte';
 
   // When it was started and finished, and how long it took. Stamped by status
   // changes; corrected here by picking a day.
@@ -60,28 +61,22 @@
   <div class="modal-section journal">
     <div class="modal-section-label">Journal</div>
     <div class="journal-dates">
-      <label class="journal-field">
-        <span class="t-field-label">Started</span>
-        <input
-          type="date"
-          class="input input-mono"
-          max={today}
-          value={toDay(entry.dateStarted)}
-          onchange={(ev) => setStarted(ev.currentTarget.value)}
-        />
-      </label>
+      <DateField
+        label="Started"
+        id="journal-started"
+        max={today}
+        value={toDay(entry.dateStarted)}
+        onchange={setStarted}
+      />
       {#if entry.status === 'finished' || finished}
-        <label class="journal-field">
-          <span class="t-field-label">Finished</span>
-          <input
-            type="date"
-            class="input input-mono"
-            max={today}
-            min={toDay(entry.dateStarted) || undefined}
-            value={toDay(finished)}
-            onchange={(ev) => setFinished(ev.currentTarget.value)}
-          />
-        </label>
+        <DateField
+          label="Finished"
+          id="journal-finished"
+          max={today}
+          min={toDay(entry.dateStarted) || undefined}
+          value={toDay(finished)}
+          onchange={setFinished}
+        />
       {/if}
     </div>
 
@@ -116,10 +111,8 @@
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-4);
   }
-  .journal-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+  .journal-dates > :global(.field) {
+    margin-bottom: 0;
   }
   .journal-line {
     margin-top: var(--space-3);

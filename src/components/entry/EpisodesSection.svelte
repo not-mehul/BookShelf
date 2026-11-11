@@ -67,8 +67,8 @@
     {@const next = p.next}
     <div class="episodes-next">
       <div>
-        <div class="episodes-next-label">Next up</div>
-        <div class="episodes-next-title">{episodeCode(next)} · {next.name || 'Untitled'}</div>
+        <div class="episodes-next-label">Next up · {episodeCode(next)}</div>
+        <div class="episodes-next-title">{next.name || 'Untitled'}</div>
       </div>
       <button type="button" class="btn btn-primary btn-sm" onclick={() => mark([next.id], true)}>
         <Icon name="check" /> <span>Mark watched</span>
@@ -77,7 +77,7 @@
   {:else if p.caughtUp}
     <p class="episodes-next-note">
       {p.upcoming
-        ? `Caught up — ${episodeCode(p.upcoming)} airs ${fmtDate(p.upcoming.aired)}`
+        ? `Caught up. ${episodeCode(p.upcoming)} airs ${fmtDate(p.upcoming.aired)}`
         : 'Caught up on every aired episode.'}
     </p>
   {/if}
@@ -105,7 +105,9 @@
     >
       <summary>
         <span class="season-name">{season === 0 ? 'Specials' : `Season ${season}`}</span>
-        <span class="season-count">{done}/{aired.length}{all && aired.length ? ' ✓' : ''}</span>
+        <span class="season-count"
+          >{aired.length ? `${done}/${aired.length}${all ? ' ✓' : ''}` : `${episodes.length} upcoming`}</span
+        >
       </summary>
       {#if aired.length}
         <button

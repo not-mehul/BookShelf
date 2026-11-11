@@ -491,11 +491,6 @@ img {
   color: var(--accent-amber);
   margin-top: 0.4rem;
 }
-.entry-rating-line.unrated {
-  color: var(--text-faint);
-  font-style: italic;
-  font-family: var(--font-serif);
-}
 
 /* In-library badge on search cards */
 .in-library-badge {
@@ -1834,13 +1829,6 @@ img {
   align-items: center;
   gap: 0.6rem;
 }
-.queue-short {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.82rem;
-  color: var(--text-body);
-}
 .queue-pick-card {
   margin-top: 0.8rem;
   padding: 0.9rem 1rem;
@@ -2020,6 +2008,24 @@ img {
   color: var(--text-heading);
   font-size: 0.85rem;
 }
+/* Phones: the count and Done share the top line, the three actions sit below
+   at one width, so nothing is left alone on a line. */
+@media (max-width: 520px) {
+  .select-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .select-bar[hidden] {
+    display: none;
+  }
+  .select-count {
+    grid-column: 1 / 3;
+  }
+  .select-done {
+    grid-row: 1;
+    grid-column: 3;
+  }
+}
 body.is-selecting .fab {
   display: none;
 }
@@ -2037,28 +2043,16 @@ body.is-selecting .app-shell {
   flex-wrap: wrap;
 }
 .remind-wrap {
+  flex-basis: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 0.25rem;
 }
-.remind-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.78rem;
-  color: var(--text-body);
-  cursor: pointer;
-}
-.remind-toggle svg {
-  width: 14px;
-  height: 14px;
-}
 .remind-note {
-  font-size: 0.72rem;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: var(--danger);
-  max-width: 16rem;
-  text-align: right;
 }
 .episodes-summary {
   color: var(--text-body);
@@ -2067,6 +2061,7 @@ body.is-selecting .app-shell {
 }
 .episodes-next {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -2075,9 +2070,14 @@ body.is-selecting .app-shell {
   border-left: 2px solid var(--accent-amber);
   background: var(--panel-bg-faint);
 }
+.episodes-next > div {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
 .episodes-next-label {
+  font-family: var(--font-mono);
   font-size: 0.65rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -2097,6 +2097,7 @@ body.is-selecting .app-shell {
 }
 .season summary {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   cursor: pointer;
   list-style: none;
@@ -2135,17 +2136,55 @@ body.is-selecting .app-shell {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.3rem 0;
+  min-height: 44px;
 }
+/* A themed check box: never the browser's own (§8.6). */
 .episode input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--accent-amber);
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--corner-xs);
+  background: var(--input-bg);
+  cursor: pointer;
+  transition:
+    background-color var(--spring-effects-fast-dur) var(--spring-effects-fast),
+    border-color var(--spring-effects-fast-dur) var(--spring-effects-fast);
+}
+.episode input::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  margin-top: -2px;
+  border: solid var(--on-accent);
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg) scale(0);
+  transition: transform var(--spring-spatial-fast-dur) var(--spring-spatial-fast);
+}
+.episode input:checked {
+  border-color: var(--accent-bright);
+  background: var(--accent-bright);
+}
+.episode input:checked::after {
+  transform: rotate(-45deg) scale(1);
+}
+.episode input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.episode input:disabled {
+  background: var(--disabled-bg);
+  cursor: default;
 }
 .episode label {
   display: grid;
   grid-template-columns: 2.4rem 1fr auto;
+  align-items: baseline;
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
@@ -2277,13 +2316,6 @@ body.is-selecting .app-shell {
   gap: 0.6rem 1rem;
   margin-bottom: 0.5rem;
 }
-.share-card-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.82rem;
-  color: var(--text-body);
-}
 .share-card-actions {
   justify-content: center;
   flex-wrap: wrap;
@@ -2331,4 +2363,139 @@ img.cover-img.is-loaded {
 /* The title word that moves in an easter egg (style.md §11.3). */
 .title-word {
   display: inline-block;
+}
+
+/* ─── Date picker (§8.6) ──────────────────────────────────────── */
+
+.picker-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.picker-field > svg {
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+.picker-value {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker-placeholder {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--text-faint);
+}
+.modal-dialog .picker-card {
+  display: flex;
+  flex-direction: column;
+  max-width: 420px;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--panel-bg-faint);
+}
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.calendar-month {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--accent-amber);
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-grid .t-field-label {
+  margin: 0;
+  text-align: center;
+}
+.day-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  background: var(--panel-bg-faint);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-body);
+}
+.day-cell:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+.day-cell.today {
+  border: 1px solid rgba(var(--accent-amber-rgb), 0.55);
+}
+.day-cell[aria-pressed='true'],
+.day-cell[aria-pressed='true']:hover:not(:disabled) {
+  border: 0;
+  background: var(--accent-bright);
+  color: var(--on-accent);
+}
+.day-cell:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+.picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ─── Sheet (§8.11): Settings rises from the bottom on phones ─── */
+
+.modal-dialog.is-sheet .sheet-handle {
+  display: none;
+}
+@media (max-width: 899px) {
+  .modal-dialog.is-sheet {
+    align-items: flex-end;
+    padding: calc(var(--space-4) + var(--inset-top)) 0 0;
+  }
+  .modal-dialog.is-sheet .modal-card {
+    max-height: 90dvh;
+    padding-top: 0.5rem;
+    padding-bottom: calc(1.75rem + var(--inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--border-soft);
+    border-radius: var(--corner-xl) var(--corner-xl) 0 0;
+    background: var(--sheet-bg);
+    box-shadow: none;
+    animation: sheet-in var(--spring-spatial-calm-dur) var(--spring-spatial-calm);
+  }
+  .modal-dialog.is-sheet .modal-card::before,
+  .modal-dialog.is-sheet .modal-card::after {
+    display: none;
+  }
+  .modal-dialog.is-sheet .sheet-handle {
+    display: block;
+    flex-shrink: 0;
+    width: 32px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: var(--corner-full);
+    background: var(--border);
+  }
+  .modal-dialog.is-sheet.closing .modal-card {
+    animation: sheet-out var(--dur-exit) ease-in forwards;
+  }
 }

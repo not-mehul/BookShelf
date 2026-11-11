@@ -9,7 +9,7 @@
   import { ui, type AddSeed } from '../../state/ui.svelte';
   import { canScanBarcodes, scanBarcode } from '../../util/barcode';
   import { messageOf } from '../../util/errors';
-  import { TYPE_ICON, TYPE_LABEL } from '../../util/labels';
+  import { TYPE_ICON, TYPE_NOUN } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
   import { parseSeriesFromTitle } from '../../util/series';
   import { fetchThumbBlob } from '../../util/thumbs';
@@ -151,7 +151,7 @@
   }
 </script>
 
-<ModalHead eyebrow="Add a {TYPE_LABEL[type].toLowerCase()}" class="add-head-search" {onback} />
+<ModalHead eyebrow="Add to catalog" title="Add a {TYPE_NOUN[type]}" class="add-head-search" {onback} />
 
 <form
   class="search-form add-search-form"

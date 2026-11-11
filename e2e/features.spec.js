@@ -45,7 +45,7 @@ test.describe('in the browser', () => {
     await dialog.getByRole('button', { name: 'Add 50 pages' }).click();
     await expect(dialog.locator('.progress-left')).toHaveText('240 pages left · 17%');
     await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('in-progress');
-    await expect(dialog.locator('.journal input[type=date]').first()).not.toHaveValue('');
+    await expect(dialog.locator('.journal .picker-field').first()).toHaveAttribute('data-value', /\d{4}-\d{2}-\d{2}/);
 
     await dialog.getByRole('spinbutton', { name: 'Current' }).fill('290');
     await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('finished');
@@ -155,7 +155,7 @@ test.describe('in the browser', () => {
     await expect(section.locator('.episodes-summary')).toHaveText('3 of 4 aired episodes watched · 1 upcoming');
     await section.getByRole('button', { name: 'Mark season watched' }).click();
     await expect(section.locator('.episodes-summary')).toHaveText('4 of 4 aired episodes watched · 1 upcoming');
-    await expect(section.locator('.episodes-next-note')).toContainText('Caught up — S2 E1 airs');
+    await expect(section.locator('.episodes-next-note')).toContainText('Caught up. S2 E1 airs');
     // Unaired episodes can't be ticked; specials are listed but don't count.
     await section.locator('summary', { hasText: 'Season 2' }).click();
     await expect(section.getByLabel(/Hello, Ms. Cobel/)).toBeDisabled();
@@ -213,8 +213,7 @@ test.describe('in the Android shell', () => {
     await page.goto('/index.html');
     await importFixture(page);
     await card(page, 'Severance').click();
-    const toggle = page.getByLabel('New-episode alerts');
-    // click(), not check(): the app immediately reverts it when permission is refused.
+    const toggle = page.getByRole('switch', { name: /New-episode alerts/ });
     await toggle.click();
     await expect(toggle).not.toBeChecked();
     await expect(page.locator('.remind-note')).toContainText('Notifications are off');
@@ -225,8 +224,9 @@ test.describe('in the Android shell', () => {
     await page.goto('/index.html');
     await importFixture(page);
     await card(page, 'Severance').click();
-    await page.getByLabel('New-episode alerts').check();
-    await expect(page.getByLabel('New-episode alerts')).toBeChecked();
+    const toggle = page.getByRole('switch', { name: /New-episode alerts/ });
+    await toggle.click();
+    await expect(toggle).toBeChecked();
     await expect.poll(() => page.evaluate(() => window.__sent.filter((m) => m.method === 'episodeReminders').length)).toBeGreaterThan(0);
   });
 });

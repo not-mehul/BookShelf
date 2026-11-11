@@ -136,8 +136,8 @@
       <button type="button" class="btn btn-primary" disabled={loaded && !items.length} onclick={showPick}>
         <Icon name="shuffle" /> <span>Pick something for me</span>
       </button>
-      <label class="queue-short" for="pick-short"
-        ><input type="checkbox" id="pick-short" bind:checked={short} /> Short books</label
+      <button type="button" class="chip" aria-pressed={short} onclick={() => (short = !short)}
+        >Short books</button
       >
       <div class="select-wrap select-wrap-sm">
         <select class="select select-sm" aria-label="Genre" bind:value={genre}>

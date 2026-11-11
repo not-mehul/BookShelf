@@ -173,7 +173,7 @@
     {/if}
 
     <hr class="divider settings-divider" />
-    <div class="settings-section-heading">Backup & Data</div>
+    <div class="settings-section-heading">Your data</div>
     <p class="field-hint">
       JSON is a complete, lossless backup (covers included) and is safe to re-import. Markdown import is
       best-effort for older exports.

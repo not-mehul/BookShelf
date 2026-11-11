@@ -101,7 +101,7 @@
 />
 
 {#if ui.modal}
-  <Modal contentKey={ui.modalKey} onclose={() => ui.close()}>
+  <Modal contentKey={ui.modalKey} sheet={ui.modal.kind === 'settings'} onclose={() => ui.close()}>
     {#key ui.modalKey}
       <ModalContent modal={ui.modal} />
     {/key}

@@ -14,10 +14,15 @@
   }
 
   let { entry, update, onedit }: Props = $props();
-  const citation = $derived([entry.creators?.[0], entry.source, entry.location].filter(Boolean).join(', '));
   // The book / film / show it is from, if that is still on the shelf.
   const linked = $derived(
     entry.linkedEntryId ? shelf.entries.find((e) => e.id === entry.linkedEntryId) : undefined
+  );
+  // The "From" link below already names a linked source, so the citation doesn't repeat it.
+  const citation = $derived(
+    [entry.creators?.[0], linked && entry.source === linked.title ? '' : entry.source, entry.location]
+      .filter(Boolean)
+      .join(', ')
   );
 </script>
 

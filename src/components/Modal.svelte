@@ -21,11 +21,13 @@
   interface Props {
     /** Changes whenever the content is replaced (another dialog opened in its place). */
     contentKey: number;
+    /** A sheet rises from the bottom on phones (style.md §8.11) and is a modal from 900px. */
+    sheet?: boolean;
     onclose: () => void;
     children: Snippet;
   }
 
-  let { contentKey, onclose, children }: Props = $props();
+  let { contentKey, sheet = false, onclose, children }: Props = $props();
   let dialog: HTMLDialogElement;
   let card: HTMLDivElement;
   let closeBtn: HTMLButtonElement;
@@ -69,6 +71,7 @@
 <dialog
   bind:this={dialog}
   class="modal-dialog"
+  class:is-sheet={sheet}
   aria-labelledby="modal-title"
   onclick={(ev) => {
     // The dialog box fills the viewport; a click on it outside the card dismisses.
@@ -80,6 +83,7 @@
   }}
 >
   <div class="modal-card" bind:this={card}>
+    {#if sheet}<div class="sheet-handle" aria-hidden="true"></div>{/if}
     <button
       bind:this={closeBtn}
       type="button"

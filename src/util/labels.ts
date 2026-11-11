@@ -9,6 +9,13 @@ export const TYPE_LABEL: Record<EntryType, string> = {
   tv: 'TV Show',
   quote: 'Quote'
 };
+/** In running text: "Add a book", "Add a TV show". */
+export const TYPE_NOUN: Record<EntryType, string> = {
+  book: 'book',
+  movie: 'movie',
+  tv: 'TV show',
+  quote: 'quote'
+};
 /** Shorter, for chips and list rows. */
 export const TYPE_SHORT: Record<EntryType, string> = {
   book: 'Book',

@@ -110,14 +110,20 @@
       <Segmented options={FORMAT_OPTS} bind:value={format} label="Card format" />
       {#if e.type !== 'quote'}
         {#if e.rating != null}
-          <label class="share-card-toggle" for="card-rating">
-            <input type="checkbox" id="card-rating" bind:checked={includeRating} /> Rating
-          </label>
+          <button
+            type="button"
+            class="chip"
+            aria-pressed={includeRating}
+            onclick={() => (includeRating = !includeRating)}>Rating</button
+          >
         {/if}
         {#if e.notes?.trim()}
-          <label class="share-card-toggle" for="card-notes">
-            <input type="checkbox" id="card-notes" bind:checked={includeNotes} /> My notes
-          </label>
+          <button
+            type="button"
+            class="chip"
+            aria-pressed={includeNotes}
+            onclick={() => (includeNotes = !includeNotes)}>My notes</button
+          >
         {/if}
       {/if}
     </div>

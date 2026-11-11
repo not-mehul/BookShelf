@@ -108,8 +108,6 @@
       {/if}
       {#if entry.rating != null}
         <div class="entry-rating-line">{starString(entry.rating)}</div>
-      {:else}
-        <div class="entry-rating-line unrated">unrated</div>
       {/if}
       {#if entry.status}
         <span

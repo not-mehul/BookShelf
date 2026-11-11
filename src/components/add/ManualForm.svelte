@@ -2,7 +2,7 @@
   import { saveEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
-  import { TYPE_LABEL } from '../../util/labels';
+  import { TYPE_NOUN } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
   import { parseSeriesFromTitle } from '../../util/series';
   import { splitList } from '../../util/text';
@@ -58,7 +58,7 @@
   }
 </script>
 
-<ModalHead eyebrow="Add a {TYPE_LABEL[type].toLowerCase()} manually" {onback} />
+<ModalHead eyebrow="Enter by hand" title="Add a {TYPE_NOUN[type]}" {onback} />
 
 <form class="add-form" onsubmit={submit}>
   <Field label="Title" id="m-title" placeholder="Required" bind:value={title} autofocus />
