@@ -4,6 +4,8 @@
   import { ui } from '../state/ui.svelte';
   import { plural } from '../util/labels';
   import Icon from './Icon.svelte';
+  import IdleCat from './IdleCat.svelte';
+  import IdleDock from './IdleDock.svelte';
   import Library from './Library.svelte';
   import Modal from './Modal.svelte';
   import ModalContent from './ModalContent.svelte';
@@ -88,6 +90,8 @@
 >
   <Icon name="plus" />
 </button>
+
+<IdleDock label="The library cat" disabled={!!ui.modal}><IdleCat /></IdleDock>
 
 <Toast
   toast={ui.toast}
