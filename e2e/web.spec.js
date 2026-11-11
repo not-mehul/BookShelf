@@ -81,3 +81,31 @@ test('phone layout: filter gets its own row; sync is app-only', async ({ page })
   await expect(page.locator('.sync-section')).toHaveCount(0);
   await expect(page.getByLabel('Proxy URL (optional)')).toBeVisible();
 });
+
+test('hides easter eggs, counts them once, and lists the count in Settings', async ({ page }) => {
+  for (const key of [
+    'ArrowUp',
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowLeft',
+    'ArrowRight',
+    'b',
+    'a'
+  ]) {
+    await page.keyboard.press(key);
+  }
+  await expect(page.locator('.toast[data-kind="celebrate"]')).toHaveText(
+    'Every cover, turned face out. Easter egg found: 1 of 3.'
+  );
+
+  for (let i = 0; i < 7; i++) await page.locator('.t-page-title').click();
+  await expect(page.locator('.toast[data-kind="celebrate"]')).toHaveText(
+    'Shh. This is a library. Easter egg found: 2 of 3.'
+  );
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.locator('#eggCount')).toHaveText('Easter eggs: 2 of 3 found');
+});

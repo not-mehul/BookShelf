@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cheer } from '../../util/delight';
   import { untrack } from 'svelte';
   import { loadEpisodeGuide } from '../../api/episode-sync';
   import { enrichEntry, isTvdbConfigured } from '../../api/tvdb';
@@ -25,10 +26,13 @@
   async function update(change: (draft: CatalogEntry) => void | Promise<void>): Promise<void> {
     if (!entry) return;
     const draft = { ...entry };
+    const was = entry.status;
     await change(draft);
     await saveEntry(draft);
     entry = draft;
     shelf.changed();
+    // Finishing a book, a film or a show is worth a little confetti (style.md §11.3).
+    if (draft.status === 'finished' && was !== 'finished') cheer(null, { count: 60 });
   }
 
   function show(next: CatalogEntry) {

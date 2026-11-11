@@ -31,7 +31,7 @@ export type Modal =
   | { kind: 'bulk'; ids: string[] }
   | { kind: 'share'; id: string };
 
-export type ToastKind = 'success' | 'error' | 'info';
+export type ToastKind = 'success' | 'error' | 'info' | 'celebrate';
 
 export interface ToastAction {
   label: string;

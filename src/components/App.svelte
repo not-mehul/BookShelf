@@ -7,7 +7,8 @@
   import Library from './Library.svelte';
   import Modal from './Modal.svelte';
   import ModalContent from './ModalContent.svelte';
-  import { ThemeToggle, Toast } from 'dusk-dawn';
+  import { ThemeToggle, Toast, konami, play, secretTaps } from 'dusk-dawn';
+  import { cheer, hatch } from '../util/delight';
 
   const counts = $derived.by(() => {
     const c = { book: 0, movie: 0, tv: 0, quote: 0 };
@@ -22,11 +23,30 @@
       counts.quote && plural(counts.quote, 'quote')
     ].filter((p): p is string => Boolean(p))
   );
+
+  // Easter eggs (style.md §11.3). The Konami code turns every cover face out;
+  // seven taps on the title get you shushed.
+  let titleWord = $state<HTMLElement>();
+  $effect(() =>
+    konami(() => {
+      for (const [i, card] of [...document.querySelectorAll('.entry-card')].slice(0, 30).entries()) {
+        setTimeout(() => play(card, 'flip'), 45 * i);
+      }
+      cheer(null, { count: 70 });
+      hatch('konami', 'Every cover, turned face out.');
+    })
+  );
+  function hush() {
+    play(titleWord, 'wiggle');
+    hatch('title', 'Shh. This is a library.');
+  }
 </script>
 
 <header class="site-header">
   <div class="title-block">
-    <h1 class="t-page-title">Book<em>Shelf</em></h1>
+    <h1 class="t-page-title" use:secretTaps={{ count: 7, onunlock: hush }}>
+      Book<em class="title-word" bind:this={titleWord}>Shelf</em>
+    </h1>
     <p class="t-tagline">by Mehul</p>
   </div>
   <div class="header-controls">
