@@ -6,6 +6,7 @@
   import { getEntry, saveEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
+  import { hasNookling, tellNookling } from '../../platform/nookling';
   import { guideIsStale } from '../../util/episodes';
   import { fetchThumbBlob } from '../../util/thumbs';
   import type { CatalogEntry } from '../../types';
@@ -32,7 +33,17 @@
     entry = draft;
     shelf.changed();
     // Finishing a book, a film or a show is worth a little confetti (style.md §11.3).
-    if (draft.status === 'finished' && was !== 'finished') cheer(null, { count: 60 });
+    if (draft.status === 'finished' && was !== 'finished') {
+      cheer(null, { count: 60 });
+      // A finished book can go to the nookling too, when Nookling is installed.
+      if (draft.type === 'book' && (await hasNookling())) {
+        const { title, creators } = draft;
+        ui.notify(`Finished ${title}.`, 'success', {
+          label: 'Share with your nookling',
+          run: () => void tellNookling(title, creators[0] ?? '')
+        });
+      }
+    }
   }
 
   function show(next: CatalogEntry) {

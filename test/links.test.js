@@ -73,3 +73,12 @@ describe('links between the apps', () => {
     expect(fractionParam(undefined)).toBeNull();
   });
 });
+
+describe('telling Nookling about a finished book', () => {
+  it('sends the title and author, from BookShelf', async () => {
+    const { readLink } = await import('../src/platform/nookling');
+    const url = readLink(' Momo ', 'Michael Ende');
+    expect(url).toBe('nookling://read?title=Momo&author=Michael+Ende&source=bookshelf');
+    expect(isKnownAction(parseLink(url))).toBe(true);
+  });
+});

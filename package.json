@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
+    "@capacitor/app-launcher": "8.0.1",
     "@capacitor/core": "^8.6.0",
     "dexie": "^4.4.7"
   },
