@@ -1,177 +1,106 @@
-# BookShelf
+<p align="center"><img src="public/icon.svg" width="88" height="88" alt=""></p>
 
-A personal catalog for books, films, TV shows, and quotes — searchable, ratable, exportable. A web app (installable as a PWA) that also ships as a native Android application via a thin WebView shell (no Capacitor). Styled with *Editorial Dusk & Dawn* — a warm, two-theme editorial aesthetic.
+<h1 align="center">BookShelf</h1>
 
-- **Books** — Google Books search, with an Open Library fallback, ISBN lookup and **barcode scanning**
-- **Movies & TV** — TheTVDB v4 (cast/genre enrichment on open), directly or through your own **hosted proxy** ([`proxy/`](./proxy))
-- **Quotes** — manual entry with author, source and page/time, **linked to the book, film or show** they come from (each entry lists its quotes)
-- **Manual entry** — add anything by hand when search comes up empty, and edit any entry afterward
-- **Organize** — **half-star ratings** with optional aspect scores (story, writing, acting…), status (Wishlist, Reading/Watching, Completed), notes, tags/collections
-- **TV season tracking** — mark seasons watched, "Up next" on the library, status follows automatically, and (Android) **new-episode alerts**
-- **Series** — detected from titles or set by hand: reading/watching order, what's next, gaps, "check for new installments"
-- **Ranked queue** — your Wishlist in order (drag, keyboard or buttons), plus "pick something for me" by type, length or genre
-- **Bulk edit** — select several entries (button or long-press) to change status, add/remove tags, or delete
-- **Reading journal** — starting and finishing are dated as they happen; a book's span is picked on one calendar (start, then finish), a film or show takes one day
-- **Statistics** — a year in review (finished per month, pages read, a yearly book goal with its pace, the longest book and quickest read), plus all-time totals, rating distribution, most-shelved authors and directors, decades and top genres
-- **Little things** — a different kept quote at the top of the library each day, the library remembers its tab and sort, and `/` jumps to the filter
-- **Storage** — local IndexedDB (Dexie) with cached cover thumbnails; nothing leaves the device
-- **Backup** — lossless JSON export/import (re-importable without duplicates) plus human-readable Markdown export
-- **Share cards** — any book, film, show or quote as a Dusk or Dawn styled image (post, square or story), or as text
-- **Share *into* BookShelf** — share a highlight, title or link from any app (Android share sheet, or the installed PWA's share target) to get a prefilled quote or search
-- **Links from the sibling apps** — Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick as finished or in progress. `bookshelf://open` just opens it. The scheme and its actions are shared by all six apps (`src/platform/links.ts`, style.md §14.1)
-- **Encrypted sync** (Android) — end-to-end encrypted sync through a folder you choose (Google Drive, Nextcloud, Syncthing…)
-- **Home-screen widget** (Android) — resizable: shelf count, what you're reading/watching with progress, latest quote
-- **Secrets in the Android Keystore** — API keys, tokens and the sync passphrase are encrypted with a hardware-backed key
-- **Themes** — System, Dusk (dark) or Dawn (light), set in Settings; System follows the OS live, and the header switch flips to the other side
+<p align="center"><em>Books, films, shows and the lines worth keeping.</em></p>
 
-## Quick start (development)
+<p align="center">
+  Android&nbsp;·&nbsp;Web&nbsp;·&nbsp;<a href="https://github.com/not-mehul/BookShelf/releases/latest">Latest release</a>&nbsp;·&nbsp;MIT&nbsp;·&nbsp;Created by <strong>Mehul Sen</strong>
+</p>
 
-Requires **Node 22.12+** (Node 24 LTS recommended — see `.nvmrc`).
+---
 
-```bash
+BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, track where you are, and see your year in review. It runs as an Android app and as an installable web app, and the library lives on your device.
+
+<p align="center">
+  <img src="docs/screenshots/library.webp" width="200" alt="The library: shelf count, type tabs with counts, Up next for a TV season and a quote from the shelf">
+  <img src="docs/screenshots/entry.webp" width="200" alt="A book's page with its cover, author, genre and its place in a series">
+  <img src="docs/screenshots/statistics.webp" width="200" alt="Statistics: the year in review with books and films finished per month">
+  <img src="docs/screenshots/shelf-dawn.webp" width="200" alt="Library cards in the light Dawn theme with ratings, series and status">
+</p>
+
+## Features
+
+### Add anything
+
+- **Books** from Google Books, with Open Library as a fallback, by title, ISBN or a **scanned barcode**.
+- **Films and TV** from TheTVDB, directly or through your own hosted proxy ([`proxy/`](proxy)), with cast and genres filled in when you open an entry.
+- **Quotes** with author, source and page or time, linked to the book, film or show they come from. Each entry lists its quotes.
+- **By hand**, when search comes up empty. Every entry can be edited afterwards.
+- **Share into BookShelf** a highlight, title or link from any app (the Android share sheet, or the installed web app's share target) to get a prefilled quote or search.
+
+### Keep track
+
+- **Status at a tap.** Three toggles, Wishlist, Reading or Watching, and Completed, each in its own colour.
+- **Half-star ratings** with optional aspect scores (story, writing, acting and so on), notes, tags and collections.
+- **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day.
+- **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**.
+- **Series**, detected from titles or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
+- **A ranked queue.** Your wishlist in order (drag, keyboard or buttons), plus _pick something for me_ by type, length or genre.
+- **Bulk edit.** Select several entries to change status, add or remove tags, or delete them.
+
+### Look back
+
+- **A year in review**: finished per month, pages in the books you finished, a yearly reading goal with its pace, the longest book and the highest rated.
+- **All-time statistics**: totals, rating distribution, most-shelved authors and directors, decades and top genres.
+- **Share cards.** Any book, film, show or quote as an image in the Dusk or Dawn style (post, square or story), or as text.
+- **Little things.** A different kept quote at the top of the library each day, the library remembers its tab and sort, and `/` jumps to the filter. Finishing something earns a little confetti, there is an idle cat to play with, and four easter eggs are counted in Settings.
+
+### Your data
+
+- **On your device.** Everything lives in local storage with cached cover thumbnails.
+- **Backup and restore** as lossless JSON (re-importing never duplicates), plus a readable Markdown export.
+- **Encrypted sync** (Android): end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
+- **A home-screen widget** (Android): shelf count, what you are reading or watching, and your latest quote.
+- **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
+- **Links from the other apps.** Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick. `bookshelf://open` just opens it.
+- **Themes.** System, Dusk (dark) or Dawn (light).
+
+## Private by design
+
+Your catalog never leaves the device. BookShelf talks to a catalog only when you search, and if you turn on sync, it writes one end-to-end encrypted file to the folder you chose. There are no accounts and no BookShelf server.
+
+## Install
+
+- **Android:** download the signed APK from the [latest release](https://github.com/not-mehul/BookShelf/releases/latest) and open it on your phone.
+- **Web:** build it (see below) and host `dist/index.html` anywhere; it installs as a web app from the browser.
+
+Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if your key needs one) for films and TV, or the URL of your [TheTVDB proxy](proxy). A **Google Books API key** is optional and raises the daily quota. In a plain browser, TheTVDB blocks cross-origin requests, so use the proxy or set a CORS proxy under Settings; the Android app needs neither.
+
+## The Dusk & Dawn apps
+
+BookShelf is one of six apps by Mehul Sen that share one design system, [Editorial Dusk & Dawn](https://github.com/not-mehul/dusk-dawn), and a common link scheme, so they can hand things to each other.
+
+| App                                                 | What it is for                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Waymark](https://github.com/not-mehul/Waymark)     | Your whole trip, offline: flights, stays, plans and costs on one timeline |
+| [BookShelf](https://github.com/not-mehul/BookShelf) | Books, films, shows and the lines worth keeping                           |
+| [Ledger](https://github.com/not-mehul/Ledger)       | A record of cities, scored on what matters to you                         |
+| [Colophon](https://github.com/not-mehul/Colophon)   | Inspect, fix and rebind EPUB editions                                     |
+| [Rosetta](https://github.com/not-mehul/Rosetta)     | A quiet library and reader for books, papers and notes                    |
+| [Mise](https://github.com/not-mehul/Mise)           | Recipes from anywhere, cooked one step at a time                          |
+
+## Build from source
+
+Svelte 5 and TypeScript, built by Vite into a single self-contained page, with Dexie for storage and a Capacitor 8 Android app around it. You need Node 22.12 or later.
+
+```sh
 npm install
-npm run dev
+npm run dev          # the app in a browser
+npm run check        # tokens, lint, typecheck, unit tests and build
+npm run sync         # build, then copy it into the Android project
 ```
 
-Open the shown localhost URL. Open **Settings** (gear, top-right) and paste:
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) covers the scripts, the Android app, the project structure, the APIs and the tests. [RELEASING.md](RELEASING.md) covers signing and releases.
 
-- A **TheTVDB API key** (project key from your TheTVDB account)
-- Your **TheTVDB subscriber PIN** (if your project key uses end-user subscription funding)
-- Optionally a **Google Books API key** (raises the daily quota)
+## Credits
 
-Or, instead of a TheTVDB key on every device, deploy the [TheTVDB proxy](./proxy)
-and enter its URL (and access token) under Settings → TheTVDB.
+BookShelf is designed and built by **Mehul Sen** ([@not-mehul](https://github.com/not-mehul)).
 
-> **Privacy:** catalog data lives locally in IndexedDB. In the Android app, API
-> keys, the TheTVDB token and the sync passphrase are encrypted with an Android
-> Keystore key; in a plain browser they sit in localStorage. Nothing is sent
-> anywhere except to the respective API when you search — and, if you enable
-> sync, an end-to-end encrypted file to the folder you chose.
+- Catalog data: [Google Books](https://books.google.com), [Open Library](https://openlibrary.org) and [TheTVDB](https://thetvdb.com).
+- Icons: [Lucide](https://lucide.dev), ISC.
+- Fonts and design: Fraunces (SIL Open Font License) through [dusk-dawn](https://github.com/not-mehul/dusk-dawn).
 
-In a plain browser, TheTVDB blocks cross-origin requests: use the TheTVDB proxy,
-or set a generic CORS proxy under Settings → Browser Compatibility. The Android
-app needs neither.
+## Licence
 
-## Scripts
-
-```bash
-npm run dev          # Vite dev server
-npm run build        # production build (single self-contained index.html)
-npm run test         # Vitest unit tests (web + proxy)
-npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
-npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
-npm run lint         # ESLint
-npm run format       # Prettier (write)
-npm run check        # tokens + lint + typecheck + test + build (what CI runs on each push)
-npm run sync         # build, then copy it into the Android project (cap sync android)
-```
-
-Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vite 8
-(Rolldown), Vitest 5, Playwright, ESLint 10 (flat config, typescript-eslint,
-eslint-plugin-svelte), Prettier 3, Dexie 4. The same stack as Ledger.
-
-For `test:e2e`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
-or point `PW_CHROMIUM_PATH` at an existing Chromium.
-
-## Android
-
-The Android app is a Capacitor 8 project in [`android/`](./android), set up like
-Ledger's: Capacitor hosts the web build, and one Kotlin plugin
-(`BookShelfPlugin.kt` ↔ `src/platform/native.ts`) adds native HTTP to bypass
-WebView CORS (restricted to the app's API hosts), file export/share, predictive
-Back, and the Keystore, barcode scanner, folder sync, new-episode alerts and the
-home-screen widget. Everything is feature-detected, so the same build runs
-unchanged in a plain browser. See [`android/README.md`](./android/README.md) for
-how to build and run it, and how your data carries over from the old WebView
-shell.
-
-## Project structure
-
-```
-src/
-  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync, service worker
-  components/        Svelte 5 UI (runes)
-    App.svelte       Header, stats bar, library, add button, the one dialog
-    Library.svelte   Grid: type filter, search, sort, tag chips, selection mode
-    EntryCard.svelte, UpNext.svelte, RatingControl.svelte, EntryPicker.svelte, …
-    Modal.svelte     The native <dialog> every view opens in (focus, Escape, Android Back)
-    entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
-    add/             Add flow: medium → search / manual / quote
-    settings/        Preferences, sync setup, backup & restore
-    Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte, CameraScanner.svelte
-  state/
-    shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts
-    ui.svelte.ts     Which dialog is open
-  api/
-    books.ts         Google Books client
-    openlibrary.ts   Open Library client + ISBN detection
-    tvdb.ts          TheTVDB v4 client (login, token cache, extended enrichment)
-    normalize.ts     API responses → unified CatalogEntry shape
-    episode-sync.ts  Episode-guide refresh + Android reminder schedule
-  db/
-    database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD
-  share/
-    card.ts          Canvas share-card renderer (palette read from the tokens)
-    layout.ts        Text wrapping / fit-to-box (pure)
-    share-image.ts   Native share sheet, Web Share (files) or download
-  export/
-    markdown.ts      DB → Markdown serializer
-    import.ts        Markdown parser (best-effort)
-    json.ts          Lossless JSON backup / restore
-    share.ts         Single-entry share
-  platform/
-    native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
-    theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
-    widget.ts        Builds the home-screen widget's summary
-  sync/
-    crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
-    merge.ts         Last-writer-wins merge with deletion tombstones (pure)
-    sync.ts          Pull → merge → push orchestration, auto-sync
-  util/              Pure helpers: settings, share intake, barcode, stars, series,
-                     queue ranks, episodes, bulk edits, entry matching, icons, covers
-  styles/
-    app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first
-  types.d.ts         Shared data types (CatalogEntry, …)
-public/
-  manifest.webmanifest, sw.js, icon.svg   PWA assets
-test/                Vitest unit tests
-e2e/                 Playwright smoke tests (+ a simulated Android shell)
-proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
-index.html
-capacitor.config.ts  App id, web origin, SystemBars
-android/             Capacitor Android project (BookShelfPlugin and native features)
-```
-
-## Notes on the APIs
-
-**TheTVDB v4** issues a bearer token from `/login` that lasts ~1 month. The client caches it and refreshes when it ages past 25 days, or whenever a request returns 401. Movies and series are both served from `/search`; opening a saved entry enriches it with cast/genre from `/extended`. On Android the request is routed through the native HTTP bridge to bypass WebView CORS.
-
-**Google Books** requires no auth for basic use; an API key raises the daily quota. **Open Library** is keyless and used as a fallback and for ISBN lookups.
-
-## Testing & CI
-
-- **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
-  detection, Markdown parsing, share intake, the native bridge protocol and
-  back-handler stack, Keystore routing, sync encryption and merge (plus an
-  end-to-end sync between two simulated devices), the widget summary, half-star
-  ratings, series detection, queue ranking and picks, episode progress,
-  share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
-- **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
-  simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
-  (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
-  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
-  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
-- **Android (JVM)** — native HTTP host allowlist, filename sanitizing and MIME types,
-  Keystore name validation, the widget summary contract, and which new-episode
-  alerts are due.
-
-GitHub Actions (`.github/workflows/ci.yml`) runs `npm run check` (tokens, colours,
-lint, typecheck, unit tests, build) on every push to main and every pull request.
-The Playwright suite and an Android debug build run only when the workflow is
-started by hand (Actions → CI → Run workflow). The release workflow builds the
-signed APK on each version tag and checks that R8 kept the plugin, widget UI and
-reminder worker.
-
-## Design system
-
-BookShelf uses Editorial Dusk & Dawn from the [`dusk-dawn`](https://github.com/not-mehul/dusk-dawn) package, shared with Waymark, Ledger, Colophon and Rosetta: the tokens, Fraunces, the shared component styles and the `TabRail`, `ThemeToggle` and `Toast` components. Every color is a semantic CSS variable from `dusk-dawn/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). `dusk-dawn colours` (part of `npm run lint`) fails on any literal color in `src/`, and `dusk-dawn check` tests contrast in both themes. To change the design, change the package and move its tag in `package.json` (`style.md` §18 in the package).
+[MIT](LICENSE) © 2026 Mehul Sen.

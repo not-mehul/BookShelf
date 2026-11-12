@@ -1,0 +1,155 @@
+# Developing BookShelf
+
+How BookShelf is built, run and tested. For what the app does, see the [README](../README.md); for cutting a release, see [RELEASING.md](../RELEASING.md).
+
+## Quick start (development)
+
+Requires **Node 22.12+** (Node 24 LTS recommended — see `.nvmrc`).
+
+```bash
+npm install
+npm run dev
+```
+
+Open the shown localhost URL. Open **Settings** (gear, top-right) and paste:
+
+- A **TheTVDB API key** (project key from your TheTVDB account)
+- Your **TheTVDB subscriber PIN** (if your project key uses end-user subscription funding)
+- Optionally a **Google Books API key** (raises the daily quota)
+
+Or, instead of a TheTVDB key on every device, deploy the [TheTVDB proxy](../proxy)
+and enter its URL (and access token) under Settings → TheTVDB.
+
+> **Privacy:** catalog data lives locally in IndexedDB. In the Android app, API
+> keys, the TheTVDB token and the sync passphrase are encrypted with an Android
+> Keystore key; in a plain browser they sit in localStorage. Nothing is sent
+> anywhere except to the respective API when you search — and, if you enable
+> sync, an end-to-end encrypted file to the folder you chose.
+
+In a plain browser, TheTVDB blocks cross-origin requests: use the TheTVDB proxy,
+or set a generic CORS proxy under Settings → Browser Compatibility. The Android
+app needs neither.
+
+## Scripts
+
+```bash
+npm run dev          # Vite dev server
+npm run build        # production build (single self-contained index.html)
+npm run test         # Vitest unit tests (web + proxy)
+npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
+npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
+npm run lint         # ESLint
+npm run format       # Prettier (write)
+npm run check        # tokens + lint + typecheck + test + build (what CI runs on each push)
+npm run sync         # build, then copy it into the Android project (cap sync android)
+```
+
+Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vite 8
+(Rolldown), Vitest 5, Playwright, ESLint 10 (flat config, typescript-eslint,
+eslint-plugin-svelte), Prettier 3, Dexie 4. The same stack as Ledger.
+
+For `test:e2e`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
+or point `PW_CHROMIUM_PATH` at an existing Chromium.
+
+## Android
+
+The Android app is a Capacitor 8 project in [`android/`](../android), set up like
+Ledger's: Capacitor hosts the web build, and one Kotlin plugin
+(`BookShelfPlugin.kt` ↔ `src/platform/native.ts`) adds native HTTP to bypass
+WebView CORS (restricted to the app's API hosts), file export/share, predictive
+Back, and the Keystore, barcode scanner, folder sync, new-episode alerts and the
+home-screen widget. Everything is feature-detected, so the same build runs
+unchanged in a plain browser. See [`android/README.md`](../android/README.md) for
+how to build and run it, and how your data carries over from the old WebView
+shell.
+
+## Project structure
+
+```
+src/
+  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync, service worker
+  components/        Svelte 5 UI (runes)
+    App.svelte       Header, stats bar, library, add button, the one dialog
+    Library.svelte   Grid: type filter, search, sort, tag chips, selection mode
+    EntryCard.svelte, UpNext.svelte, RatingControl.svelte, EntryPicker.svelte, …
+    Modal.svelte     The native <dialog> every view opens in (focus, Escape, Android Back)
+    entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
+    add/             Add flow: medium → search / manual / quote
+    settings/        Preferences, sync setup, backup & restore
+    Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte, CameraScanner.svelte
+  state/
+    shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts
+    ui.svelte.ts     Which dialog is open
+  api/
+    books.ts         Google Books client
+    openlibrary.ts   Open Library client + ISBN detection
+    tvdb.ts          TheTVDB v4 client (login, token cache, extended enrichment)
+    normalize.ts     API responses → unified CatalogEntry shape
+    episode-sync.ts  Episode-guide refresh + Android reminder schedule
+  db/
+    database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD
+  share/
+    card.ts          Canvas share-card renderer (palette read from the tokens)
+    layout.ts        Text wrapping / fit-to-box (pure)
+    share-image.ts   Native share sheet, Web Share (files) or download
+  export/
+    markdown.ts      DB → Markdown serializer
+    import.ts        Markdown parser (best-effort)
+    json.ts          Lossless JSON backup / restore
+    share.ts         Single-entry share
+  platform/
+    native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
+    theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
+    widget.ts        Builds the home-screen widget's summary
+  sync/
+    crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
+    merge.ts         Last-writer-wins merge with deletion tombstones (pure)
+    sync.ts          Pull → merge → push orchestration, auto-sync
+  util/              Pure helpers: settings, share intake, barcode, stars, series,
+                     queue ranks, episodes, bulk edits, entry matching, icons, covers
+  styles/
+    app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first
+  types.d.ts         Shared data types (CatalogEntry, …)
+public/
+  manifest.webmanifest, sw.js, icon.svg   PWA assets
+test/                Vitest unit tests
+e2e/                 Playwright smoke tests (+ a simulated Android shell)
+proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
+index.html
+capacitor.config.ts  App id, web origin, SystemBars
+android/             Capacitor Android project (BookShelfPlugin and native features)
+```
+
+## Notes on the APIs
+
+**TheTVDB v4** issues a bearer token from `/login` that lasts ~1 month. The client caches it and refreshes when it ages past 25 days, or whenever a request returns 401. Movies and series are both served from `/search`; opening a saved entry enriches it with cast/genre from `/extended`. On Android the request is routed through the native HTTP bridge to bypass WebView CORS.
+
+**Google Books** requires no auth for basic use; an API key raises the daily quota. **Open Library** is keyless and used as a fallback and for ISBN lookups.
+
+## Testing & CI
+
+- **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
+  detection, Markdown parsing, share intake, the native bridge protocol and
+  back-handler stack, Keystore routing, sync encryption and merge (plus an
+  end-to-end sync between two simulated devices), the widget summary, half-star
+  ratings, series detection, queue ranking and picks, episode progress,
+  share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
+- **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
+  simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
+  (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
+  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
+  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
+- **Android (JVM)** — native HTTP host allowlist, filename sanitizing and MIME types,
+  Keystore name validation, the widget summary contract, and which new-episode
+  alerts are due.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `npm run check` (tokens, colours,
+lint, typecheck, unit tests, build) on every push to main and every pull request.
+The Playwright suite and an Android debug build run only when the workflow is
+started by hand (Actions → CI → Run workflow). The release workflow builds the
+signed APK on each version tag and checks that R8 kept the plugin, widget UI and
+reminder worker.
+
+## Design system
+
+BookShelf uses Editorial Dusk & Dawn from the [`dusk-dawn`](https://github.com/not-mehul/dusk-dawn) package, shared with Waymark, Ledger, Colophon and Rosetta: the tokens, Fraunces, the shared component styles and the `TabRail`, `ThemeToggle` and `Toast` components. Every color is a semantic CSS variable from `dusk-dawn/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). `dusk-dawn colours` (part of `npm run lint`) fails on any literal color in `src/`, and `dusk-dawn check` tests contrast in both themes. To change the design, change the package and move its tag in `package.json` (`style.md` §18 in the package).
