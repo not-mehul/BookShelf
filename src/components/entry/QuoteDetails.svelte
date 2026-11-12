@@ -26,8 +26,10 @@
   );
 </script>
 
-<div class="modal-quote-block">
+<!-- The same hero as a book, film or show: centred, eyebrow first. -->
+<div class="modal-hero modal-quote-block">
   <span class="modal-quote-glyph" aria-hidden="true">“</span>
+  <div class="modal-eyebrow">Quote</div>
   <blockquote class="modal-quote-text" id="modal-title" tabindex="-1">
     {entry.quoteText || entry.title}
   </blockquote>

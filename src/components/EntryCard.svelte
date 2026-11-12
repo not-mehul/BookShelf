@@ -31,9 +31,9 @@
   }
 
   const src = $derived(entry.type === 'quote' ? null : thumbnailUrl(entry) || entry.thumbnailUrl);
-  // A thin meter for things under way, and a count for things returned to.
+  // A thin meter for shows under way (books no longer track pages), and a count for things returned to.
   const progressPct = $derived(
-    entry.status === 'in-progress' && entry.progress?.total
+    entry.type === 'tv' && entry.status === 'in-progress' && entry.progress?.total
       ? Math.min(100, Math.round((entry.progress.current / entry.progress.total) * 100))
       : null
   );

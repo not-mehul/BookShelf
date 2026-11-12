@@ -33,7 +33,10 @@ export function buildWidgetSummary(entries: CatalogEntry[], theme: 'light' | 'da
       title: e.title,
       creator: e.creators?.[0] || '',
       type: e.type,
-      progress: e.progress && e.progress.total > 0 ? Math.min(1, e.progress.current / e.progress.total) : null
+      progress:
+        e.type === 'tv' && e.progress && e.progress.total > 0
+          ? Math.min(1, e.progress.current / e.progress.total)
+          : null
     }));
 
   const latestQuote = entries

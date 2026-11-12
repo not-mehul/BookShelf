@@ -1,17 +1,16 @@
 <script lang="ts">
   import { applyStatus } from '../../util/apply-status';
-  import { STATUS_LABEL } from '../../util/status';
-  import type { CatalogEntry, EntryStatus } from '../../types';
+  import type { CatalogEntry } from '../../types';
   import RatingControl from '../RatingControl.svelte';
   import AspectRatings from './AspectRatings.svelte';
   import EntryActions from './EntryActions.svelte';
-  import EpisodesSection from './EpisodesSection.svelte';
   import Hero from './Hero.svelte';
   import JournalSection from './JournalSection.svelte';
   import LinkedQuotes from './LinkedQuotes.svelte';
   import NotesField from './NotesField.svelte';
-  import ProgressEditor from './ProgressEditor.svelte';
+  import SeasonsSection from './SeasonsSection.svelte';
   import SeriesSection from './SeriesSection.svelte';
+  import StatusPicker from './StatusPicker.svelte';
   import TagsEditor from './TagsEditor.svelte';
 
   interface Props {
@@ -21,13 +20,6 @@
   }
 
   let { entry, update, onedit }: Props = $props();
-
-  const STATUS_OPTS: { value: EntryStatus | ''; label: string }[] = [
-    { value: '', label: '— none —' },
-    { value: 'want', label: STATUS_LABEL.want },
-    { value: 'in-progress', label: STATUS_LABEL['in-progress'] },
-    { value: 'finished', label: STATUS_LABEL.finished }
-  ];
 
   const hasGuide = $derived(entry.type === 'tv' && Boolean(entry.episodeGuide?.episodes.length));
 </script>
@@ -58,47 +50,31 @@
   <AspectRatings {entry} onchange={(aspects) => update((d) => void (d.aspectRatings = aspects))} />
 </div>
 
-<!-- TV with an episode guide: per-episode tracking (progress is derived).
-     Books, and shows without a guide (manual entries): manual progress. -->
+<div class="modal-section">
+  <div class="modal-section-label">Status</div>
+  <StatusPicker
+    value={entry.status ?? null}
+    type={entry.type}
+    onchange={(status) => void update((d) => applyStatus(d, status))}
+  />
+</div>
+
+<!-- TV with an episode guide: watched by season (status follows). -->
 {#if hasGuide}
-  <EpisodesSection {entry} {update} />
-{:else if entry.type === 'book' || entry.type === 'tv'}
-  <!-- Remounts when a re-read starts, so the fields show the fresh count. -->
-  {#key entry.dateStarted}
-    <ProgressEditor {entry} {update} />
-  {/key}
-  {#if entry.type === 'tv' && entry.sourceId && !entry.episodeGuide}
-    <p class="field-hint episodes-pending">
-      Episode tracking appears here once the episode list loads (needs TheTVDB access in Settings).
-    </p>
-  {/if}
+  <SeasonsSection {entry} {update} />
+{:else if entry.type === 'tv' && entry.sourceId && !entry.episodeGuide}
+  <p class="field-hint episodes-pending">
+    Seasons appear here once the episode list loads (needs TheTVDB access in Settings).
+  </p>
 {/if}
 
 <div class="modal-section">
-  <div class="modal-two-col">
-    <div>
-      <div class="modal-section-label">Progress status</div>
-      <div class="select-wrap">
-        <select
-          class="select"
-          aria-label="Progress status"
-          value={entry.status || ''}
-          onchange={(ev) => {
-            const status = (ev.currentTarget.value as EntryStatus) || null;
-            void update((d) => applyStatus(d, status));
-          }}
-        >
-          {#each STATUS_OPTS as opt (opt.value)}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </div>
-    </div>
-    <div>
-      <div class="modal-section-label">Notes</div>
-      <NotesField value={entry.notes || ''} onsave={(notes) => update((d) => void (d.notes = notes))} />
-    </div>
-  </div>
+  <div class="modal-section-label">Notes</div>
+  <NotesField
+    value={entry.notes || ''}
+    type={entry.type}
+    onsave={(notes) => update((d) => void (d.notes = notes))}
+  />
 </div>
 
 <JournalSection {entry} {update} />

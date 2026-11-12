@@ -12,20 +12,6 @@
   import { ThemeToggle, Toast, konami, play, secretTaps } from 'dusk-dawn';
   import { cheer, hatch } from '../util/delight';
 
-  const counts = $derived.by(() => {
-    const c = { book: 0, movie: 0, tv: 0, quote: 0 };
-    for (const e of shelf.entries) c[e.type]++;
-    return c;
-  });
-  const parts = $derived(
-    [
-      counts.book && plural(counts.book, 'book'),
-      counts.movie && plural(counts.movie, 'movie'),
-      counts.tv && plural(counts.tv, 'show'),
-      counts.quote && plural(counts.quote, 'quote')
-    ].filter((p): p is string => Boolean(p))
-  );
-
   // Easter eggs (style.md §11.3). The Konami code turns every cover face out;
   // seven taps on the title get you shushed.
   let titleWord = $state<HTMLElement>();
@@ -46,10 +32,15 @@
 
 <header class="site-header">
   <div class="title-block">
+    <p class="eyebrow header-count">
+      {shelf.entries.length
+        ? `${plural(shelf.entries.length, 'entry', 'entries')} on the shelf`
+        : 'An empty shelf'}
+    </p>
     <h1 class="t-page-title" use:secretTaps={{ count: 7, onunlock: hush }}>
       Book<em class="title-word" bind:this={titleWord}>Shelf</em>
     </h1>
-    <p class="t-tagline">by Mehul</p>
+    <p class="t-tagline">Books, films, shows and the lines worth keeping</p>
   </div>
   <div class="header-controls">
     <ThemeToggle dawn={theme.shown === 'light'} label="Dawn theme" ontoggle={() => void toggleTheme()} />
@@ -64,18 +55,6 @@
     </button>
   </div>
 </header>
-
-<div class="stats-bar">
-  {#if shelf.entries.length}
-    <span class="stat-accent">{plural(shelf.entries.length, 'entry', 'entries')}</span>
-    {#each parts as part (part)}
-      <!-- The rule travels with its count, so a wrapped line never ends on one. -->
-      <span class="stat-item"><span class="stat-sep"></span>{part}</span>
-    {/each}
-  {:else}
-    <span>0 entries</span>
-  {/if}
-</div>
 
 <div id="screen">
   <Library />

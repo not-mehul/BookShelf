@@ -70,10 +70,10 @@
 </script>
 
 <div class="sync-section">
-  <div class="settings-section-heading">Sync</div>
+  <h3 class="settings-section-heading">Sync</h3>
   <p class="field-hint">
-    Keeps an end-to-end encrypted copy of your shelf in a folder — e.g. one synced by Google Drive, Nextcloud
-    or Syncthing — and merges changes from your other devices.
+    An encrypted copy of your shelf in a folder that Google Drive, Nextcloud or Syncthing keeps in step,
+    merged with your other devices.
   </p>
   {#if status !== undefined && passphrase !== null}
     <div class="token-info-row">

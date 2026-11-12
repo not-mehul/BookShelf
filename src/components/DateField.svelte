@@ -1,7 +1,10 @@
 <script lang="ts">
-  // A day (style.md §8.6): a field shaped like a text input that opens a month
-  // calendar in its own modal, over the entry. Monday first, today ringed, the
-  // chosen day lit. Nothing changes until Choose; Clear empties the field.
+  // A day, or a span of days (style.md §8.6): a field shaped like a text input
+  // that opens a month calendar in its own modal, over the entry. Monday first,
+  // today ringed, the chosen days lit. Nothing changes until Choose.
+  //
+  // With `range`, the first tap picks the start and a second, optional tap the
+  // end; a tap before the start begins again from there.
   import { tick } from 'svelte';
   import { pushBackHandler } from '../platform/native';
   import Icon from './Icon.svelte';
@@ -9,38 +12,44 @@
   interface Props {
     label: string;
     id: string;
-    /** "YYYY-MM-DD", or empty for none. */
+    /** "YYYY-MM-DD", or empty for none. The start of a range. */
     value: string;
-    /** Days after this (or before `min`) are shown but cannot be chosen. */
+    /** The end of a range, "YYYY-MM-DD" or empty. */
+    end?: string;
+    range?: boolean;
+    /** Days after this are shown but cannot be chosen. */
     max?: string;
-    min?: string;
-    onchange: (day: string) => void;
+    /** Called with the chosen day, and the end of a range ('' when open-ended). */
+    onchange: (day: string, end: string) => void;
   }
 
-  let { label, id, value, max, min, onchange }: Props = $props();
+  let { label, id, value, end = '', range = false, max, onchange }: Props = $props();
 
   const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   const pad = (n: number) => String(n).padStart(2, '0');
   const key = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
   const now = new Date();
   const today = key(now.getFullYear(), now.getMonth(), now.getDate());
+  const asDate = (day: string) => new Date(`${day}T12:00:00`);
   const long = (day: string) =>
-    new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-
-  /** Short enough for a half-width field on a phone: "2 Mar 2026". */
+    asDate(day).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  /** Short enough for a field on a phone: "2 Mar 2026". */
   const short = (day: string) =>
-    new Date(`${day}T12:00:00`).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    asDate(day).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  /** "10 Feb – 2 Mar 2026", dropping the first year when both share it. */
+  function span(a: string, b: string) {
+    if (!b) return `${short(a)} –`;
+    if (a === b) return short(a);
+    const first =
+      a.slice(0, 4) === b.slice(0, 4)
+        ? asDate(a).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+        : short(a);
+    return `${first} – ${short(b)}`;
+  }
 
   let open = $state(false);
   let draft = $state('');
+  let draftEnd = $state('');
   let year = $state(now.getFullYear());
   let month = $state(now.getMonth());
   let dialog = $state<HTMLDialogElement>();
@@ -55,14 +64,35 @@
   const shownMonth = $derived(
     new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
   );
-  const outOfRange = (day: string) => (max !== undefined && day > max) || (min !== undefined && day < min);
+  const title = $derived(
+    !draft ? (range ? 'Tap the day you started' : 'No day') : range ? span(draft, draftEnd) : long(draft)
+  );
+  const hint = $derived(
+    range ? (draft && !draftEnd ? 'Tap the day you finished, or Choose to leave it open.' : '') : ''
+  );
 
   function start() {
-    draft = value;
-    const from = new Date(`${value || today}T12:00:00`);
+    // A new entry's calendar opens on today, chosen.
+    draft = value || (range ? '' : today);
+    draftEnd = end;
+    const from = asDate(value || today);
     year = from.getFullYear();
     month = from.getMonth();
     open = true;
+  }
+
+  function pick(day: string) {
+    if (!range) {
+      draft = day;
+      return;
+    }
+    // First tap (or a tap before the start, or after a full span): a new start.
+    if (!draft || draftEnd || day < draft) {
+      draft = day;
+      draftEnd = '';
+    } else {
+      draftEnd = day;
+    }
   }
 
   function step(by: number) {
@@ -71,9 +101,9 @@
     month = d.getMonth();
   }
 
-  function finish(next: string | null) {
+  function finish(next: string | null, nextEnd = '') {
     open = false;
-    if (next !== null && next !== value) onchange(next);
+    if (next !== null && (next !== value || nextEnd !== end)) onchange(next, nextEnd);
   }
 
   $effect(() => {
@@ -98,6 +128,7 @@
     class="picker-field"
     {id}
     data-value={value}
+    data-end={end}
     aria-labelledby="{id}-label {id}-value"
     aria-haspopup="dialog"
     aria-expanded={open}
@@ -105,7 +136,7 @@
   >
     <Icon name="calendar" />
     {#if value}
-      <span class="picker-value" id="{id}-value">{short(value)}</span>
+      <span class="picker-value" id="{id}-value">{range ? span(value, end) : short(value)}</span>
     {:else}
       <span class="picker-placeholder" id="{id}-value">Pick a day</span>
     {/if}
@@ -131,9 +162,8 @@
       <div class="picker-head">
         <div>
           <div class="modal-eyebrow">{label}</div>
-          <h2 class="add-title" id="{id}-picker-title" aria-live="polite">
-            {draft ? long(draft) : 'No day'}
-          </h2>
+          <h2 class="add-title" id="{id}-picker-title" aria-live="polite">{title}</h2>
+          {#if hint}<p class="t-hint picker-hint">{hint}</p>{/if}
         </div>
         <button type="button" class="btn-icon" aria-label="Close" onclick={() => finish(null)}
           ><Icon name="x" /></button
@@ -159,10 +189,11 @@
                 type="button"
                 class="day-cell"
                 class:today={day === today}
-                aria-pressed={day === draft}
+                class:in-span={range && draft && draftEnd && day > draft && day < draftEnd}
+                aria-pressed={day === draft || (range && day === draftEnd)}
                 aria-label={long(day)}
-                disabled={outOfRange(day)}
-                onclick={() => (draft = day)}>{Number(day.slice(8))}</button
+                disabled={max !== undefined && day > max}
+                onclick={() => pick(day)}>{Number(day.slice(8))}</button
               >
             {:else}
               <span></span>
@@ -171,10 +202,14 @@
         </div>
       </div>
       <div class="picker-actions">
-        <button type="button" class="btn btn-muted" disabled={!value} onclick={() => finish('')}>Clear</button
+        <button type="button" class="btn btn-muted" disabled={!value} onclick={() => finish('', '')}
+          >Clear</button
         >
-        <button type="button" class="btn btn-primary" disabled={!draft} onclick={() => finish(draft)}
-          >Choose</button
+        <button
+          type="button"
+          class="btn btn-primary"
+          disabled={!draft}
+          onclick={() => finish(draft, draftEnd)}>Choose</button
         >
       </div>
     </div>

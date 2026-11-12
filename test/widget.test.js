@@ -16,12 +16,17 @@ describe('buildWidgetSummary', () => {
 
   it('lists up to three in-progress items, most recently touched first, with progress', () => {
     const items = [1, 2, 3, 4].map((n) =>
-      e({ title: `B${n}`, status: 'in-progress', updatedAt: `2026-01-0${n}T00:00:00Z`, creators: ['A'], progress: { current: n, total: 4 } })
+      e({ type: 'tv', title: `B${n}`, status: 'in-progress', updatedAt: `2026-01-0${n}T00:00:00Z`, creators: ['A'], progress: { current: n, total: 4 } })
     );
     const s = buildWidgetSummary([...items, e({ title: 'done', status: 'finished' })], 'light');
     expect(s.inProgress.map((i) => i.title)).toEqual(['B4', 'B3', 'B2']);
-    expect(s.inProgress[0]).toEqual({ title: 'B4', creator: 'A', type: 'book', progress: 1 });
+    expect(s.inProgress[0]).toEqual({ title: 'B4', creator: 'A', type: 'tv', progress: 1 });
     expect(s.inProgress[2].progress).toBe(0.5);
+  });
+
+  it('reports no progress for books, which no longer track pages', () => {
+    const s = buildWidgetSummary([e({ status: 'in-progress', progress: { current: 3, total: 9 } })], 'dark');
+    expect(s.inProgress[0].progress).toBeNull();
   });
 
   it('reports null progress when no total is known', () => {

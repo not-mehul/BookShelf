@@ -1,7 +1,6 @@
 <script lang="ts">
   import { applyStatus } from '../../util/apply-status';
   import {
-    againLabel,
     daysToFinish,
     durationLabel,
     formatDay,
@@ -30,29 +29,29 @@
   const times = $derived(timesLabel(entry.type, finishes.length));
   const earlier = $derived(finishes.slice(0, -1));
 
-  // Starting over keeps every earlier finish and begins the count again.
-  function readAgain() {
+  function setFinishDay(d: CatalogEntry, iso: string | null) {
+    const list = [...(d.finishes || [])];
+    if (!iso) list.pop();
+    else if (list.length) list[list.length - 1] = iso;
+    else list.push(iso);
+    d.finishes = list.sort();
+  }
+
+  // Books: one calendar for the span, from the day started to the day finished.
+  // Picking a finish day finishes the book.
+  function setSpan(startDay: string, endDay: string) {
     void update(async (d) => {
-      const kept = d.finishes || [];
-      await applyStatus(d, 'in-progress');
-      d.finishes = kept;
-      if (d.progress) d.progress = { ...d.progress, current: 0 };
-      if (d.watchedEpisodes?.length) d.watchedEpisodes = [];
+      d.dateStarted = fromDay(startDay);
+      if (endDay && d.status !== 'finished') await applyStatus(d, 'finished');
+      if (endDay || d.status === 'finished') setFinishDay(d, fromDay(endDay));
     });
   }
 
-  function setStarted(day: string) {
-    void update((d) => void (d.dateStarted = fromDay(day)));
-  }
-
-  function setFinished(day: string) {
-    const iso = fromDay(day);
+  // Films and shows: one day, the finish once finished and the start before.
+  function setDay(day: string) {
     void update((d) => {
-      const list = [...(d.finishes || [])];
-      if (!iso) list.pop();
-      else if (list.length) list[list.length - 1] = iso;
-      else list.push(iso);
-      d.finishes = list.sort();
+      if (d.status === 'finished') setFinishDay(d, fromDay(day));
+      else d.dateStarted = fromDay(day);
     });
   }
 </script>
@@ -61,21 +60,23 @@
   <div class="modal-section journal">
     <div class="modal-section-label">Journal</div>
     <div class="journal-dates">
-      <DateField
-        label="Started"
-        id="journal-started"
-        max={today}
-        value={toDay(entry.dateStarted)}
-        onchange={setStarted}
-      />
-      {#if entry.status === 'finished' || finished}
+      {#if entry.type === 'book'}
         <DateField
-          label="Finished"
-          id="journal-finished"
+          label="Read"
+          id="journal-span"
+          range
           max={today}
-          min={toDay(entry.dateStarted) || undefined}
-          value={toDay(finished)}
-          onchange={setFinished}
+          value={toDay(entry.dateStarted)}
+          end={entry.status === 'finished' ? toDay(finished) : ''}
+          onchange={setSpan}
+        />
+      {:else}
+        <DateField
+          label={entry.status === 'finished' ? 'Finished' : 'Started'}
+          id="journal-day"
+          max={today}
+          value={entry.status === 'finished' ? toDay(finished) : toDay(entry.dateStarted)}
+          onchange={setDay}
         />
       {/if}
     </div>
@@ -88,19 +89,13 @@
     {:else if times}
       <p class="t-hint journal-line">{times}.</p>
     {:else if entry.status === 'finished' && !finished}
-      <p class="t-hint journal-line">Pick the day you finished it to count it in that year's review.</p>
+      <p class="t-hint journal-line">Pick the day you finished to count it in that year's review.</p>
     {/if}
 
     {#if earlier.length}
       <p class="t-data-small journal-earlier">
         Before: {earlier.map((f) => formatDay(f)).join(' · ')}
       </p>
-    {/if}
-
-    {#if entry.status === 'finished'}
-      <button type="button" class="btn btn-muted btn-sm journal-again" onclick={readAgain}>
-        {againLabel(entry.type)}
-      </button>
     {/if}
   </div>
 {/if}
@@ -120,8 +115,5 @@
   .journal-earlier {
     margin-top: var(--space-2);
     font-variant-numeric: tabular-nums;
-  }
-  .journal-again {
-    margin-top: var(--space-4);
   }
 </style>

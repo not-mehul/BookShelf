@@ -36,5 +36,7 @@
   <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'share', id: entry.id })}>
     <Icon name="share" /> <span class="btn-label">Share</span>
   </button>
-  <button type="button" class="btn btn-danger" onclick={remove}>Remove</button>
+  <button type="button" class="btn btn-danger" title="Remove" onclick={remove}>
+    <Icon name="trash" /> <span class="btn-label">Remove</span>
+  </button>
 </div>

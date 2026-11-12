@@ -27,6 +27,12 @@
     { id: 'tv', label: 'TV' },
     { id: 'quote', label: 'Quotes' }
   ];
+  // Each type's count rides on its tab (the header counts the whole shelf).
+  const tabsWithCounts = $derived.by(() => {
+    const c: Record<string, number> = {};
+    for (const e of shelf.entries) c[e.type] = (c[e.type] || 0) + 1;
+    return TYPE_TABS.map((t) => (t.id === 'all' || !c[t.id] ? t : { ...t, badge: c[t.id] }));
+  });
   const SORT_OPTS: { value: SortKey; label: string }[] = [
     { value: 'dateAdded', label: 'Recent' },
     { value: 'rating', label: 'Rating' },
@@ -178,7 +184,7 @@
 
 <div class="lib-header">
   <div class="lib-types-row">
-    <TabRail tabs={TYPE_TABS} value={type} label="Show" onselect={(id) => (type = id)} />
+    <TabRail tabs={tabsWithCounts} value={type} label="Show" onselect={(id) => (type = id)} />
     <!-- The header already counts the whole shelf; this counts what a filter leaves. -->
     <div class="lib-count">
       {visible.length && visible.length !== shelf.entries.length

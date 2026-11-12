@@ -56,7 +56,7 @@ test('adding a quote puts it on the shelf', async ({ page }) => {
   await page.mouse.click(6, 6); // outside the card dismisses
   await expect(page.locator('dialog')).toHaveCount(0);
   await expect(page.locator('.quote-card')).toHaveCount(1);
-  await expect(page.locator('.stats-bar')).toContainText('1 entry');
+  await expect(page.locator('.header-count')).toContainText('1 entry');
 });
 
 test('text shared to the installed PWA opens a prefilled add flow', async ({ page }) => {

@@ -120,11 +120,17 @@ img {
 
 .site-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin-bottom: 2.5rem;
+}
+/* The shelf's count is the header's eyebrow (as Ledger's date is). */
+.header-count {
+  margin: 0 0 0.75rem;
+}
+.site-header .header-controls {
+  margin-top: 1.5rem;
 }
 
 .title-block {
@@ -170,36 +176,6 @@ img {
     justify-content: flex-end;
     gap: 0.4rem;
   }
-}
-
-/* ─── Stats bar ───────────────────────────────────────────────── */
-
-.stats-bar {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  margin-bottom: 2.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.stats-bar .stat-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  white-space: nowrap;
-}
-.stats-bar .stat-sep {
-  display: inline-block;
-  width: 1px;
-  height: 0.75em;
-  background: var(--border-soft);
-}
-.stats-bar .stat-accent {
-  color: var(--text-dim);
 }
 
 /* ─── Tab navigation ──────────────────────────────────────────── */
@@ -625,11 +601,15 @@ img {
 }
 
 /* Structured modal sections */
+/* The entry's hero: cover centred, then its title, creators, year and
+   genres centred under it, one column on every width. */
 .modal-hero {
   display: flex;
-  gap: 1.5rem;
-  padding: 2rem 2rem 1.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 2.25rem 2rem 1.75rem;
+  text-align: center;
 }
 .modal-poster {
   width: 140px;
@@ -661,10 +641,14 @@ img {
 }
 
 .modal-heading {
-  flex: 1 1 200px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.35rem;
+  max-width: 28rem;
+}
+.modal-heading .tag-row {
+  justify-content: center;
 }
 /* The entry's own title is the hero of its dialog: larger and upright. */
 .modal-hero .modal-title {
@@ -875,6 +859,8 @@ img {
 }
 
 .settings-section-heading {
+  margin: 0 0 1.25rem;
+  font-weight: 400;
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.28em;
@@ -1000,8 +986,8 @@ img {
 
 /* ─── Modal quote display ─────────────────────────────────────── */
 
-.modal-quote-block {
-  padding: 2rem 2.25rem 1.75rem;
+.modal-hero.modal-quote-block {
+  gap: 0.75rem;
 }
 
 .modal-quote-glyph {
@@ -1011,7 +997,7 @@ img {
   line-height: 0.7;
   color: var(--accent-amber);
   opacity: 0.3;
-  margin-bottom: 0.75rem;
+  margin-bottom: -0.5rem;
   user-select: none;
 }
 
@@ -1028,7 +1014,7 @@ img {
 }
 
 .modal-quote-citation {
-  margin-top: 1.25rem;
+  margin-top: 0.25rem;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.1em;
@@ -1036,9 +1022,6 @@ img {
 }
 
 @media (max-width: 480px) {
-  .modal-quote-block {
-    padding: 1.5rem 1.25rem;
-  }
   .modal-quote-text {
     font-size: 1.125rem;
   }
@@ -1391,68 +1374,6 @@ img {
   margin-top: 0.25rem;
 }
 
-/* ─── Progress (books & TV) ───────────────────────────────────── */
-
-.progress-edit-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.progress-input {
-  width: 6rem;
-  text-align: center;
-}
-.progress-of {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-.progress-bar {
-  margin-top: 0.6rem;
-  height: 4px;
-  border-radius: var(--corner-full);
-  background: var(--chart-track);
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  width: 0;
-  background: var(--accent-sage);
-  transition: width var(--dur-settle) var(--ease-settle);
-}
-.progress-steps {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-.progress-step {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  min-width: 44px;
-  justify-content: center;
-}
-.progress-meter {
-  margin-top: var(--space-3);
-}
-.progress-meter .meter-fill {
-  transition: width var(--dur-settle) var(--ease-settle);
-}
-.progress-left {
-  margin-top: var(--space-2);
-  font-variant-numeric: tabular-nums;
-}
-.progress-forecast {
-  margin-top: var(--space-1);
-}
-@media (max-width: 480px) {
-  .progress-edit-row {
-    flex-wrap: wrap;
-  }
-  .progress-steps {
-    margin-left: 0;
-    width: 100%;
-  }
-}
-
 /* ─── Tag editor (detail modal) ───────────────────────────────── */
 
 .tag-chip-row {
@@ -1664,7 +1585,7 @@ img {
   display: inline-flex;
   align-items: baseline;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0;
   padding: 0;
   border: 0;
   background: none;
@@ -2033,17 +1954,10 @@ body.is-selecting .app-shell {
   padding-bottom: calc(8rem + var(--inset-bottom));
 }
 
-/* ─── TV episodes ─────────────────────────────────────────────── */
+/* ─── New-episode alerts ──────────────────────────────────────── */
 
-.episodes-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
 .remind-wrap {
-  flex-basis: 100%;
+  margin-top: var(--space-3);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -2053,163 +1967,6 @@ body.is-selecting .app-shell {
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--danger);
-}
-.episodes-summary {
-  color: var(--text-body);
-  font-size: 0.88rem;
-  margin-bottom: 0.6rem;
-}
-.episodes-next {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.7rem 0.9rem;
-  margin-bottom: 0.6rem;
-  border-left: 2px solid var(--accent-amber);
-  background: var(--panel-bg-faint);
-}
-.episodes-next > div {
-  flex: 1 1 8rem;
-  min-width: 0;
-}
-.episodes-next-label {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.episodes-next-title {
-  font-family: var(--font-serif);
-  color: var(--text-heading);
-}
-.episodes-next-note {
-  font-style: italic;
-  color: var(--text-dim);
-  margin-bottom: 0.6rem;
-}
-.season {
-  margin-top: 0.6rem;
-  border-top: 1px solid var(--border-soft);
-  padding-top: 0.5rem;
-}
-.season summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  cursor: pointer;
-  list-style: none;
-  padding: 0.25rem 0;
-}
-.season summary::-webkit-details-marker {
-  display: none;
-}
-.season summary::before {
-  content: '▸';
-  color: var(--text-muted);
-  margin-right: 0.5rem;
-  transition: transform 0.15s;
-}
-.season[open] summary::before {
-  transform: rotate(90deg);
-}
-.season-name {
-  flex: 1;
-  color: var(--text-heading);
-}
-.season-count {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-.season-toggle {
-  margin: 0.4rem 0;
-}
-.episode-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
-.episode {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-height: 44px;
-}
-/* A themed check box: never the browser's own (§8.6). */
-.episode input {
-  appearance: none;
-  -webkit-appearance: none;
-  display: grid;
-  place-content: center;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  flex: none;
-  border: 1px solid var(--border);
-  border-radius: var(--corner-xs);
-  background: var(--input-bg);
-  cursor: pointer;
-  transition:
-    background-color var(--spring-effects-fast-dur) var(--spring-effects-fast),
-    border-color var(--spring-effects-fast-dur) var(--spring-effects-fast);
-}
-.episode input::after {
-  content: '';
-  width: 10px;
-  height: 6px;
-  margin-top: -2px;
-  border: solid var(--on-accent);
-  border-width: 0 0 2px 2px;
-  transform: rotate(-45deg) scale(0);
-  transition: transform var(--spring-spatial-fast-dur) var(--spring-spatial-fast);
-}
-.episode input:checked {
-  border-color: var(--accent-bright);
-  background: var(--accent-bright);
-}
-.episode input:checked::after {
-  transform: rotate(-45deg) scale(1);
-}
-.episode input:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-.episode input:disabled {
-  background: var(--disabled-bg);
-  cursor: default;
-}
-.episode label {
-  display: grid;
-  grid-template-columns: 2.4rem 1fr auto;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex: 1;
-  min-width: 0;
-  cursor: pointer;
-}
-.episode.is-upcoming label {
-  color: var(--text-muted);
-  cursor: default;
-}
-.episode-code {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--accent-amber);
-}
-.episode-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-body);
-}
-.episode-date {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  white-space: nowrap;
 }
 
 /* ─── Up next (library) ───────────────────────────────────────── */
@@ -2498,4 +2255,11 @@ img.cover-img.is-loaded {
   .modal-dialog.is-sheet.closing .modal-card {
     animation: sheet-out var(--dur-exit) ease-in forwards;
   }
+}
+.day-cell.in-span {
+  background: rgba(var(--accent-amber-rgb), 0.16);
+  color: var(--text-heading);
+}
+.picker-hint {
+  margin: 0.25rem 0 0;
 }
