@@ -25,7 +25,10 @@ export function newEntry(type: EntryType, fields: Partial<CatalogEntry> & { titl
     ...fields
   };
   // Added already started or finished (a link from a sibling app, a seeded search):
-  // the journal starts today.
-  if (!entry.dateStarted && !entry.finishes?.length) stampStatusDates(entry, null, entry.status);
+  // the journal starts today, unless the entry arrived with its own dates.
+  if (!entry.dateStarted && !entry.finishes?.length) {
+    stampStatusDates(entry, null, entry.status);
+    if (entry.status === 'finished') entry.dateStarted = entry.finishes?.[0] ?? null;
+  }
   return entry;
 }

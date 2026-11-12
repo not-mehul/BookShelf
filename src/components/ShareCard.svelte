@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { LoadingIndicator } from 'dusk-dawn';
   import { untrack } from 'svelte';
   import { getEntry } from '../db/database';
   import { shareEntry } from '../export/share';
@@ -92,21 +93,37 @@
   {@const e = entry}
   <div class="share-card-body">
     <div class="share-card-frame">
-      <img class="share-card-preview" alt="Preview of the share card" src={url || undefined} />
+      {#if url}
+        <img class="share-card-preview" alt="Preview of the share card" src={url} />
+      {:else}
+        <!-- Shaped like the card while it draws, so nothing jumps and no broken image shows. -->
+        <div
+          class="share-card-preview share-card-pending"
+          style:aspect-ratio="{FORMATS[format].width} / {FORMATS[format].height}"
+        >
+          <LoadingIndicator label="Drawing the card" size={32} />
+        </div>
+      {/if}
     </div>
     <div class="share-card-controls">
       <Segmented options={THEME_OPTS} bind:value={theme} label="Card theme" />
       <Segmented options={FORMAT_OPTS} bind:value={format} label="Card format" />
       {#if e.type !== 'quote'}
         {#if e.rating != null}
-          <label class="share-card-toggle" for="card-rating">
-            <input type="checkbox" id="card-rating" bind:checked={includeRating} /> Rating
-          </label>
+          <button
+            type="button"
+            class="chip"
+            aria-pressed={includeRating}
+            onclick={() => (includeRating = !includeRating)}>Rating</button
+          >
         {/if}
         {#if e.notes?.trim()}
-          <label class="share-card-toggle" for="card-notes">
-            <input type="checkbox" id="card-notes" bind:checked={includeNotes} /> My notes
-          </label>
+          <button
+            type="button"
+            class="chip"
+            aria-pressed={includeNotes}
+            onclick={() => (includeNotes = !includeNotes)}>My notes</button
+          >
         {/if}
       {/if}
     </div>

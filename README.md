@@ -6,14 +6,14 @@ A personal catalog for books, films, TV shows, and quotes — searchable, ratabl
 - **Movies & TV** — TheTVDB v4 (cast/genre enrichment on open), directly or through your own **hosted proxy** ([`proxy/`](./proxy))
 - **Quotes** — manual entry with author, source and page/time, **linked to the book, film or show** they come from (each entry lists its quotes)
 - **Manual entry** — add anything by hand when search comes up empty, and edit any entry afterward
-- **Organize** — **half-star ratings** with optional aspect scores (story, writing, acting…), status, progress, notes, tags/collections
-- **TV episode tracking** — tick episodes and seasons, "Up next" on the library, progress and status follow automatically, and (Android) **new-episode alerts**
+- **Organize** — **half-star ratings** with optional aspect scores (story, writing, acting…), status (Wishlist, Reading/Watching, Completed), notes, tags/collections
+- **TV season tracking** — mark seasons watched, "Up next" on the library, status follows automatically, and (Android) **new-episode alerts**
 - **Series** — detected from titles or set by hand: reading/watching order, what's next, gaps, "check for new installments"
 - **Ranked queue** — your Wishlist in order (drag, keyboard or buttons), plus "pick something for me" by type, length or genre
 - **Bulk edit** — select several entries (button or long-press) to change status, add/remove tags, or delete
-- **Reading journal** — starting and finishing are dated as they happen (and can be corrected by picking a day); re-reads and rewatches keep every finish, show how long each one took, and forecast when the current book will be done at your pace
+- **Reading journal** — starting and finishing are dated as they happen; a book's span is picked on one calendar (start, then finish), a film or show takes one day
 - **Statistics** — a year in review (finished per month, pages read, a yearly book goal with its pace, the longest book and quickest read), plus all-time totals, rating distribution, most-shelved authors and directors, decades and top genres
-- **Little things** — a different kept quote at the top of the library each day, quick +10/+25/+50 page steps, the library remembers its tab and sort, and `/` jumps to the filter
+- **Little things** — a different kept quote at the top of the library each day, the library remembers its tab and sort, and `/` jumps to the filter
 - **Storage** — local IndexedDB (Dexie) with cached cover thumbnails; nothing leaves the device
 - **Backup** — lossless JSON export/import (re-importable without duplicates) plus human-readable Markdown export
 - **Share cards** — any book, film, show or quote as a Dusk or Dawn styled image (post, square or story), or as text
@@ -62,7 +62,7 @@ npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
 npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
 npm run lint         # ESLint
 npm run format       # Prettier (write)
-npm run check        # lint + typecheck + test + build
+npm run check        # tokens + lint + typecheck + test + build (what CI runs on each push)
 npm run sync         # build, then copy it into the Android project (cap sync android)
 ```
 
@@ -134,9 +134,6 @@ src/
   types.d.ts         Shared data types (CatalogEntry, …)
 public/
   manifest.webmanifest, sw.js, icon.svg   PWA assets
-scripts/
-  android-upgrade-test.mjs  Emulator: old shell → Capacitor upgrade keeps the data
-  android-emulator-tests.sh, android-smoke.sh  CI emulator steps
 test/                Vitest unit tests
 e2e/                 Playwright smoke tests (+ a simulated Android shell)
 proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
@@ -168,12 +165,12 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
   Keystore name validation, the widget summary contract, and which new-episode
   alerts are due.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
-
-- **Web** — lint, typecheck, unit tests, build.
-- **E2E** — Playwright smoke tests (report uploaded on failure).
-- **Android** — JVM tests, Android Lint, debug + R8 release builds, and a guard that R8 kept the plugin, widget UI and reminder worker.
-- **Android emulator** (API 36) — installs the old WebView shell, upgrades it in place to this build and checks the shelf, settings and saved keys survived; then a launch smoke test of the minified release build.
+GitHub Actions (`.github/workflows/ci.yml`) runs `npm run check` (tokens, colours,
+lint, typecheck, unit tests, build) on every push to main and every pull request.
+The Playwright suite and an Android debug build run only when the workflow is
+started by hand (Actions → CI → Run workflow). The release workflow builds the
+signed APK on each version tag and checks that R8 kept the plugin, widget UI and
+reminder worker.
 
 ## Design system
 

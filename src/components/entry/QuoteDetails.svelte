@@ -14,15 +14,22 @@
   }
 
   let { entry, update, onedit }: Props = $props();
-  const citation = $derived([entry.creators?.[0], entry.source, entry.location].filter(Boolean).join(', '));
   // The book / film / show it is from, if that is still on the shelf.
   const linked = $derived(
     entry.linkedEntryId ? shelf.entries.find((e) => e.id === entry.linkedEntryId) : undefined
   );
+  // The "From" link below already names a linked source, so the citation doesn't repeat it.
+  const citation = $derived(
+    [entry.creators?.[0], linked && entry.source === linked.title ? '' : entry.source, entry.location]
+      .filter(Boolean)
+      .join(', ')
+  );
 </script>
 
-<div class="modal-quote-block">
+<!-- The same hero as a book, film or show: centred, eyebrow first. -->
+<div class="modal-hero modal-quote-block">
   <span class="modal-quote-glyph" aria-hidden="true">“</span>
+  <div class="modal-eyebrow">Quote</div>
   <blockquote class="modal-quote-text" id="modal-title" tabindex="-1">
     {entry.quoteText || entry.title}
   </blockquote>

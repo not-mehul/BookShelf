@@ -27,12 +27,18 @@
     { id: 'tv', label: 'TV' },
     { id: 'quote', label: 'Quotes' }
   ];
+  // Each type's count rides on its tab (the header counts the whole shelf).
+  const tabsWithCounts = $derived.by(() => {
+    const c: Record<string, number> = {};
+    for (const e of shelf.entries) c[e.type] = (c[e.type] || 0) + 1;
+    return TYPE_TABS.map((t) => (t.id === 'all' || !c[t.id] ? t : { ...t, badge: c[t.id] }));
+  });
   const SORT_OPTS: { value: SortKey; label: string }[] = [
-    { value: 'dateAdded', label: 'Recently added' },
-    { value: 'rating', label: 'Highest rated' },
-    { value: 'title', label: 'Title (A–Z)' },
-    { value: 'year', label: 'Year (newest)' },
-    { value: 'series', label: 'Series order' }
+    { value: 'dateAdded', label: 'Recent' },
+    { value: 'rating', label: 'Rating' },
+    { value: 'title', label: 'Title' },
+    { value: 'year', label: 'Year' },
+    { value: 'series', label: 'Series' }
   ];
   const SORTERS: Record<SortKey, (a: CatalogEntry, b: CatalogEntry) => number> = {
     dateAdded: (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''),
@@ -178,8 +184,13 @@
 
 <div class="lib-header">
   <div class="lib-types-row">
-    <TabRail tabs={TYPE_TABS} value={type} label="Show" onselect={(id) => (type = id)} />
-    <div class="lib-count">{visible.length ? plural(visible.length, 'entry', 'entries') : ''}</div>
+    <TabRail tabs={tabsWithCounts} value={type} label="Show" onselect={(id) => (type = id)} />
+    <!-- The header already counts the whole shelf; this counts what a filter leaves. -->
+    <div class="lib-count">
+      {visible.length && visible.length !== shelf.entries.length
+        ? plural(visible.length, 'entry', 'entries')
+        : ''}
+    </div>
   </div>
 
   <div class="lib-tools-row">
@@ -343,6 +354,6 @@
     >
       Delete
     </button>
-    <button type="button" class="btn btn-muted btn-sm" onclick={exitSelection}>Done</button>
+    <button type="button" class="btn btn-muted btn-sm select-done" onclick={exitSelection}>Done</button>
   {/if}
 </div>

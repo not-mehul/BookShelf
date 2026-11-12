@@ -58,7 +58,7 @@
   }
 </script>
 
-<ModalHead eyebrow="Add a quote" {onback} />
+<ModalHead eyebrow="Add to catalog" title="Add a quote" {onback} />
 
 <form class="add-form" onsubmit={submit}>
   <Field label="Quote text" id="q-text" placeholder="The quote…" rows={5} bind:value={text} autofocus />

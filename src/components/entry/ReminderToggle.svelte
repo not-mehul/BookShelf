@@ -3,7 +3,7 @@
   import { listEntries } from '../../db/database';
   import { callNative } from '../../platform/native';
   import type { CatalogEntry } from '../../types';
-  import Icon from '../Icon.svelte';
+  import { Switch } from 'dusk-dawn';
 
   // Per-show "notify me" switch (Android app). Asks for notification
   // permission when turned on, and reverts if it's refused.
@@ -16,14 +16,11 @@
   let note = $state('');
   const id = $derived(`remind-${entry.id}`);
 
-  async function onchange(ev: Event & { currentTarget: HTMLInputElement }) {
-    const box = ev.currentTarget;
-    const on = box.checked;
+  async function onchange(on: boolean) {
     if (on) {
       const granted = await callNative('requestNotificationPermission').catch(() => false);
       if (!granted) {
-        box.checked = false;
-        note = 'Notifications are off for BookShelf — allow them in system settings.';
+        note = 'Notifications are off for BookShelf. Allow them in system settings.';
         return;
       }
     }
@@ -34,9 +31,12 @@
 </script>
 
 <div class="remind-wrap">
-  <label class="remind-toggle" for={id}>
-    <input type="checkbox" {id} checked={Boolean(entry.remindNewEpisodes)} {onchange} />
-    <span aria-hidden="true"><Icon name="bell" /></span> New-episode alerts
-  </label>
-  <span class="remind-note" role="status">{note}</span>
+  <Switch
+    {id}
+    checked={Boolean(entry.remindNewEpisodes)}
+    label="New-episode alerts"
+    hint="A notification when a new episode airs."
+    {onchange}
+  />
+  {#if note}<p class="remind-note" role="status">{note}</p>{/if}
 </div>

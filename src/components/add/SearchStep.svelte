@@ -9,7 +9,7 @@
   import { ui, type AddSeed } from '../../state/ui.svelte';
   import { canScanBarcodes, scanBarcode } from '../../util/barcode';
   import { messageOf } from '../../util/errors';
-  import { TYPE_ICON, TYPE_LABEL } from '../../util/labels';
+  import { TYPE_ICON, TYPE_NOUN } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
   import { parseSeriesFromTitle } from '../../util/series';
   import { fetchThumbBlob } from '../../util/thumbs';
@@ -151,7 +151,7 @@
   }
 </script>
 
-<ModalHead eyebrow="Add a {TYPE_LABEL[type].toLowerCase()}" class="add-head-search" {onback} />
+<ModalHead eyebrow="Add to catalog" title="Add a {TYPE_NOUN[type]}" class="add-head-search" {onback} />
 
 <form
   class="search-form add-search-form"
@@ -187,15 +187,21 @@
     <div class="loading-row"><LoadingIndicator label="Searching" size={32} />Searching</div>
   {:else if results.state === 'no-tvdb'}
     <div class="notice">
-      TheTVDB isn’t set up — add an API key or a proxy URL for movies and TV.
-      <a
-        href="#settings"
-        onclick={(ev) => {
-          ev.preventDefault();
-          ui.open({ kind: 'settings' });
-        }}>Open Settings</a
-      >
-      to add it, or enter details manually below.
+      <Icon name="settings" />
+      <div class="notice-text">
+        <span class="notice-title">TheTVDB isn’t set up.</span>
+        <span class="notice-detail">
+          Add an API key or a proxy URL in
+          <a
+            href="#settings"
+            onclick={(ev) => {
+              ev.preventDefault();
+              ui.open({ kind: 'settings' });
+            }}>Settings</a
+          >
+          to search movies and TV, or enter the details by hand below.
+        </span>
+      </div>
     </div>
   {:else if results.state === 'error'}
     <div class="msg-error">{results.message}</div>

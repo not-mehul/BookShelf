@@ -35,22 +35,22 @@ test.describe('in the browser', () => {
     await expect(card(page, "Rocannon's World").locator('.entry-rating-line')).toHaveText('★★★½☆');
   });
 
-  test('journal: progress starts and finishes a book, and the year in review counts it', async ({ page }) => {
+  test('journal: status starts and finishes a book, and the year in review counts it', async ({ page }) => {
     await expect(page.locator('.shelf-line')).toContainText('Light is the left hand of darkness');
 
     await card(page, 'The Hobbit').click();
     const dialog = page.locator('dialog[open]');
-    // The edition's page count fills the total; a quick step starts it.
-    await expect(dialog.getByRole('spinbutton', { name: 'Total' })).toHaveValue('290');
-    await dialog.getByRole('button', { name: 'Add 50 pages' }).click();
-    await expect(dialog.locator('.progress-left')).toHaveText('240 pages left · 17%');
-    await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('in-progress');
-    await expect(dialog.locator('.journal input[type=date]').first()).not.toHaveValue('');
+    const status = dialog.getByRole('radiogroup', { name: 'Status' });
+    await expect(status.getByRole('radio', { name: 'Wishlist' })).toHaveAttribute('aria-checked', 'true');
+    // Starting stamps today; the book's dates are one span on one calendar.
+    await status.getByRole('radio', { name: 'Reading' }).click();
+    await expect(status.getByRole('radio', { name: 'Reading' })).toHaveAttribute('aria-checked', 'true');
+    await expect(dialog.locator('#journal-span')).toHaveAttribute('data-value', /\d{4}-\d{2}-\d{2}/);
+    await expect(dialog.locator('#journal-span')).toHaveAttribute('data-end', '');
 
-    await dialog.getByRole('spinbutton', { name: 'Current' }).fill('290');
-    await expect(dialog.getByRole('combobox', { name: 'Progress status' })).toHaveValue('finished');
+    await status.getByRole('radio', { name: 'Completed' }).click();
     await expect(dialog.locator('.journal')).toContainText('Started and finished on the same day.');
-    await expect(dialog.getByRole('button', { name: 'Read again' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Read again' })).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(card(page, 'The Hobbit').locator('.entry-status-chip')).toHaveText('Completed');
 
@@ -138,30 +138,29 @@ test.describe('in the browser', () => {
 
     // Deleting offers an undo instead of asking first.
     await page.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.locator('.stats-bar')).toContainText('5 entries');
+    await expect(page.locator('.header-count')).toContainText('5 entries');
     await expect(page.locator('.select-bar')).toBeHidden();
     await expect(page.locator('#toast')).toContainText('Deleted 2 entries.');
     await page.locator('#toast').getByRole('button', { name: 'Undo' }).click();
-    await expect(page.locator('.stats-bar')).toContainText('7 entries');
+    await expect(page.locator('.header-count')).toContainText('7 entries');
   });
 
-  test('TV episodes: up next, mark watched, seasons', async ({ page }) => {
-    await expect(page.locator('.up-next-ep')).toHaveText('S1 E3 · In Perpetuity');
-    await page.getByRole('button', { name: 'Mark S1 E3 of Severance watched' }).click();
-    await expect(page.locator('.up-next-ep')).toHaveText('S1 E4 · The You You Are');
+  test('TV seasons: up next, mark a season watched', async ({ page }) => {
+    await expect(page.locator('.up-next-ep')).toHaveText('Season 1');
+    await page.getByRole('button', { name: 'Mark season 1 of Severance watched' }).click();
+    // Season 2 hasn't aired: Up next says when it does.
+    await expect(page.locator('.up-next-ep')).toHaveText('Season 2');
+    await expect(page.locator('.up-next-when')).toHaveText(/^airs 2099-01-17$/);
 
     await card(page, 'Severance').click();
-    const section = page.locator('dialog[open] .episodes-section');
-    await expect(section.locator('.episodes-summary')).toHaveText('3 of 4 aired episodes watched · 1 upcoming');
-    await section.getByRole('button', { name: 'Mark season watched' }).click();
-    await expect(section.locator('.episodes-summary')).toHaveText('4 of 4 aired episodes watched · 1 upcoming');
-    await expect(section.locator('.episodes-next-note')).toContainText('Caught up — S2 E1 airs');
-    // Unaired episodes can't be ticked; specials are listed but don't count.
-    await section.locator('summary', { hasText: 'Season 2' }).click();
-    await expect(section.getByLabel(/Hello, Ms. Cobel/)).toBeDisabled();
-    await expect(section.locator('summary', { hasText: 'Specials' })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('.up-next-when')).toHaveText(/^airs 2099-01-17$/);
+    const section = page.locator('dialog[open] .seasons-section');
+    await expect(section.locator('.seasons-summary')).toHaveText('1 of 1 season watched · season 2 is coming');
+    await expect(section.getByRole('button', { name: /Season 1/ })).toHaveAttribute('aria-pressed', 'true');
+    // Unaired seasons can't be marked; specials aren't listed.
+    await expect(section.getByRole('button', { name: /Season 2/ })).toBeDisabled();
+    await expect(section).not.toContainText('Specials');
+    await section.getByRole('button', { name: /Season 1/ }).click();
+    await expect(section.locator('.seasons-summary')).toHaveText('0 of 1 season watched · next up: season 1');
   });
 
   test('share cards render in every format and theme', async ({ page }) => {
@@ -213,8 +212,7 @@ test.describe('in the Android shell', () => {
     await page.goto('/index.html');
     await importFixture(page);
     await card(page, 'Severance').click();
-    const toggle = page.getByLabel('New-episode alerts');
-    // click(), not check(): the app immediately reverts it when permission is refused.
+    const toggle = page.getByRole('switch', { name: /New-episode alerts/ });
     await toggle.click();
     await expect(toggle).not.toBeChecked();
     await expect(page.locator('.remind-note')).toContainText('Notifications are off');
@@ -225,8 +223,9 @@ test.describe('in the Android shell', () => {
     await page.goto('/index.html');
     await importFixture(page);
     await card(page, 'Severance').click();
-    await page.getByLabel('New-episode alerts').check();
-    await expect(page.getByLabel('New-episode alerts')).toBeChecked();
+    const toggle = page.getByRole('switch', { name: /New-episode alerts/ });
+    await toggle.click();
+    await expect(toggle).toBeChecked();
     await expect.poll(() => page.evaluate(() => window.__sent.filter((m) => m.method === 'episodeReminders').length)).toBeGreaterThan(0);
   });
 });

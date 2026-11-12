@@ -126,3 +126,43 @@ function shiftDate(ymd: string, days: number) {
   const [y, m, d] = ymd.split('-').map(Number);
   return localDate(new Date(y!, m! - 1, d! + days));
 }
+
+export interface SeasonState {
+  season: number;
+  episodes: Episode[];
+  /** Episodes that have aired, the ones a season's mark covers. */
+  aired: Episode[];
+  /** Every aired episode is watched (and at least one has aired). */
+  watched: boolean;
+  /** The first episode's air date, YYYY-MM-DD, if known. */
+  firstAired: string | null;
+}
+
+/**
+ * A show tracked by season rather than by episode: each regular season,
+ * whether it's watched, and the season to watch next. Marking a season marks
+ * its aired episodes, so the episode-level data underneath stays valid.
+ */
+export function seasonProgress(entry: CatalogEntry, today: string = localDate()) {
+  const watched = new Set(entry.watchedEpisodes || []);
+  const list: SeasonState[] = seasons(entry)
+    .filter(({ season }) => season > 0)
+    .map(({ season, episodes }) => {
+      const aired = episodes.filter((ep) => hasAired(ep, today));
+      return {
+        season,
+        episodes,
+        aired,
+        watched: aired.length > 0 && aired.every((ep) => watched.has(ep.id)),
+        firstAired: episodes.find((ep) => ep.aired)?.aired ?? null
+      };
+    });
+  const airedSeasons = list.filter((s) => s.aired.length);
+  return {
+    seasons: list,
+    watched: list.filter((s) => s.watched).length,
+    aired: airedSeasons.length,
+    next: airedSeasons.find((s) => !s.watched) ?? null,
+    upcoming: list.find((s) => !s.aired.length) ?? null
+  };
+}
