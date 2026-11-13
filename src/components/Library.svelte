@@ -74,6 +74,7 @@
       list = list.filter((e) =>
         [
           e.title,
+          e.originalTitle,
           e.quoteText,
           e.summary,
           e.notes,

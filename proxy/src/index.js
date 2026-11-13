@@ -90,6 +90,8 @@ export function route(url) {
   }
   const detail = path.match(/^\/(movies|series)\/(\d{1,12})\/extended$/);
   if (detail) return { kind: 'api', url: `${TVDB}/${detail[1]}/${detail[2]}/extended` };
+  const english = path.match(/^\/(movies|series)\/(\d{1,12})\/translations\/eng$/);
+  if (english) return { kind: 'api', url: `${TVDB}/${english[1]}/${english[2]}/translations/eng` };
   const episodes = path.match(/^\/series\/(\d{1,12})\/episodes\/(default|official)$/);
   if (episodes) {
     const page = Math.min(Math.max(Number.parseInt(url.searchParams.get('page') || '0', 10) || 0, 0), 50);

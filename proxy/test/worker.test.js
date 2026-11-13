@@ -34,6 +34,9 @@ describe('route', () => {
     expect(r('/search?query=dune&type=series')?.url).toBe('https://api4.thetvdb.com/v4/search?query=dune&limit=20&type=series');
     expect(r('/movies/123/extended')?.url).toBe('https://api4.thetvdb.com/v4/movies/123/extended');
     expect(r('/series/9/extended/')?.url).toBe('https://api4.thetvdb.com/v4/series/9/extended');
+    expect(r('/movies/123/translations/eng')?.url).toBe('https://api4.thetvdb.com/v4/movies/123/translations/eng');
+    expect(r('/series/9/translations/eng')?.url).toBe('https://api4.thetvdb.com/v4/series/9/translations/eng');
+    expect(r('/series/9/translations/fra')).toBeNull();
     expect(r('/series/9/episodes/default?page=2')?.url).toBe('https://api4.thetvdb.com/v4/series/9/episodes/default?page=2');
     expect(r('/series/9/episodes/default?page=999')?.url).toBe('https://api4.thetvdb.com/v4/series/9/episodes/default?page=50');
     expect(r('/series/9/episodes/dvd')).toBeNull();

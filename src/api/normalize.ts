@@ -45,6 +45,10 @@ export interface TvdbSearchHit {
   image_url?: string;
   thumbnail?: string;
   url?: string;
+  /** Names by language code, e.g. { eng: 'Spirited Away', jpn: '千と千尋の神隠し' }. */
+  translations?: Record<string, string>;
+  /** Overviews by language code. */
+  overviews?: Record<string, string>;
 }
 export interface TvdbDetail {
   image?: string;
@@ -111,13 +115,18 @@ export function normalizeTvdbSearchHit(hit: TvdbSearchHit): SearchHit {
   const isSeries = hit.type === 'series';
   const type = isSeries ? 'tv' : 'movie';
   const year = hit.year ? parseInt(hit.year, 10) : NaN;
+  // TheTVDB names a film or show in its own language; prefer the English name
+  // and keep the original alongside it.
+  const original = (hit.name || hit.title || '').trim();
+  const english = hit.translations?.eng?.trim() || '';
   return {
     type,
     sourceId: String(hit.tvdb_id || hit.id),
-    title: hit.name || hit.title || 'Untitled',
+    title: english || original || 'Untitled',
+    originalTitle: english && original && english !== original ? original : null,
     creators: [],
     year: Number.isFinite(year) ? year : null,
-    summary: hit.overview || '',
+    summary: hit.overviews?.eng || hit.overview || '',
     genres: hit.genres || [],
     thumbnailUrl: hit.image_url || hit.thumbnail || null,
     detailUrl: hit.url || null,
