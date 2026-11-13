@@ -42,13 +42,13 @@ export async function exportMarkdown() {
         const citeParts = [e.creators?.[0], e.source, e.location].filter(Boolean).map(escapeMd);
         if (citeParts.length) md += `>\n> — ${citeParts.join(', ')}\n\n`;
         else md += '\n';
-        if (e.rating != null) md += `${starString(e.rating)} **${ratingLabel(e.rating)}**\n\n`;
+        if (e.rating != null) md += `${starString(e.rating)} **${ratingLabel(e.rating, 5)}**\n\n`;
         if (e.notes?.trim()) md += `_${escapeMd(e.notes.trim())}_\n\n`;
         md += `_Added ${formatDate(e.dateAdded)}_\n\n---\n\n`;
         continue;
       }
       const year = e.year ? ` (${e.year})` : '';
-      const stars = e.rating != null ? ` — ${starString(e.rating)} **${ratingLabel(e.rating)}**` : '';
+      const stars = e.rating != null ? ` — ${starString(e.rating)} **${ratingLabel(e.rating, 5)}**` : '';
       md += `### ${escapeMd(e.title)}${year}${stars}\n`;
       if (e.thumbnailUrl) md += `![Poster](${e.thumbnailUrl})\n\n`;
       if (e.creators?.length) md += `*${escapeMd(e.creators.join(', '))}*\n\n`;

@@ -1,7 +1,8 @@
 // Shared data types, imported with `import type { … } from '../types'`.
 
 export type EntryType = 'book' | 'movie' | 'tv' | 'quote';
-export type EntryStatus = 'want' | 'in-progress' | 'finished';
+/** `abandoned` is "Did not finish": put down partway, on purpose, and that's fine. */
+export type EntryStatus = 'want' | 'in-progress' | 'finished' | 'abandoned';
 
 /** One item on the shelf, as stored in IndexedDB. */
 export interface CatalogEntry {

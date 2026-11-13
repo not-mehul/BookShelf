@@ -14,6 +14,10 @@
   import SyncSection from './SyncSection.svelte';
   import { setTheme, theme, type ThemeChoice } from '../../platform/theme.svelte';
   import Segmented from '../Segmented.svelte';
+  import { importCatalogExport, type CatalogSource } from '../../export/catalog-import';
+  import { backupToDocuments, lastBackupAt } from '../../sync/auto-backup';
+  import { chooseRatingScale, ratingView } from '../../state/rating-scale.svelte';
+  import type { RatingScale } from '../../util/stars';
 
   type Def = { key: string; label: string; hint: string; type: 'password' | 'url' };
   const TVDB: Def[] = [
@@ -59,7 +63,9 @@
   let values = $state<Record<string, string> | null>(null);
   let tokenIssued = $state(0);
   let notice = $state<{ text: string; kind: 'ok' | 'err' } | null>(null);
-  let busy = $state<'backup' | 'json' | 'md' | null>(null);
+  let busy = $state<'backup' | 'json' | 'md' | 'catalog' | 'weekly' | null>(null);
+  let catalogInput = $state<HTMLInputElement>();
+  let lastWeekly = $state(lastBackupAt());
   let jsonInput = $state<HTMLInputElement>();
   let mdInput = $state<HTMLInputElement>();
   const settleFocus = useModalFocus();
@@ -127,6 +133,60 @@
     }
   }
 
+  const SOURCE_NAME: Record<CatalogSource, string> = {
+    goodreads: 'Goodreads',
+    storygraph: 'StoryGraph',
+    letterboxd: 'Letterboxd'
+  };
+
+  // Goodreads or StoryGraph's CSV, or Letterboxd's zip (or the CSVs inside it).
+  async function importCatalog(input: HTMLInputElement) {
+    const files = [...(input.files ?? [])];
+    if (!files.length) return;
+    busy = 'catalog';
+    try {
+      const r = await importCatalogExport(files);
+      const parts = [r.added === 1 ? '1 new entry' : `${r.added} new entries`];
+      if (r.updated) parts.push(`${r.updated} already here filled in`);
+      if (r.unchanged) parts.push(`${r.unchanged} already here as they were`);
+      say(`From ${SOURCE_NAME[r.source]}: ${parts.join(', ')}.`);
+      shelf.changed();
+    } catch (err) {
+      say('Import failed: ' + messageOf(err), 'err');
+    } finally {
+      busy = null;
+      input.value = '';
+    }
+  }
+
+  async function weeklyNow() {
+    busy = 'weekly';
+    try {
+      const where = await backupToDocuments();
+      lastWeekly = lastBackupAt();
+      say(`Backed up to ${where}.`);
+    } catch (err) {
+      say('Backup failed: ' + messageOf(err), 'err');
+    } finally {
+      busy = null;
+    }
+  }
+
+  const lastWeeklyText = $derived(
+    lastWeekly
+      ? new Date(lastWeekly).toLocaleDateString(undefined, {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        })
+      : 'not yet'
+  );
+
+  const SCALES: { value: '5' | '10'; label: string }[] = [
+    { value: '5', label: 'Stars' },
+    { value: '10', label: 'Out of 10' }
+  ];
+
   const THEMES: { value: ThemeChoice; label: string }[] = [
     { value: 'system', label: 'System' },
     { value: 'dark', label: 'Dusk' },
@@ -149,6 +209,18 @@
         value={theme.choice}
         label="Theme"
         onchange={(choice) => void setTheme(choice)}
+      />
+    </div>
+    <div class="theme-setting-row">
+      <div class="theme-setting-text">
+        <div class="theme-setting-label">Ratings</div>
+        <div class="theme-setting-sub">Out of 10 takes half points, like 7.5.</div>
+      </div>
+      <Segmented
+        options={SCALES}
+        value={String(ratingView.scale) as '5' | '10'}
+        label="Rating scale"
+        onchange={(scale) => chooseRatingScale(Number(scale) as RatingScale)}
       />
     </div>
   </section>
@@ -224,6 +296,14 @@
         hidden
         onchange={(ev) => importFile(ev.currentTarget, 'md')}
       />
+      <input
+        bind:this={catalogInput}
+        type="file"
+        accept=".csv,text/csv,.zip,application/zip"
+        multiple
+        hidden
+        onchange={(ev) => importCatalog(ev.currentTarget)}
+      />
       <div class="settings-data-row">
         <button type="button" class="btn btn-primary" disabled={busy !== null} onclick={backup}
           ><Icon name="download" /> <span>Back up</span></button
@@ -240,6 +320,26 @@
       <p class="field-hint">
         A backup is one JSON file with everything, covers included. Restoring it again never duplicates
         entries.
+      </p>
+      {#if native}
+        <p class="field-hint" id="weeklyBackup">
+          Once a week a copy also goes to Documents/BookShelf/Backups, keeping the last five. Last backed up: {lastWeeklyText}.
+        </p>
+        <button type="button" class="settings-text-link" disabled={busy !== null} onclick={weeklyNow}>
+          {busy === 'weekly' ? 'Backing up…' : 'Back up to Documents now'}
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="settings-text-link"
+        disabled={busy !== null}
+        onclick={() => catalogInput?.click()}
+      >
+        {busy === 'catalog' ? 'Importing…' : 'Import from Goodreads, StoryGraph or Letterboxd'}
+      </button>
+      <p class="field-hint">
+        Goodreads and StoryGraph export one CSV; Letterboxd exports a zip, which can be picked as it is.
+        Anything already on the shelf only gains what it was missing.
       </p>
       <button
         type="button"
@@ -315,7 +415,7 @@
     margin-left: 0.35rem;
     font-family: var(--font-mono);
     font-size: 0.6875rem;
-    color: var(--text-faint);
+    color: var(--text-dim);
   }
   .settings-fold-state {
     font-family: var(--font-mono);

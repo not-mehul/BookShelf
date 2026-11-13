@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { ratingView } from '../state/rating-scale.svelte';
   import { thumbnailUrl } from '../db/database';
   import { ui } from '../state/ui.svelte';
   import { TYPE_ICON, TYPE_LABEL } from '../util/labels';
-  import { starString } from '../util/stars';
+  import { ratingBrief } from '../util/stars';
   import { statusLabel } from '../util/status';
   import type { CatalogEntry } from '../types';
   import CoverImage from './CoverImage.svelte';
@@ -81,7 +82,7 @@
         <div class="quote-card-author">— {attribution}</div>
       {/if}
       {#if entry.rating != null}
-        <div class="entry-rating-line">{starString(entry.rating)}</div>
+        <div class="entry-rating-line">{ratingBrief(entry.rating, ratingView.scale)}</div>
       {/if}
     </div>
   {:else}
@@ -107,13 +108,14 @@
         </div>
       {/if}
       {#if entry.rating != null}
-        <div class="entry-rating-line">{starString(entry.rating)}</div>
+        <div class="entry-rating-line">{ratingBrief(entry.rating, ratingView.scale)}</div>
       {/if}
       {#if entry.status}
         <span
           class="entry-status-chip"
           class:is-active={entry.status === 'in-progress'}
           class:is-planned={entry.status === 'want'}
+          class:is-stopped={entry.status === 'abandoned'}
           >{statusLabel(entry.status) || entry.status}{#if entry.status === 'finished' && times > 1}<span
               class="entry-times"
               aria-hidden="true">&nbsp;×{times}</span

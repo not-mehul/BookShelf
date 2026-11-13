@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Wishlist, under way or done: three icon toggles side by side, one at a
+  // Wishlist, under way, done or put down: four icon toggles side by side, one at a
   // time, each in its status colour (the status chip's: cream, amber, sage).
   // Tapping the lit one again clears the status.
   import { STATUS_LABEL } from '../../util/status';
@@ -18,7 +18,8 @@
   const OPTIONS = $derived([
     { status: 'want' as const, icon: 'bookmark' as const, label: STATUS_LABEL.want },
     { status: 'in-progress' as const, icon: 'progress' as const, label: verb },
-    { status: 'finished' as const, icon: 'check' as const, label: STATUS_LABEL.finished }
+    { status: 'finished' as const, icon: 'check' as const, label: STATUS_LABEL.finished },
+    { status: 'abandoned' as const, icon: 'stop' as const, label: 'Stopped' }
   ]);
 </script>
 
@@ -29,6 +30,7 @@
       role="radio"
       class="status-option is-{opt.status}"
       aria-checked={value === opt.status}
+      aria-label={opt.status === 'abandoned' ? STATUS_LABEL.abandoned : undefined}
       onclick={() => onchange(value === opt.status ? null : opt.status)}
     >
       <Icon name={opt.icon} />
@@ -40,7 +42,7 @@
 <style>
   .status-picker {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-2);
   }
   .status-option {
