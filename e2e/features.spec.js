@@ -66,10 +66,11 @@ test.describe('in the browser', () => {
 
   test('the library remembers its tab and sort, and / focuses the filter', async ({ page }) => {
     await page.getByRole('tab', { name: 'Books' }).click();
-    await page.getByRole('combobox', { name: 'Sort by' }).selectOption('title');
+    await page.getByRole('combobox', { name: 'Sort by' }).click();
+    await page.getByRole('option', { name: 'Title' }).click();
     await page.reload();
     await expect(page.getByRole('tab', { name: 'Books' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveValue('title');
+    await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveText('Title');
     await page.keyboard.press('/');
     await expect(page.getByRole('searchbox', { name: 'Filter library' })).toBeFocused();
     await page.keyboard.type('hob');
@@ -99,7 +100,8 @@ test.describe('in the browser', () => {
     await expect(items).toHaveText(["Rocannon's World", 'The Left Hand of Darkness', 'The Dispossessed']);
     await expect(page.locator('dialog[open] .series-next')).toHaveText('Next: #5 The Dispossessed');
     await page.keyboard.press('Escape');
-    await page.getByRole('combobox', { name: 'Sort by' }).selectOption('series');
+    await page.getByRole('combobox', { name: 'Sort by' }).click();
+    await page.getByRole('option', { name: 'Series' }).click();
     const titles = await page.locator('.entry-title').allTextContents();
     expect(titles.slice(0, 3)).toEqual(["Rocannon's World", 'The Left Hand of Darkness', 'The Dispossessed']);
   });

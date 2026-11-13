@@ -229,7 +229,7 @@ img {
   font-size: 0.875rem;
 }
 
-/* Custom select — wrap in .select-wrap */
+/* Select (dusk-dawn) — wrap in .select-wrap */
 .select-wrap {
   position: relative;
   display: block;
@@ -237,7 +237,7 @@ img {
 
 /* Compact select (toolbar use) */
 .select-sm {
-  padding: 0.55rem 2.25rem 0.55rem 0.85rem;
+  padding: 0.55rem 0.75rem 0.55rem 0.85rem;
   font-size: 0.75rem;
   font-family: var(--font-mono);
   letter-spacing: 0.05em;

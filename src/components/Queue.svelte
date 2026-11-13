@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Select } from 'dusk-dawn';
   import { tick } from 'svelte';
   import { listEntries, saveEntry, thumbnailUrl } from '../db/database';
   import { shelf } from '../state/shelf.svelte';
@@ -140,12 +141,12 @@
         >Short books</button
       >
       <div class="select-wrap select-wrap-sm">
-        <select class="select select-sm" aria-label="Genre" bind:value={genre}>
-          <option value="">Any genre</option>
-          {#each genres as g (g)}
-            <option value={g}>{g}</option>
-          {/each}
-        </select>
+        <Select
+          class="select-sm"
+          label="Genre"
+          bind:value={genre}
+          options={[{ value: '', label: 'Any genre' }, ...genres.map((g) => ({ value: g, label: g }))]}
+        />
       </div>
     </div>
     <div class="queue-pick-result" aria-live="polite">

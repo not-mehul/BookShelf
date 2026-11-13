@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Select } from 'dusk-dawn';
   import { untrack } from 'svelte';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
@@ -150,11 +151,12 @@
         <h3 class="t-section-label" id="stats-year">Year in review</h3>
         {#if years.length > 1}
           <div class="select-wrap select-wrap-sm">
-            <select class="select select-sm" aria-label="Year" bind:value={year}>
-              {#each years as y (y)}
-                <option value={y}>{y}</option>
-              {/each}
-            </select>
+            <Select
+              class="select-sm"
+              label="Year"
+              bind:value={year}
+              options={years.map((y) => ({ value: y, label: String(y) }))}
+            />
           </div>
         {:else}
           <span class="t-data-small">{year}</span>

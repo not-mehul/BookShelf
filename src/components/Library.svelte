@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Select } from 'dusk-dawn';
   import { hatch } from '../util/delight';
   import { SvelteSet } from 'svelte/reactivity';
   import { saveAndShareMarkdown } from '../export/markdown';
@@ -212,11 +213,7 @@
       }}
     />
     <div class="select-wrap select-wrap-sm">
-      <select class="select select-sm" aria-label="Sort by" bind:value={sort}>
-        {#each SORT_OPTS as opt (opt.value)}
-          <option value={opt.value}>{opt.label}</option>
-        {/each}
-      </select>
+      <Select class="select-sm" label="Sort by" bind:value={sort} options={SORT_OPTS} />
     </div>
     <button
       type="button"
