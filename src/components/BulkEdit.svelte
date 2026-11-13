@@ -70,7 +70,11 @@
   <div class="field">
     <label class="label-field" for="bulk-remove-tag">Remove tag</label>
     <div class="select-wrap">
-      <Select id="bulk-remove-tag" bind:value={removeTag} options={[{ value: '', label: '— None —' }, ...tags.map((t) => ({ value: t, label: t }))]} />
+      <Select
+        id="bulk-remove-tag"
+        bind:value={removeTag}
+        options={[{ value: '', label: '— None —' }, ...tags.map((t) => ({ value: t, label: t }))]}
+      />
     </div>
   </div>
   {#if error}

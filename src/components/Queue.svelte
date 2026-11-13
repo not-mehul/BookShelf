@@ -141,7 +141,12 @@
         >Short books</button
       >
       <div class="select-wrap select-wrap-sm">
-        <Select class="select-sm" label="Genre" bind:value={genre} options={[{ value: '', label: 'Any genre' }, ...genres.map((g) => ({ value: g, label: g }))]} />
+        <Select
+          class="select-sm"
+          label="Genre"
+          bind:value={genre}
+          options={[{ value: '', label: 'Any genre' }, ...genres.map((g) => ({ value: g, label: g }))]}
+        />
       </div>
     </div>
     <div class="queue-pick-result" aria-live="polite">
