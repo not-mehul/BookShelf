@@ -198,3 +198,34 @@ export function pushBackHandler(handler: () => void): () => void {
     setBackHandler(backStack.length > 0);
   };
 }
+
+/**
+ * Android Back closes an open dusk-dawn Select menu before anything else
+ * (style.md §14). The menu is a popover, so its `toggle` event says when it
+ * opens; Back is claimed for as long as it stays in the page. Esc, a tap
+ * outside or a choice close it the usual way and release Back again.
+ * Takes dusk-dawn's dismissOverlay, so this module stays free of Svelte.
+ */
+export function claimBackForMenus(dismissOverlay: () => boolean, doc: Document = document) {
+  if (!shell) return;
+  doc.addEventListener(
+    'toggle',
+    (ev) => {
+      const menu = ev.target;
+      if (!(menu instanceof HTMLElement) || !menu.classList.contains('dd-menu')) return;
+      if ((ev as ToggleEvent).newState !== 'open' || !menu.parentNode) return;
+      const release = pushBackHandler(() => {
+        release();
+        dismissOverlay();
+      });
+      const gone = new MutationObserver(() => {
+        if (menu.isConnected && menu.matches(':popover-open')) return;
+        gone.disconnect();
+        release();
+      });
+      gone.observe(menu.parentNode, { childList: true });
+      gone.observe(menu, { attributes: true });
+    },
+    true
+  );
+}

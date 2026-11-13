@@ -3,9 +3,10 @@
 // Android shell, links from the sibling apps, the PWA share target, sync).
 
 import { mount } from 'svelte';
+import { dismissOverlay } from 'dusk-dawn';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
-import { installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
+import { claimBackForMenus, installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
 import { startAutoBackup } from './sync/auto-backup';
@@ -17,6 +18,8 @@ import { parseSharedText, type SharedInput } from './util/share-intake';
 // Must run before anything fetches: routes cross-origin calls through the
 // Android shell's native HTTP. A no-op in a plain browser.
 installNativeBridge();
+// Android Back closes an open Select menu before anything else.
+claimBackForMenus(dismissOverlay);
 
 function openShared(shared: SharedInput) {
   ui.openAdd({ prefill: parseSharedText(shared) });

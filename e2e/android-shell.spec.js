@@ -48,6 +48,24 @@ test('Android Back closes a modal and then returns Back to the system', async ({
   expect(await lastOf(page, 'backHandler')).toMatchObject({ enabled: false });
 });
 
+test('Android Back closes an open menu first, then gives Back back', async ({ page }) => {
+  await boot(page);
+  const sort = page.getByRole('combobox', { name: 'Sort by' });
+  await sort.click();
+  await expect(page.getByRole('listbox')).toBeVisible();
+  expect(await lastOf(page, 'backHandler')).toMatchObject({ enabled: true });
+  await page.evaluate(() => window.__nativeBack());
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect(sort).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(async () => (await lastOf(page, 'backHandler'))?.enabled).toBe(false);
+
+  // Closed by a choice, the menu still hands Back to the system.
+  await sort.click();
+  await page.getByRole('option', { name: 'Title' }).click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+  await expect.poll(async () => (await lastOf(page, 'backHandler'))?.enabled).toBe(false);
+});
+
 test('secrets typed in Settings go to the Keystore, not localStorage', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Settings' }).click();
