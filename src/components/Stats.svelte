@@ -4,7 +4,8 @@
   import { ui } from '../state/ui.svelte';
   import { plural } from '../util/labels';
   import { getSetting, setSetting } from '../util/settings';
-  import { ratingDistribution } from '../util/stars';
+  import { ratingDistribution, ratingValue } from '../util/stars';
+  import { ratingView } from '../state/rating-scale.svelte';
   import {
     bookPages,
     decades,
@@ -94,9 +95,11 @@
   );
   const ratings = $derived(entries.map((e) => e.rating).filter((r): r is number => r != null));
   const average = $derived(
-    ratings.length ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(1) : ''
+    ratings.length
+      ? `${Number(ratingValue(ratings.reduce((s, r) => s + r, 0) / ratings.length, ratingView.scale)).toFixed(1)}/${ratingView.scale}`
+      : ''
   );
-  const bins = $derived(ratingDistribution(ratings));
+  const bins = $derived(ratingDistribution(ratings, ratingView.scale));
   const maxBin = $derived(Math.max(...bins.map((b) => b.count), 1));
   const topGenres = $derived.by(() => {
     const counts: Record<string, number> = {};
@@ -111,6 +114,7 @@
   const maxEra = $derived(Math.max(1, ...eras.map(([, n]) => n)));
   const finished = $derived(entries.filter((e) => e.status === 'finished').length);
   const inProgress = $derived(entries.filter((e) => e.status === 'in-progress').length);
+  const stopped = $derived(entries.filter((e) => e.status === 'abandoned').length);
   const reread = $derived(entries.filter((e) => (e.finishes?.length || 0) > 1).length);
 </script>
 
@@ -286,6 +290,7 @@
         <div class="hairline-grid stats-grid">
           {#if inProgress}{@render tile(inProgress, 'In progress')}{/if}
           {#if finished}{@render tile(finished, 'Completed')}{/if}
+          {#if stopped}{@render tile(stopped, 'Did not finish')}{/if}
           {#if reread}{@render tile(reread, 'Returned to')}{/if}
         </div>
       {/if}
@@ -293,7 +298,7 @@
       {#if ratings.length}
         <div class="stats-label">Ratings · average {average} across {ratings.length}</div>
         {@render bars(
-          bins.map((b) => [`${b.rating}★`, b.count]),
+          bins.map((b) => [ratingView.scale === 10 ? `${b.rating}` : `${b.rating}★`, b.count]),
           maxBin
         )}
       {/if}

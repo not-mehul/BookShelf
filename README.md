@@ -31,8 +31,8 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 ### Keep track
 
-- **Status at a tap.** Three toggles, Wishlist, Reading or Watching, and Completed, each in its own colour.
-- **Half-star ratings** with optional aspect scores (story, writing, acting and so on), notes, tags and collections.
+- **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Completed, and Did not finish for the ones you put down on purpose.
+- **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Optional aspect scores (story, writing, acting and so on), notes, tags and collections.
 - **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day.
 - **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**.
 - **Series**, detected from titles or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
@@ -50,6 +50,8 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 - **On your device.** Everything lives in local storage with cached cover thumbnails.
 - **Backup and restore** as lossless JSON (re-importing never duplicates), plus a readable Markdown export.
+- **Weekly backups** (Android): once a week a dated copy goes to Documents/BookShelf/Backups, keeping the last five, with nothing to set up. Settings shows when it last ran.
+- **Bring your shelf over** from Goodreads or StoryGraph (their CSV export) or Letterboxd (the export zip, as it is). Ratings, shelves, read dates, reviews and tags come with it, all on the device. Anything already on your shelf only gains what it was missing, so importing twice adds nothing.
 - **Encrypted sync** (Android): end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
 - **A home-screen widget** (Android): shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.

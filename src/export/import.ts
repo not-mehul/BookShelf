@@ -1,7 +1,7 @@
 import { newEntryId, saveEntry } from '../db/database';
 import { fetchThumbBlob } from '../util/thumbs';
 import { fromDay } from '../util/journal';
-import { normalizeRating } from '../util/stars';
+import { parseRatingLabel } from '../util/stars';
 import type { CatalogEntry, EntryType } from '../types';
 
 /**
@@ -83,8 +83,8 @@ async function parseEntry(text: string, type: EntryType): Promise<CatalogEntry |
           quoteLines.push(content);
         }
       } else if (/[★☆½]/.test(line)) {
-        const match = line.match(/(\d(?:\.5)?)\/5/);
-        if (match) entry.rating = normalizeRating(parseFloat(match[1]!));
+        const rating = parseRatingLabel(line);
+        if (rating != null) entry.rating = rating;
       } else if (line.startsWith('_') && line.endsWith('_')) {
         const content = line.slice(1, -1).trim();
         if (content.startsWith('Added')) {
@@ -105,10 +105,8 @@ async function parseEntry(text: string, type: EntryType): Promise<CatalogEntry |
     if (!firstLine.startsWith('###')) return null;
 
     const titlePart = firstLine.slice(3).trim();
-    const ratingMatch = titlePart.match(/—\s*[★☆½]+\s*\*\*(\d(?:\.5)?)\/5\*\*/);
-    if (ratingMatch) {
-      entry.rating = normalizeRating(parseFloat(ratingMatch[1]!));
-    }
+    const ratingMatch = titlePart.match(/—\s*[★☆½]+\s*\*\*([\d.]+\/(?:5|10))\*\*/);
+    if (ratingMatch) entry.rating = parseRatingLabel(ratingMatch[1]!);
 
     const titleNoRating = (titlePart.split('—')[0] ?? '').trim();
     const yearMatch = titleNoRating.match(/\((\d{4})\)$/);
@@ -156,7 +154,8 @@ async function parseEntry(text: string, type: EntryType): Promise<CatalogEntry |
             .filter((d): d is string => d != null);
       } else if (line.startsWith('**Status:**')) {
         const status = line.replace('**Status:**', '').trim();
-        if (status === 'want' || status === 'in-progress' || status === 'finished') entry.status = status;
+        if (status === 'want' || status === 'in-progress' || status === 'finished' || status === 'abandoned')
+          entry.status = status;
       } else if (line.startsWith('>')) {
         entry.notes += (entry.notes ? '\n' : '') + line.slice(1).trim();
       } else if (line.startsWith('_Added')) {

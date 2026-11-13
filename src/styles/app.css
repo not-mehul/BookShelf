@@ -503,6 +503,11 @@ img {
   color: var(--text-dim);
   border-color: var(--border);
 }
+.entry-status-chip.is-stopped {
+  color: var(--text-dim);
+  border-color: var(--border);
+  border-style: dashed;
+}
 .entry-status-chip.is-active {
   color: var(--accent-amber);
   border-color: rgba(var(--accent-amber-rgb), 0.35);
@@ -805,6 +810,25 @@ img {
 .rating-row-compact .rating-star svg {
   width: 18px;
   height: 18px;
+}
+/* Out of 10: ten smaller stars in the same width, and the number beside them. */
+.rating-stars-ten {
+  gap: 2px;
+}
+.rating-stars-ten .rating-star,
+.rating-stars-ten .rating-star svg {
+  width: 20px;
+  height: 20px;
+}
+.rating-row-compact .rating-stars-ten .rating-star,
+.rating-row-compact .rating-stars-ten .rating-star svg {
+  width: 14px;
+  height: 14px;
+}
+.rating-number {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 /* Aspect ratings (collapsible) */

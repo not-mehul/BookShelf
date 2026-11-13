@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { starString } from '../../util/stars';
+  import { ratingView } from '../../state/rating-scale.svelte';
+  import { ratingBrief } from '../../util/stars';
   import type { CatalogEntry } from '../../types';
   import RatingControl from '../RatingControl.svelte';
 
@@ -36,7 +37,7 @@
   const summary = $derived(
     aspects
       .filter(([k]) => scores[k] != null)
-      .map(([k, l]) => `${l} ${starString(scores[k])}`)
+      .map(([k, l]) => `${l} ${ratingBrief(scores[k], ratingView.scale)}`)
       .join(' · ')
   );
 

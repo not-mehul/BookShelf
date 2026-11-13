@@ -8,6 +8,7 @@ import { refreshFollowedGuides } from './api/episode-sync';
 import { installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
+import { startAutoBackup } from './sync/auto-backup';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
 import { readBookShelfLink } from './util/link-intake';
@@ -59,6 +60,8 @@ async function boot(): Promise<void> {
 
   // Encrypted folder sync (Android app, once configured): pull now, push after changes.
   shelf.startSync();
+  // The weekly backup to Documents/BookShelf/Backups (Android app).
+  startAutoBackup();
   // Refresh episode guides of shows being followed (quietly; needs TheTVDB).
   void refreshFollowedGuides(() => void shelf.refresh());
 }
