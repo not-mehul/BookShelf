@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Select } from 'dusk-dawn';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { applyBulkChanges, type BulkChanges } from '../util/bulk';
@@ -44,13 +45,15 @@
   <div class="field">
     <label class="label-field" for="bulk-status">Status</label>
     <div class="select-wrap">
-      <select class="select" id="bulk-status" bind:value={status}>
-        <option value={KEEP}>— No change —</option>
-        {#each Object.entries(STATUS_LABEL) as [value, label] (value)}
-          <option {value}>{label}</option>
-        {/each}
-        <option value="">Clear status</option>
-      </select>
+      <Select
+        id="bulk-status"
+        bind:value={status}
+        options={[
+          { value: KEEP, label: '— No change —' },
+          ...Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label })),
+          { value: '', label: 'Clear status' }
+        ]}
+      />
     </div>
   </div>
   <div class="field">
@@ -67,12 +70,7 @@
   <div class="field">
     <label class="label-field" for="bulk-remove-tag">Remove tag</label>
     <div class="select-wrap">
-      <select class="select" id="bulk-remove-tag" bind:value={removeTag}>
-        <option value="">— None —</option>
-        {#each tags as t (t)}
-          <option value={t}>{t}</option>
-        {/each}
-      </select>
+      <Select id="bulk-remove-tag" bind:value={removeTag} options={[{ value: '', label: '— None —' }, ...tags.map((t) => ({ value: t, label: t }))]} />
     </div>
   </div>
   {#if error}
