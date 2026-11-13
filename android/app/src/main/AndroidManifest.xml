@@ -104,5 +104,9 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="mise" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="nookling" />
+        </intent>
     </queries>
 </manifest>

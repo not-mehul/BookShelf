@@ -69,7 +69,7 @@ Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if you
 
 ## The Dusk & Dawn apps
 
-BookShelf is one of six apps by Mehul Sen that share one design system, [Editorial Dusk & Dawn](https://github.com/not-mehul/dusk-dawn), and a common link scheme, so they can hand things to each other.
+BookShelf is one of seven apps by Mehul Sen that share one design system, [Editorial Dusk & Dawn](https://github.com/not-mehul/dusk-dawn), and a common link scheme, so they can hand things to each other.
 
 | App                                                 | What it is for                                                            |
 | --------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -79,6 +79,7 @@ BookShelf is one of six apps by Mehul Sen that share one design system, [Editori
 | [Colophon](https://github.com/not-mehul/Colophon)   | Inspect, fix and rebind EPUB editions                                     |
 | [Rosetta](https://github.com/not-mehul/Rosetta)     | A quiet library and reader for books, papers and notes                    |
 | [Mise](https://github.com/not-mehul/Mise)           | Recipes from anywhere, cooked one step at a time                          |
+| [Nookling](https://github.com/not-mehul/Nookling)   | A small round friend to feed, play with and put to bed                    |
 
 ## Build from source
 
