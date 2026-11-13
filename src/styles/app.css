@@ -664,6 +664,11 @@ img {
   font-size: 1rem;
   color: var(--text-dim);
 }
+.modal-original {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  color: var(--text-faint);
+}
 .modal-year {
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -1193,6 +1198,14 @@ img {
 .add-result-meta {
   flex: 1;
   min-width: 0;
+}
+.add-result-original {
+  font-family: var(--font-serif);
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .add-result-title {
   font-family: var(--font-serif);

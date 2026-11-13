@@ -10,6 +10,8 @@ export interface CatalogEntry {
   /** External id (Google Books / Open Library / TheTVDB); null for manual entries. */
   sourceId: string | null;
   title: string;
+  /** The title in its own language, when `title` is the English one. */
+  originalTitle?: string | null;
   creators: string[];
   year: number | null;
   summary: string;
@@ -81,7 +83,7 @@ export type SearchHit = Pick<
   CatalogEntry,
   'type' | 'sourceId' | 'title' | 'creators' | 'year' | 'summary' | 'genres' | 'thumbnailUrl'
 > &
-  Partial<Pick<CatalogEntry, 'pageCount' | 'isbn' | 'detailUrl'>> & { raw?: unknown };
+  Partial<Pick<CatalogEntry, 'pageCount' | 'isbn' | 'detailUrl' | 'originalTitle'>> & { raw?: unknown };
 
 /** Record of a deleted entry, kept so deletions propagate through sync. */
 export interface Tombstone {

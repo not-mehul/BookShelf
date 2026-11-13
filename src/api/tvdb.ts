@@ -128,6 +128,17 @@ export async function getSeries(id: string): Promise<TvdbDetail | null> {
   return json?.data || null;
 }
 
+/** A film's or show's English name on TheTVDB, or '' when it has none. */
+export async function getEnglishTitle(type: 'movie' | 'tv', id: string): Promise<string> {
+  const kind = type === 'movie' ? 'movies' : 'series';
+  try {
+    const json = await tvdbFetch(`/${kind}/${encodeURIComponent(id)}/translations/eng`);
+    return String(json?.data?.name || '').trim();
+  } catch {
+    return '';
+  }
+}
+
 export async function enrichEntry(entry: CatalogEntry): Promise<CatalogEntry> {
   if (!entry.sourceId) return entry;
   try {

@@ -133,6 +133,7 @@
     const entry = newEntry(hit.type, {
       sourceId: hit.sourceId != null ? String(hit.sourceId) : null,
       title: hit.title,
+      originalTitle: hit.originalTitle || null,
       creators: hit.creators || [],
       year: hit.year ?? null,
       summary: hit.summary || '',
@@ -230,6 +231,9 @@
           </div>
           <div class="add-result-meta">
             <div class="add-result-title">{hit.title}</div>
+            {#if hit.originalTitle}
+              <div class="add-result-original">{hit.originalTitle}</div>
+            {/if}
             {#if hit.creators?.length || hit.year}
               <div class="add-result-sub">
                 {[hit.creators?.slice(0, 2).join(', '), hit.year].filter(Boolean).join(' · ')}

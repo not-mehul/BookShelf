@@ -20,6 +20,9 @@
   <div class="modal-heading">
     <div class="modal-eyebrow">{TYPE_LABEL[entry.type]}</div>
     <h2 class="modal-title" id="modal-title" tabindex="-1">{entry.title}</h2>
+    {#if entry.originalTitle}
+      <p class="modal-original">{entry.originalTitle}</p>
+    {/if}
     {#if entry.creators?.length}
       <p class="modal-creators">{entry.creators.join(', ')}</p>
     {/if}

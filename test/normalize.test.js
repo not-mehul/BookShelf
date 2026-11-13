@@ -73,6 +73,32 @@ describe('normalizeTvdbSearchHit', () => {
   });
 });
 
+describe('normalizeTvdbSearchHit translations', () => {
+  it('prefers the English name and keeps the original', () => {
+    const out = normalizeTvdbSearchHit({
+      type: 'movie',
+      id: 1,
+      name: '千と千尋の神隠し',
+      translations: { eng: 'Spirited Away', jpn: '千と千尋の神隠し' },
+      overview: '日本語',
+      overviews: { eng: 'A girl in a spirit world.' }
+    });
+    expect(out.title).toBe('Spirited Away');
+    expect(out.originalTitle).toBe('千と千尋の神隠し');
+    expect(out.summary).toBe('A girl in a spirit world.');
+  });
+  it('has no original title when the name is already English', () => {
+    const out = normalizeTvdbSearchHit({
+      type: 'series',
+      id: 2,
+      name: 'Firefly',
+      translations: { eng: 'Firefly' }
+    });
+    expect(out.title).toBe('Firefly');
+    expect(out.originalTitle).toBeNull();
+  });
+});
+
 describe('enrichFromTvdbDetail', () => {
   it('fills genres and directors and sets the enriched flag', () => {
     const base = { type: 'movie', title: 'X', creators: [], genres: [] };
@@ -98,8 +124,9 @@ import { collectEpisodePages } from '../src/api/tvdb';
 
 describe('episodes from TheTVDB', () => {
   it('normalizes episode records and drops unusable ones', () => {
-    expect(normalizeEpisode({ id: 7, seasonNumber: 2, number: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 }))
-      .toEqual({ id: 7, s: 2, e: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 });
+    expect(
+      normalizeEpisode({ id: 7, seasonNumber: 2, number: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 })
+    ).toEqual({ id: 7, s: 2, e: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 });
     expect(normalizeEpisode({ id: 8, seasonNumber: 1, number: 1, aired: null }).aired).toBeNull();
     expect(normalizeEpisode({ id: 9, number: 1 })).toBeNull();
   });
@@ -118,7 +145,9 @@ describe('episodes from TheTVDB', () => {
     let calls = 0;
     const r = await collectEpisodePages(async (p) => {
       calls++;
-      return { data: { episodes: p === 0 ? Array.from({ length: 500 }, (_, i) => ({ id: i })) : [{ id: 999 }] } };
+      return {
+        data: { episodes: p === 0 ? Array.from({ length: 500 }, (_, i) => ({ id: i })) : [{ id: 999 }] }
+      };
     });
     expect(calls).toBe(2);
     expect(r.episodes).toHaveLength(501);

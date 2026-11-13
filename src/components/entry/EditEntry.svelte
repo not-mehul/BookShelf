@@ -4,6 +4,7 @@
   import { fetchThumbBlob } from '../../util/thumbs';
   import { splitList } from '../../util/text';
   import { TYPE_LABEL } from '../../util/labels';
+  import { getEnglishTitle, isTvdbConfigured } from '../../api/tvdb';
   import type { CatalogEntry } from '../../types';
   import EntryPicker from '../EntryPicker.svelte';
   import Field from '../Field.svelte';
@@ -31,6 +32,33 @@
   // user sets (or clears) it.
   const series = e.series === undefined ? parseSeriesFromTitle(e.title) : e.series;
   let title = $state(e.title);
+  let originalTitle = $state(e.originalTitle || '');
+  // Films and shows from TheTVDB can fetch their English name.
+  const canLookUp = (e.type === 'movie' || e.type === 'tv') && Boolean(e.sourceId);
+  let lookingUp = $state(false);
+  let lookupNote = $state('');
+
+  async function useEnglishTitle() {
+    lookingUp = true;
+    lookupNote = '';
+    try {
+      if (!(await isTvdbConfigured())) {
+        lookupNote = 'Set up TheTVDB in Settings first.';
+        return;
+      }
+      const english = await getEnglishTitle(e.type as 'movie' | 'tv', e.sourceId!);
+      if (!english) {
+        lookupNote = 'TheTVDB has no English title for this one.';
+      } else if (english === title.trim()) {
+        lookupNote = 'This is already the English title.';
+      } else {
+        if (!originalTitle.trim()) originalTitle = title.trim();
+        title = english;
+      }
+    } finally {
+      lookingUp = false;
+    }
+  }
   let creators = $state((e.creators || []).join(', '));
   let year = $state(e.year != null ? String(e.year) : '');
   let genres = $state((e.genres || []).join(', '));
@@ -75,6 +103,8 @@
         d.thumbnailBlob = null;
       }
       d.title = t;
+      const orig = originalTitle.trim();
+      d.originalTitle = orig && orig !== t ? orig : null;
       d.creators = splitList(creators);
       d.year = Number.isFinite(yearNum) ? yearNum : null;
       d.genres = splitList(genres);
@@ -113,6 +143,20 @@
     <Field label="Page / time" id="e-location" placeholder="e.g. p. 112 or 1:04:20" bind:value={location} />
   {:else}
     <Field label="Title" id="e-title" placeholder="Required" bind:value={title} autofocus />
+    {#if e.type !== 'book'}
+      <Field
+        label="Original title"
+        id="e-original"
+        placeholder="If it isn't in English"
+        bind:value={originalTitle}
+      />
+      {#if canLookUp}
+        <button type="button" class="edit-text-link" disabled={lookingUp} onclick={useEnglishTitle}
+          >{lookingUp ? 'Looking it up…' : 'Use the English title from TheTVDB'}</button
+        >
+      {/if}
+      {#if lookupNote}<p class="t-hint edit-note" role="status">{lookupNote}</p>{/if}
+    {/if}
     <Field
       label={e.type === 'book' ? 'Author(s)' : 'Director / Creator(s)'}
       id="e-creators"
@@ -153,3 +197,23 @@
     <button type="submit" class="btn btn-primary"><Icon name="check" /> Save changes</button>
   </div>
 </form>
+
+<style>
+  .edit-text-link {
+    display: block;
+    margin: calc(-1 * var(--space-2)) 0 1.25rem;
+    padding: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .edit-note {
+    margin: calc(-1 * var(--space-2)) 0 1.25rem;
+  }
+  .edit-text-link:hover:not(:disabled) {
+    color: var(--text-heading);
+  }
+</style>
