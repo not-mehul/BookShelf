@@ -1406,8 +1406,8 @@ img {
 .lib-tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  justify-content: center;
+  gap: var(--space-3);
+  justify-content: flex-start;
   margin-top: 0.25rem;
 }
 
