@@ -775,7 +775,10 @@ img {
   padding: 3px;
   border-radius: var(--corner-sm);
   cursor: pointer;
-  touch-action: manipulation;
+  /* Sideways drags rate; a vertical swipe still scrolls the page. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .rating-stars:focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -802,6 +805,65 @@ img {
   overflow: hidden;
   color: var(--accent-bright);
   transition: width var(--dur-hover) var(--ease-standard);
+}
+/* Sliding: the fill follows the finger on the fast spring, so each half step
+   glides rather than jumps. */
+.is-sliding .rating-star-fill,
+.rating-lens .rating-star-fill {
+  transition: width var(--spring-spatial-fast-dur) var(--spring-spatial-fast);
+}
+
+/* The magnified view while sliding (RatingControl): an opaque card in the top
+   layer above the stars, with the same stars at twice the size and the value. */
+.rating-lens {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--modal-bg);
+  border: 1px solid rgba(var(--accent-amber-rgb), 0.4);
+  border-radius: var(--corner-lg);
+  box-shadow: 0 12px 32px rgba(var(--shadow-rgb), calc(0.6 * var(--shadow-strength)));
+  color: var(--text-heading);
+  pointer-events: none;
+}
+.rating-lens:popover-open {
+  display: flex;
+  animation: lens-in var(--spring-spatial-fast-dur) var(--spring-spatial-fast);
+}
+@keyframes lens-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+}
+.rating-lens-stars {
+  display: inline-flex;
+  gap: 6px;
+}
+.rating-lens .rating-star,
+.rating-lens .rating-star svg {
+  width: 44px;
+  height: 44px;
+}
+.rating-lens .rating-stars-ten {
+  gap: 3px;
+}
+.rating-lens .rating-stars-ten .rating-star,
+.rating-lens .rating-stars-ten .rating-star svg {
+  width: 30px;
+  height: 30px;
+}
+.rating-lens-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--accent-bright);
+  font-variant-numeric: tabular-nums;
 }
 .rating-star-fill svg {
   fill: currentColor;
