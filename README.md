@@ -92,6 +92,7 @@ npm install
 npm run dev          # the app in a browser
 npm run check        # tokens, lint, typecheck, unit tests and build
 npm run sync         # build, then copy it into the Android project
+npm run android:apk  # a debug APK, in android/app/build/outputs/apk/debug/
 ```
 
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) covers the scripts, the Android app, the project structure, the APIs and the tests. [RELEASING.md](RELEASING.md) covers signing and releases.
