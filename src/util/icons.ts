@@ -26,6 +26,8 @@ export const icons = {
   star: () =>
     wrap('<path d="M12 2 14.9 8.6 22 9.3l-5.4 4.9 1.6 7.1L12 17.8 5.8 21.3l1.6-7.1L2 9.3l7.1-.7Z"/>'),
   bookmark: () => wrap('<path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'),
+  // Shelved books: the All tab (the same Lucide path as Colophon's).
+  library: () => wrap('<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>'),
   book: () =>
     wrap(
       '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
