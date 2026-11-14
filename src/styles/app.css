@@ -292,6 +292,29 @@ img {
   text-align: center;
 }
 
+/* The floating bar (FloatingBar.svelte): the library tabs, sliding down from
+   the top edge when the reader scrolls back up. */
+.floating-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: calc(var(--space-2) + var(--inset-top)) calc(1rem + var(--inset-right)) 0
+    calc(1rem + var(--inset-left));
+  background: var(--sheet-bg);
+  box-shadow: 0 8px 24px rgba(var(--shadow-rgb), calc(0.4 * var(--shadow-strength)));
+  transform: translateY(calc(-100% - 24px));
+  transition: transform var(--spring-spatial-default-dur) var(--spring-spatial-default);
+}
+.floating-bar.is-shown {
+  transform: none;
+}
+.floating-bar-inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
 /* Row 2 — tools */
 .lib-tools-row {
   display: flex;

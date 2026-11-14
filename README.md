@@ -13,7 +13,7 @@
 BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, track where you are, and see your year in review. It runs as an Android app and as an installable web app, and the library lives on your device.
 
 <p align="center">
-  <img src="docs/screenshots/library.webp" width="200" alt="The library: shelf count, type tabs with counts, Up next for a TV season and a quote from the shelf">
+  <img src="docs/screenshots/library.webp" width="200" alt="The library: shelf count, type tabs, Up next for a TV season and a quote from the shelf">
   <img src="docs/screenshots/entry.webp" width="200" alt="A book's page with its cover, author, genre and its place in a series">
   <img src="docs/screenshots/statistics.webp" width="200" alt="Statistics: the year in review with books and films finished per month">
   <img src="docs/screenshots/shelf-dawn.webp" width="200" alt="Library cards in the light Dawn theme with ratings, series and status">
