@@ -677,7 +677,7 @@ img {
 .modal-year {
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: var(--text-faint);
+  color: var(--text-dim);
   letter-spacing: 0.08em;
 }
 
@@ -708,7 +708,7 @@ img {
   font-size: 0.6rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text-dim);
   margin-bottom: 0.875rem;
 }
 .modal-summary {

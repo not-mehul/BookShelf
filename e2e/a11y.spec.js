@@ -21,6 +21,19 @@ const close = async (page) => {
 };
 
 async function axe(page) {
+  // Judge contrast once a modal has finished fading in: mid-entrance its dim
+  // text reads lower than it ever rests at. Endless loops (the idle cat) aren't waited on.
+  await page.evaluate(() =>
+    Promise.race([
+      Promise.all(
+        document
+          .getAnimations()
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished.catch(() => {}))
+      ),
+      new Promise((r) => setTimeout(r, 2000))
+    ])
+  );
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
