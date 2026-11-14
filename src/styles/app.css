@@ -1288,13 +1288,36 @@ img {
     border-color 0.15s,
     background 0.15s;
 }
-.add-result-row:hover {
+/* A row lights up only where a tap does something: the whole row in Select
+   several, and just the plus otherwise. */
+label.add-result-row:hover,
+.add-result-row:has(.add-result-add:hover) {
   border-color: rgba(var(--accent-amber-rgb), 0.5);
   background: var(--hover-bg);
 }
-.add-result-row:focus-visible {
+label.add-result-row:has(:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+/* The add button: a 44px target around the 32px ring. */
+.add-result-add {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px -6px 0;
+  border-radius: var(--corner-full);
+}
+.add-result-add:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+}
+.add-result-add:active .add-result-action {
+  transform: scale(var(--press-scale));
+}
+.add-result-add[aria-disabled='true'] {
+  cursor: default;
 }
 .add-result-row.is-in-library {
   opacity: 0.7;
@@ -1307,7 +1330,7 @@ img {
   opacity: 0.5;
   cursor: default;
 }
-.add-result-list[aria-busy='true'] .add-result-row:not(.is-adding):hover {
+.add-result-list[aria-busy='true'] .add-result-row:not(.is-adding):has(.add-result-add:hover) {
   border-color: var(--border-faint);
   background: var(--panel-bg-faint);
 }

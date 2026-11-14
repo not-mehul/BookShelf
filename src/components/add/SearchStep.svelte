@@ -278,7 +278,7 @@
       <div class="add-results-label">
         {selecting
           ? `${picked.size} of ${results.hits.length} picked`
-          : `${results.hits.length} ${PLURAL[type]} found — tap to add`}
+          : `${results.hits.length} ${PLURAL[type]} found`}
       </div>
       {#if selecting}
         <button type="button" class="add-select-toggle" disabled={addingMany} onclick={stopSelecting}
@@ -334,23 +334,25 @@
             </span>
           </label>
         {:else}
-          <button
-            type="button"
-            class="add-result-row"
-            class:is-in-library={existingId}
-            class:is-adding={addingIndex === i}
-            aria-disabled={busy}
-            onclick={() => add(hit, i)}
-          >
+          <!-- Only the plus adds: the rest of the row is there to read. -->
+          <div class="add-result-row" class:is-in-library={existingId} class:is-adding={addingIndex === i}>
             {@render face()}
-            <span class="add-result-action" class:is-in-library={existingId} aria-hidden="true">
-              {#if addingIndex === i}
-                <LoadingIndicator label="Adding" size={24} />
-              {:else}
-                <Icon name={existingId ? 'check' : 'plus'} />
-              {/if}
-            </span>
-          </button>
+            <button
+              type="button"
+              class="add-result-add"
+              aria-label={existingId ? `Open ${hit.title}` : `Add ${hit.title}`}
+              aria-disabled={busy}
+              onclick={() => add(hit, i)}
+            >
+              <span class="add-result-action" class:is-in-library={existingId} aria-hidden="true">
+                {#if addingIndex === i}
+                  <LoadingIndicator label="Adding" size={24} />
+                {:else}
+                  <Icon name={existingId ? 'check' : 'plus'} />
+                {/if}
+              </span>
+            </button>
+          </div>
         {/if}
       {/each}
     </div>
