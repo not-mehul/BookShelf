@@ -5,6 +5,8 @@
   import { isNativeShell } from '../../platform/native';
   import { localDate, seasonProgress, type SeasonState } from '../../util/episodes';
   import { markEpisodes } from '../../util/mark-episodes';
+  import { plural } from '../../util/labels';
+  import { ui } from '../../state/ui.svelte';
   import type { CatalogEntry } from '../../types';
   import Icon from '../Icon.svelte';
   import ReminderToggle from './ReminderToggle.svelte';
@@ -31,6 +33,31 @@
       )
     );
 
+  // Every aired season at once, for a show with more than one. Tapping it again
+  // once they are all watched clears them. Either way Undo puts the entry back
+  // exactly as it was, status and dates included.
+  const allWatched = $derived(p.aired > 0 && p.watched === p.aired);
+  async function markAll() {
+    const before = $state.snapshot(entry) as CatalogEntry;
+    const on = !allWatched;
+    const changed = on ? p.aired - p.watched : p.watched;
+    const ids = p.seasons.flatMap((s) => s.aired.map((ep) => ep.id));
+    await update((d) => markEpisodes(d, ids, on));
+    ui.notify(
+      on ? `Marked ${plural(changed, 'season')} watched.` : `Cleared ${plural(changed, 'watched season')}.`,
+      'info',
+      {
+        label: 'Undo',
+        run: () =>
+          void update((d) => {
+            for (const key of Object.keys(d))
+              if (!(key in before)) delete (d as unknown as Record<string, unknown>)[key];
+            Object.assign(d, structuredClone(before));
+          })
+      }
+    );
+  }
+
   function meta(s: SeasonState) {
     if (!s.aired.length) return s.firstAired ? `Airs ${fmt(s.firstAired)}` : 'Not aired yet';
     const n = s.episodes.length;
@@ -43,7 +70,21 @@
 </script>
 
 <div class="modal-section seasons-section">
-  <div class="modal-section-label">Seasons</div>
+  <div class="seasons-head">
+    <div class="modal-section-label">Seasons</div>
+    {#if p.aired > 1}
+      <button
+        type="button"
+        class="btn-icon seasons-all"
+        aria-pressed={allWatched}
+        aria-label="All seasons watched"
+        title={allWatched ? 'Clear every season' : 'Mark every season watched'}
+        onclick={markAll}
+      >
+        <Icon name="checkAll" />
+      </button>
+    {/if}
+  </div>
 
   <p class="seasons-summary">
     {p.watched} of {p.aired} season{p.aired === 1 ? '' : 's'} watched{p.next
@@ -81,6 +122,33 @@
 </div>
 
 <style>
+  .seasons-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: 0.875rem;
+  }
+  .seasons-head .modal-section-label {
+    margin: 0;
+  }
+  /* A 44px target that overhangs the label's line instead of making it taller. */
+  .seasons-all {
+    margin: -12px -10px -12px 0;
+    border: 1px solid var(--border);
+  }
+  .seasons-all :global(svg) {
+    width: 20px;
+    height: 20px;
+  }
+  .seasons-all:hover {
+    color: var(--text-heading);
+  }
+  .seasons-all[aria-pressed='true'] {
+    border-color: var(--accent-sage);
+    background: var(--accent-sage);
+    color: var(--on-accent);
+  }
   .seasons-summary {
     margin: 0 0 var(--space-3);
     color: var(--text-body);
