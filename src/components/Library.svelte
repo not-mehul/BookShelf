@@ -8,12 +8,14 @@
   import { ui } from '../state/ui.svelte';
   import { deleteEntries, restoreEntries } from '../util/bulk';
   import { messageOf } from '../util/errors';
-  import { plural, TYPE_ICON } from '../util/labels';
+  import { plural, TYPE_ICON, TYPE_NOUN } from '../util/labels';
   import { compareSeriesOrder, seriesSortKey } from '../util/series';
   import type { CatalogEntry, EntryType } from '../types';
   import EntryCard from './EntryCard.svelte';
   import Icon from './Icon.svelte';
-  import { TabRail } from 'dusk-dawn';
+  import { IconTabs } from 'dusk-dawn';
+  import type { Snippet } from 'svelte';
+  import FloatingBar from './FloatingBar.svelte';
   import ShelfLine from './ShelfLine.svelte';
   import UpNext from './UpNext.svelte';
   import { loadView, saveView } from '../util/view-prefs';
@@ -21,19 +23,14 @@
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
 
-  const TYPE_TABS: { id: TypeFilter; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'book', label: 'Books' },
-    { id: 'movie', label: 'Movies' },
-    { id: 'tv', label: 'TV' },
-    { id: 'quote', label: 'Quotes' }
+  // Icons only, the chosen tab opening to its word (style.md §8.5.2).
+  const TYPE_TABS: { id: TypeFilter; label: string; icon: Snippet }[] = [
+    { id: 'all', label: 'All', icon: allIcon },
+    { id: 'book', label: 'Books', icon: bookIcon },
+    { id: 'movie', label: 'Movies', icon: movieIcon },
+    { id: 'tv', label: 'TV', icon: tvIcon },
+    { id: 'quote', label: 'Quotes', icon: quoteIcon }
   ];
-  // Each type's count rides on its tab (the header counts the whole shelf).
-  const tabsWithCounts = $derived.by(() => {
-    const c: Record<string, number> = {};
-    for (const e of shelf.entries) c[e.type] = (c[e.type] || 0) + 1;
-    return TYPE_TABS.map((t) => (t.id === 'all' || !c[t.id] ? t : { ...t, badge: c[t.id] }));
-  });
   const SORT_OPTS: { value: SortKey; label: string }[] = [
     { value: 'dateAdded', label: 'Recent' },
     { value: 'rating', label: 'Rating' },
@@ -63,6 +60,7 @@
   let sort = $state<SortKey>(saved.sort && saved.sort in SORTERS ? (saved.sort as SortKey) : 'dateAdded');
   $effect(() => saveView({ type, sort }));
   let filterInput = $state<HTMLInputElement>();
+  let typesRow = $state<HTMLElement>();
   let query = $state('');
   let tag = $state<string | null>(null);
 
@@ -92,6 +90,17 @@
       );
     }
     return [...list].sort(SORTERS[sort]);
+  });
+  // The count of what the tab shows sits once, under the tabs (and in Stats),
+  // not on every tab.
+  const typeTotal = $derived(
+    type === 'all' ? shelf.entries.length : shelf.entries.filter((e) => e.type === type).length
+  );
+  const countLine = $derived.by(() => {
+    if (!shelf.entries.length) return '';
+    const [one, many] = type === 'all' ? ['entry', 'entries'] : [TYPE_NOUN[type], `${TYPE_NOUN[type]}s`];
+    const total = plural(typeTotal, one, many);
+    return visible.length === typeTotal ? total : `${visible.length} of ${total}`;
   });
 
   // ── Selection mode ────────────────────────────────────────────
@@ -184,15 +193,19 @@
   }}
 />
 
+{#snippet allIcon()}<Icon name="library" />{/snippet}
+{#snippet bookIcon()}<Icon name={TYPE_ICON.book} />{/snippet}
+{#snippet movieIcon()}<Icon name={TYPE_ICON.movie} />{/snippet}
+{#snippet tvIcon()}<Icon name={TYPE_ICON.tv} />{/snippet}
+{#snippet quoteIcon()}<Icon name={TYPE_ICON.quote} />{/snippet}
+
+<FloatingBar tabs={TYPE_TABS} value={type} onselect={(id) => (type = id)} anchor={typesRow} />
+
 <div class="lib-header">
-  <div class="lib-types-row">
-    <TabRail tabs={tabsWithCounts} value={type} label="Show" onselect={(id) => (type = id)} />
-    <!-- The header already counts the whole shelf; this counts what a filter leaves. -->
-    <div class="lib-count">
-      {visible.length && visible.length !== shelf.entries.length
-        ? plural(visible.length, 'entry', 'entries')
-        : ''}
-    </div>
+  <div class="lib-types-row" bind:this={typesRow}>
+    <IconTabs tabs={TYPE_TABS} value={type} label="Show" labels="selected" onselect={(id) => (type = id)} />
+    <!-- What the tab shows, and what a filter or tag leaves of it. -->
+    <div class="lib-count">{countLine}</div>
   </div>
 
   <div class="lib-tools-row">
