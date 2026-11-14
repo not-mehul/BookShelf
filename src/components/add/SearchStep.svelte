@@ -1,6 +1,7 @@
 <script lang="ts">
   import { LoadingIndicator } from 'dusk-dawn';
   import { untrack } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import { searchBooks } from '../../api/books';
   import { looksLikeIsbn, searchOpenLibrary } from '../../api/openlibrary';
   import { isTvdbConfigured, searchTvdb } from '../../api/tvdb';
@@ -8,8 +9,9 @@
   import { shelf } from '../../state/shelf.svelte';
   import { ui, type AddSeed } from '../../state/ui.svelte';
   import { canScanBarcodes, scanBarcode } from '../../util/barcode';
+  import { deleteEntries } from '../../util/bulk';
   import { messageOf } from '../../util/errors';
-  import { TYPE_ICON, TYPE_NOUN } from '../../util/labels';
+  import { plural, TYPE_ICON, TYPE_NOUN } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
   import { parseSeriesFromTitle } from '../../util/series';
   import { fetchThumbBlob } from '../../util/thumbs';
@@ -76,6 +78,7 @@
     const stale = () => mine !== seq || !alive;
     const q = query.trim();
     results = { state: 'idle' };
+    picked.clear();
     if (!q) {
       input.focus();
       return;
@@ -124,12 +127,21 @@
     return { status: seed.status, ...(progress ? { progress } : {}) };
   }
 
-  async function add(hit: SearchHit) {
+  // One add at a time. A tapped result shows the loading indicator in place of
+  // its plus while its cover downloads, and every row waits, so quick repeat
+  // taps can't save it twice.
+  let addingIndex = $state<number | null>(null);
+  let addingMany = $state(false);
+  const busy = $derived(addingIndex !== null || addingMany);
+
+  // Several at once: Select several turns the rows into checkboxes.
+  let selecting = $state(false);
+  const picked = new SvelteSet<number>();
+
+  /** The entry for a result: the one already on the shelf, or a new one, saved. */
+  async function entryFor(hit: SearchHit, withSeed: boolean): Promise<{ id: string; created: boolean }> {
     const existing = await findBySource(hit.type, hit.sourceId);
-    if (existing) {
-      ui.openEntry(existing.id);
-      return;
-    }
+    if (existing) return { id: existing.id, created: false };
     const entry = newEntry(hit.type, {
       sourceId: hit.sourceId != null ? String(hit.sourceId) : null,
       title: hit.title,
@@ -144,11 +156,59 @@
       series: parseSeriesFromTitle(hit.title),
       thumbnailUrl: hit.thumbnailUrl || null,
       thumbnailBlob: await fetchThumbBlob(hit.thumbnailUrl),
-      ...seeded(hit)
+      ...(withSeed ? seeded(hit) : {})
     });
     await saveEntry(entry);
-    shelf.changed();
-    ui.openEntry(entry.id);
+    return { id: entry.id, created: true };
+  }
+
+  async function add(hit: SearchHit, i: number) {
+    if (busy) return;
+    addingIndex = i;
+    try {
+      const { id } = await entryFor(hit, true);
+      shelf.changed();
+      ui.openEntry(id);
+    } catch (err) {
+      ui.notify(`Couldn't add it: ${messageOf(err)}`, 'error');
+      addingIndex = null;
+    }
+  }
+
+  function startSelecting() {
+    picked.clear();
+    selecting = true;
+  }
+
+  function stopSelecting() {
+    picked.clear();
+    selecting = false;
+  }
+
+  /** Adds every picked result, closes the search and offers it all back. */
+  async function addPicked() {
+    if (busy || !picked.size || results.state !== 'done') return;
+    const hits = results.hits;
+    const chosen = [...picked].sort((a, b) => a - b).map((i) => hits[i]!.hit);
+    addingMany = true;
+    try {
+      const done = await Promise.all(chosen.map((hit) => entryFor(hit, false)));
+      const created = done.filter((d) => d.created).map((d) => d.id);
+      shelf.changed();
+      ui.close();
+      ui.notify(`Added ${plural(created.length, TYPE_NOUN[type], PLURAL[type])}.`, 'success', {
+        label: 'Undo',
+        run: () =>
+          void deleteEntries(created).then(
+            () => shelf.changed(),
+            (err: unknown) => ui.notify(`Couldn't remove them: ${messageOf(err)}`, 'error')
+          )
+      });
+    } catch (err) {
+      ui.notify(`Couldn't add them all: ${messageOf(err)}`, 'error');
+      shelf.changed();
+      addingMany = false;
+    }
   }
 </script>
 
@@ -213,15 +273,30 @@
       <button type="button" class="btn btn-primary" onclick={onmanual}>Enter manually</button>
     </div>
   {:else if results.state === 'done'}
-    <div class="add-results-label">{results.hits.length} {PLURAL[type]} found — tap to add</div>
-    <div class="add-result-list">
-      {#each results.hits as { hit, existingId }, i (i)}
-        <button
-          type="button"
-          class="add-result-row"
-          class:is-in-library={existingId}
-          onclick={() => add(hit)}
+    {@const addable = results.hits.filter((h) => !h.existingId).length}
+    <div class="add-results-head">
+      <div class="add-results-label">
+        {selecting
+          ? `${picked.size} of ${results.hits.length} picked`
+          : `${results.hits.length} ${PLURAL[type]} found — tap to add`}
+      </div>
+      {#if selecting}
+        <button type="button" class="add-select-toggle" disabled={addingMany} onclick={stopSelecting}
+          >Cancel</button
         >
+      {:else if addable > 1}
+        <button type="button" class="add-select-toggle" disabled={busy} onclick={startSelecting}
+          >Select several</button
+        >
+      {/if}
+    </div>
+    <!-- Says what is happening while a cover downloads, for screen readers. -->
+    <span class="visually-hidden" role="status"
+      >{addingIndex !== null ? `Adding ${results.hits[addingIndex]?.hit.title}` : ''}</span
+    >
+    <div class="add-result-list" aria-busy={busy}>
+      {#each results.hits as { hit, existingId }, i (i)}
+        {#snippet face()}
           <div class="add-result-thumb">
             <CoverImage src={hit.thumbnailUrl}>
               {#snippet fallback()}
@@ -240,12 +315,68 @@
               </div>
             {/if}
           </div>
-          <span class="add-result-action" class:is-in-library={existingId} aria-hidden="true">
-            <Icon name={existingId ? 'check' : 'plus'} />
-          </span>
-        </button>
+        {/snippet}
+        {#if selecting}
+          <label class="add-result-row" class:is-in-library={existingId} class:is-picked={picked.has(i)}>
+            {@render face()}
+            <span class="add-result-action add-result-pick">
+              {#if existingId}
+                <Icon name="check" /><span class="visually-hidden">Already on the shelf</span>
+              {:else}
+                <input
+                  type="checkbox"
+                  class="check"
+                  checked={picked.has(i)}
+                  disabled={addingMany}
+                  onchange={(ev) => (ev.currentTarget.checked ? picked.add(i) : picked.delete(i))}
+                />
+              {/if}
+            </span>
+          </label>
+        {:else}
+          <button
+            type="button"
+            class="add-result-row"
+            class:is-in-library={existingId}
+            class:is-adding={addingIndex === i}
+            aria-disabled={busy}
+            onclick={() => add(hit, i)}
+          >
+            {@render face()}
+            <span class="add-result-action" class:is-in-library={existingId} aria-hidden="true">
+              {#if addingIndex === i}
+                <LoadingIndicator label="Adding" size={24} />
+              {:else}
+                <Icon name={existingId ? 'check' : 'plus'} />
+              {/if}
+            </span>
+          </button>
+        {/if}
       {/each}
     </div>
+    {#if selecting}
+      <div class="add-picked-bar">
+        <button
+          type="button"
+          class="btn btn-primary"
+          disabled={!picked.size || addingMany}
+          onclick={addPicked}
+        >
+          {#if addingMany}
+            <LoadingIndicator label="Adding" size={20} /> Adding {plural(
+              picked.size,
+              TYPE_NOUN[type],
+              PLURAL[type]
+            )}…
+          {:else}
+            <Icon name="plus" />
+            {picked.size
+              ? `Add ${plural(picked.size, TYPE_NOUN[type], PLURAL[type])}`
+              : `Add ${PLURAL[type]}`}
+          {/if}
+        </button>
+      </div>
+    {/if}
   {/if}
 </div>
 
