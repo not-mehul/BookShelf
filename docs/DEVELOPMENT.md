@@ -42,6 +42,9 @@ npm run lint         # ESLint
 npm run format       # Prettier (write)
 npm run check        # tokens + lint + typecheck + test + build (what CI runs on each push)
 npm run sync         # build, then copy it into the Android project (cap sync android)
+npm run android      # sync, then open Android Studio
+npm run android:apk  # sync, then a debug APK (android/app/build/outputs/apk/debug/)
+npm run android:run  # sync, then install and run on a connected phone
 ```
 
 Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vite 8
