@@ -24,26 +24,40 @@
 </script>
 
 <div class="status-picker" role="radiogroup" aria-label="Status">
-  {#each OPTIONS as opt (opt.status)}
-    <button
-      type="button"
-      role="radio"
-      class="status-option is-{opt.status}"
-      aria-checked={value === opt.status}
-      aria-label={opt.status === 'abandoned' ? STATUS_LABEL.abandoned : undefined}
-      onclick={() => onchange(value === opt.status ? null : opt.status)}
-    >
-      <Icon name={opt.icon} />
-      <span class="status-option-label">{opt.label}</span>
-    </button>
-  {/each}
+  <div class="status-grid">
+    {#each OPTIONS as opt (opt.status)}
+      <button
+        type="button"
+        role="radio"
+        class="status-option is-{opt.status}"
+        aria-checked={value === opt.status}
+        aria-label={opt.status === 'abandoned' ? STATUS_LABEL.abandoned : undefined}
+        onclick={() => onchange(value === opt.status ? null : opt.status)}
+      >
+        <Icon name={opt.icon} />
+        <span class="status-option-label">{opt.label}</span>
+      </button>
+    {/each}
+  </div>
 </div>
 
 <style>
+  /* Four equal buttons across the row when every word fits whole, else two by
+     two: the switch point is in rem, so it moves with the phone's text size. */
   .status-picker {
+    container: status / inline-size;
+  }
+  .status-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-2);
+  }
+  /* Four buttons of COMPLETED (9 letters at 0.45rem each, 12px of padding)
+     and three gaps. */
+  @container status (max-width: calc(16.2rem + 72px)) {
+    .status-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
   .status-option {
     --tone-rgb: var(--cream-rgb);
@@ -51,8 +65,9 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    min-width: 0;
     min-height: 64px;
-    padding: var(--space-3) var(--space-2);
+    padding: var(--space-3) 6px;
     border: 1px solid var(--border-soft);
     border-radius: var(--corner-md);
     background: var(--panel-bg-faint);
@@ -91,9 +106,11 @@
     opacity: 1;
   }
   .status-option-label {
+    max-width: 100%;
     font-family: var(--font-mono);
     font-size: 0.625rem;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 </style>
