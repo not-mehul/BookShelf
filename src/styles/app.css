@@ -1151,13 +1151,37 @@ img {
 .add-results-zone {
   padding: 0.5rem 2rem 0.5rem;
 }
+.add-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  margin: 0.25rem 0 0.375rem;
+}
 .add-results-label {
   font-family: var(--font-mono);
   font-size: 0.6rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin: 0.75rem 0 0.875rem;
+  margin: 0.5rem 0;
+}
+/* Select several / Cancel: a quiet text button with a 44px target. */
+.add-select-toggle {
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+}
+.add-select-toggle:hover {
+  color: var(--accent-bright);
+}
+.add-select-toggle:disabled {
+  color: var(--text-faint);
 }
 
 .add-result-list {
@@ -1189,6 +1213,21 @@ img {
 }
 .add-result-row.is-in-library {
   opacity: 0.7;
+}
+.add-result-row.is-picked {
+  border-color: rgba(var(--accent-amber-rgb), 0.6);
+}
+/* While one result is being added, the others wait. */
+.add-result-list[aria-busy='true'] .add-result-row:not(.is-adding) {
+  opacity: 0.5;
+  cursor: default;
+}
+.add-result-list[aria-busy='true'] .add-result-row:not(.is-adding):hover {
+  border-color: var(--border-faint);
+  background: var(--panel-bg-faint);
+}
+label.add-result-row {
+  cursor: pointer;
 }
 
 .add-result-thumb {
@@ -1270,6 +1309,25 @@ img {
 .add-result-action.is-in-library {
   color: var(--accent-sage);
   border-color: rgba(var(--accent-sage-rgb), 0.4);
+}
+.add-result-row.is-adding .add-result-action {
+  border-color: transparent;
+}
+/* In Select several the plus becomes a drawn checkbox (dusk-dawn .check). */
+.add-result-pick {
+  border-color: transparent;
+}
+.add-result-row.is-in-library .add-result-pick {
+  color: var(--accent-sage);
+}
+/* Add N books: stays in reach at the foot of the results as they scroll. */
+.add-picked-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) 0 var(--space-1);
+  background: linear-gradient(transparent, var(--modal-bg) 35%);
 }
 
 /* Manual-entry escape hatch */
