@@ -55,16 +55,22 @@ test('a tapped result shows it is loading, and quick repeat taps add it once', a
   const covers = await stubSearch(page);
   await searchBooksFor(page, 'dune');
   const dune = page.locator('.add-result-row', { hasText: 'Dune' }).first();
-  const messiah = page.locator('.add-result-row', { hasText: 'Dune Messiah' });
+  const addDune = page.getByRole('button', { name: 'Add Dune', exact: true });
+  const addMessiah = page.getByRole('button', { name: 'Add Dune Messiah' });
 
-  await dune.click();
+  // Only the plus adds: a tap on the rest of the row does nothing.
+  await dune.locator('.add-result-title').click();
+  await expect(page.locator('.add-result-list')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('[role=progressbar]')).toHaveCount(0);
+
+  await addDune.click();
   await expect(dune.locator('[role=progressbar]')).toBeVisible();
   await expect(page.getByRole('status').filter({ hasText: 'Adding Dune' })).toHaveCount(1);
   await expect(page.locator('.add-result-list')).toHaveAttribute('aria-busy', 'true');
   // More taps, on it and on another result, while its cover is still on the way.
-  await dune.click({ force: true });
-  await dune.click({ force: true });
-  await messiah.click({ force: true });
+  await addDune.click({ force: true });
+  await addDune.click({ force: true });
+  await addMessiah.click({ force: true });
 
   covers.release();
   // The new entry opens (its rating, not the search results).
@@ -107,7 +113,7 @@ test('a result already on the shelf cannot be picked again, and Cancel leaves se
   const covers = await stubSearch(page);
   covers.release();
   await searchBooksFor(page, 'dune');
-  await page.locator('.add-result-row', { hasText: 'Dune Messiah' }).click();
+  await page.getByRole('button', { name: 'Add Dune Messiah' }).click();
   await expect(page.locator('dialog[open]').getByRole('slider', { name: 'Rating' })).toBeVisible();
   await page.keyboard.press('Escape');
 
@@ -119,4 +125,7 @@ test('a result already on the shelf cannot be picked again, and Cancel leaves se
   await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('checkbox')).toHaveCount(0);
   await expect(page.locator('.add-results-label')).toContainText('3 books found');
+  // The one already on the shelf is a tick that opens it.
+  await page.getByRole('button', { name: 'Open Dune Messiah' }).click();
+  await expect(page.locator('dialog[open]').getByRole('slider', { name: 'Rating' })).toBeVisible();
 });
