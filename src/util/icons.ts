@@ -48,6 +48,8 @@ export const icons = {
   chevronRight: () => wrap('<path d="m9 18 6-6-6-6"/>'),
   arrowLeft: () => wrap('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
   check: () => wrap('<path d="M20 6 9 17l-5-5"/>'),
+  // Every season watched at once (Lucide check-check).
+  checkAll: () => wrap('<path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/>'),
   edit: () => wrap('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
   share: () =>
     wrap(
