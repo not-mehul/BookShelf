@@ -55,7 +55,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Encrypted sync** (Android): end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
 - **A home-screen widget** (Android): shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
-- **Links from the other apps.** Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
+- **Links from the other apps.** Rosetta and the other apps open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
 - **Themes.** System, Dusk (dark) or Dawn (light).
 
 ## Private by design
@@ -71,17 +71,15 @@ Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if you
 
 ## The Dusk & Dawn apps
 
-BookShelf is one of seven apps by Mehul Sen that share one design system, [Editorial Dusk & Dawn](https://github.com/not-mehul/dusk-dawn), and a common link scheme, so they can hand things to each other.
+BookShelf is one of five apps by Mehul Sen that share one design system, [Editorial Dusk & Dawn](https://github.com/not-mehul/dusk-dawn), and a common link scheme, so they can hand things to each other.
 
 | App                                                 | What it is for                                                            |
 | --------------------------------------------------- | ------------------------------------------------------------------------- |
 | [Waymark](https://github.com/not-mehul/Waymark)     | Your whole trip, offline: flights, stays, plans and costs on one timeline |
 | [BookShelf](https://github.com/not-mehul/BookShelf) | Books, films, shows and the lines worth keeping                           |
 | [Ledger](https://github.com/not-mehul/Ledger)       | A record of cities, scored on what matters to you                         |
-| [Colophon](https://github.com/not-mehul/Colophon)   | Inspect, fix and rebind EPUB editions                                     |
 | [Rosetta](https://github.com/not-mehul/Rosetta)     | A quiet library and reader for books, papers and notes                    |
 | [Mise](https://github.com/not-mehul/Mise)           | Recipes from anywhere, cooked one step at a time                          |
-| [Nookling](https://github.com/not-mehul/Nookling)   | A small round friend to feed, play with and put to bed                    |
 
 ## Build from source
 
