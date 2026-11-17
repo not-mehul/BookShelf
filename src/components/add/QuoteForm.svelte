@@ -15,10 +15,12 @@
     prefill?: SharePrefill;
     /** Pre-link the quote to this entry. */
     linkedEntryId?: string;
+    /** From another app's link: where the quote is, and the reader's note on it. */
+    extra?: { location?: string; notes?: string };
     onback: () => void;
   }
 
-  let { prefill, linkedEntryId, onback }: Props = $props();
+  let { prefill, linkedEntryId, extra, onback }: Props = $props();
 
   // Link to a book / film / show on the shelf: the one asked for, or the
   // shared source if it matches exactly one title. Fills author and source.
@@ -32,7 +34,7 @@
   let text = $state(untrack(() => prefill?.quoteText || ''));
   let author = $state(untrack(() => prefill?.author || initial?.creators?.[0] || ''));
   let source = $state(untrack(() => prefill?.source || initial?.title || ''));
-  let location = $state('');
+  let location = $state(untrack(() => extra?.location || ''));
   let linked = $state<string | null>(initial?.id ?? null);
   let saving = $state(false);
 
@@ -50,7 +52,8 @@
       creators: author.trim() ? [author.trim()] : [],
       source: source.trim(),
       linkedEntryId: linked,
-      location: location.trim()
+      location: location.trim(),
+      ...(extra?.notes?.trim() ? { notes: extra.notes.trim() } : {})
     });
     await saveEntry(entry);
     shelf.changed();

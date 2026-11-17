@@ -41,6 +41,7 @@
     <QuoteForm
       prefill={options.prefill}
       linkedEntryId={options.linkedEntryId}
+      extra={options.quote}
       onback={() => go({ name: 'pick' })}
     />
   {:else if step.name === 'search'}

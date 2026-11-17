@@ -115,6 +115,31 @@ test('a bookshelf:// link from another app opens a book search', async ({ page }
   await expect.poll(async () => (await sent(page)).some((m) => m.type === 'http')).toBe(true);
 });
 
+test('a bookshelf://quote link from Rosetta fills in the quote form, and saves it as a quote', async ({
+  page
+}) => {
+  await boot(page, {
+    pendingEvents: [
+      [
+        'link',
+        {
+          url: 'bookshelf://quote?text=Call+me+Ishmael.&title=Moby-Dick&author=Herman+Melville&where=Loomings&note=The+opening.&source=rosetta'
+        }
+      ]
+    ]
+  });
+  await expect(page.locator('dialog[open] #modal-title')).toHaveText('Add a quote');
+  await expect(page.locator('#q-text')).toHaveValue('Call me Ishmael.');
+  await expect(page.locator('#q-author')).toHaveValue('Herman Melville');
+  await expect(page.locator('#q-source')).toHaveValue('Moby-Dick');
+  await expect(page.locator('#q-location')).toHaveValue('Loomings');
+  await page.getByRole('button', { name: 'Add quote' }).click();
+  await expect(page.locator('dialog[open]')).toContainText('Call me Ishmael.');
+  await expect(page.locator('dialog[open]').getByRole('textbox', { name: 'Notes' })).toHaveValue(
+    'The opening.'
+  );
+});
+
 test('a bookshelf://open link just opens the shelf', async ({ page }) => {
   await boot(page);
   await page.evaluate(() => window.__nativeEmit('link', { url: 'bookshelf://open?source=ledger' }));
