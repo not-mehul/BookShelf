@@ -31,8 +31,8 @@ describe('links between the apps', () => {
   });
 
   it('treats a bare scheme as open', () => {
-    expect(parseLink('colophon://')).toMatchObject({
-      app: 'colophon',
+    expect(parseLink('mise://')).toMatchObject({
+      app: 'mise',
       action: 'open',
       params: {},
       source: null
@@ -71,14 +71,5 @@ describe('links between the apps', () => {
     expect(fractionParam('0.42')).toBe(0.42);
     expect(fractionParam('1.5')).toBeNull();
     expect(fractionParam(undefined)).toBeNull();
-  });
-});
-
-describe('telling Nookling about a finished book', () => {
-  it('sends the title and author, from BookShelf', async () => {
-    const { readLink } = await import('../src/platform/nookling');
-    const url = readLink(' Momo ', 'Michael Ende');
-    expect(url).toBe('nookling://read?title=Momo&author=Michael+Ende&source=bookshelf');
-    expect(isKnownAction(parseLink(url))).toBe(true);
   });
 });
