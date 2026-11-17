@@ -5,9 +5,11 @@ import type { EntryStatus, EntryType } from '../types';
 
 /** What a link from another app knows about the book (style.md §14.1). */
 export interface AddSeed {
-  status: EntryStatus;
+  status?: EntryStatus;
   /** 0–1 through the book; becomes pages read once the edition's page count is known. */
   progress?: number;
+  /** The sender's note on the book, for the entry's notes. */
+  notes?: string;
 }
 
 export interface AddOptions {
@@ -18,6 +20,8 @@ export interface AddOptions {
   searchType?: Exclude<EntryType, 'quote'>;
   /** Pre-link a new quote to this entry. */
   linkedEntryId?: string;
+  /** A quote from another app: where in the work it is ("Chapter 3", "p. 112"), and the reader's note on it. */
+  quote?: { location?: string; notes?: string };
   /** Status (and progress) for the entry the search adds. */
   seed?: AddSeed;
 }

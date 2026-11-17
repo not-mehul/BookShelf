@@ -55,7 +55,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Encrypted sync** (Android): end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
 - **A home-screen widget** (Android): shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
-- **Links from the other apps.** Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick. `bookshelf://open` just opens it.
+- **Links from the other apps.** Rosetta, Colophon and the rest open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
 - **Themes.** System, Dusk (dark) or Dawn (light).
 
 ## Private by design

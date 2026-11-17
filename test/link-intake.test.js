@@ -49,3 +49,40 @@ describe('readBookShelfLink', () => {
     expect(readBookShelfLink('rosetta://open?id=1')).toBeNull();
   });
 });
+
+describe('quotes from another app', () => {
+  it('opens the quote form filled in, with where it is and the note', () => {
+    const intake = readBookShelfLink(
+      'bookshelf://quote?text=Call+me+Ishmael.&title=Moby-Dick&author=Herman+Melville&where=Loomings&note=The+opening.&source=rosetta'
+    );
+    expect(intake).toEqual({
+      kind: 'add',
+      options: {
+        startWith: 'quote',
+        prefill: {
+          quoteText: 'Call me Ishmael.',
+          author: 'Herman Melville',
+          source: 'Moby-Dick',
+          query: '',
+          link: null
+        },
+        quote: { location: 'Loomings', notes: 'The opening.' }
+      }
+    });
+  });
+
+  it('needs the words of the quote, and keeps them to a sane length', () => {
+    expect(readBookShelfLink('bookshelf://quote?title=Moby-Dick')).toEqual({ kind: 'open' });
+    const long = readBookShelfLink(`bookshelf://quote?text=${'a'.repeat(5000)}`);
+    expect(long.options.prefill.quoteText).toHaveLength(4000);
+    expect(long.options.quote).toBeUndefined();
+  });
+
+  it('carries a note on the book with a log', () => {
+    const intake = readBookShelfLink('bookshelf://log?title=Dune&finished=2026-11-01&note=Spice.');
+    expect(intake.options.seed).toEqual({ status: 'finished', notes: 'Spice.' });
+    expect(readBookShelfLink('bookshelf://log?title=Dune&note=Spice.').options.seed).toEqual({
+      notes: 'Spice.'
+    });
+  });
+});

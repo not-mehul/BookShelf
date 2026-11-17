@@ -124,7 +124,11 @@
     const total = hit.pageCount || 0;
     const progress =
       seed.progress !== undefined && total ? { current: Math.round(seed.progress * total), total } : null;
-    return { status: seed.status, ...(progress ? { progress } : {}) };
+    return {
+      ...(seed.status ? { status: seed.status } : {}),
+      ...(progress ? { progress } : {}),
+      ...(seed.notes ? { notes: seed.notes } : {})
+    };
   }
 
   // One add at a time. A tapped result shows the loading indicator in place of
