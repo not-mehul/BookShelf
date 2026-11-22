@@ -2,7 +2,7 @@
   // Wishlist, under way, done or put down: four icon toggles side by side, one at a
   // time, each in its status colour (the status chip's: cream, amber, sage).
   // Tapping the lit one again clears the status.
-  import { STATUS_LABEL } from '../../util/status';
+  import { statusLabel } from '../../util/status';
   import type { EntryStatus, EntryType } from '../../types';
   import Icon from '../Icon.svelte';
 
@@ -14,13 +14,16 @@
 
   let { value, type, onchange }: Props = $props();
 
-  const verb = $derived(type === 'book' ? 'Reading' : 'Watching');
-  const OPTIONS = $derived([
-    { status: 'want' as const, icon: 'bookmark' as const, label: STATUS_LABEL.want },
-    { status: 'in-progress' as const, icon: 'progress' as const, label: verb },
-    { status: 'finished' as const, icon: 'check' as const, label: STATUS_LABEL.finished },
-    { status: 'abandoned' as const, icon: 'stop' as const, label: 'Stopped' }
-  ]);
+  const OPTIONS = $derived(
+    (
+      [
+        ['want', 'bookmark'],
+        ['in-progress', 'progress'],
+        ['finished', 'check'],
+        ['abandoned', 'stop']
+      ] as const
+    ).map(([status, icon]) => ({ status, icon, label: statusLabel(status, type) }))
+  );
 </script>
 
 <div class="status-picker" role="radiogroup" aria-label="Status">
@@ -31,7 +34,6 @@
         role="radio"
         class="status-option is-{opt.status}"
         aria-checked={value === opt.status}
-        aria-label={opt.status === 'abandoned' ? STATUS_LABEL.abandoned : undefined}
         onclick={() => onchange(value === opt.status ? null : opt.status)}
       >
         <Icon name={opt.icon} />
@@ -52,9 +54,9 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-2);
   }
-  /* Four buttons of COMPLETED (9 letters at 0.45rem each, 12px of padding)
-     and three gaps. */
-  @container status (max-width: calc(16.2rem + 72px)) {
+  /* Four buttons of the longest word, WATCHING or FINISHED (8 letters at
+     0.45rem each, 12px of padding), and three gaps. "Did not finish" wraps. */
+  @container status (max-width: calc(14.4rem + 72px)) {
     .status-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -64,7 +66,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     min-width: 0;
     min-height: 64px;
     padding: var(--space-3) 6px;
@@ -110,7 +112,8 @@
     font-family: var(--font-mono);
     font-size: 0.625rem;
     letter-spacing: 0.12em;
+    line-height: 1.35;
+    text-align: center;
     text-transform: uppercase;
-    white-space: nowrap;
   }
 </style>

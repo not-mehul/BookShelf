@@ -47,7 +47,7 @@
           >
             <span class="series-pos">{m.series?.position != null ? `#${m.series.position}` : '—'}</span>
             <span class="series-title">{m.title}</span>
-            <span class="series-status">{isThis ? 'this one' : statusLabel(m.status)}</span>
+            <span class="series-status">{isThis ? 'this one' : statusLabel(m.status, m.type)}</span>
           </button>
         </li>
       {/each}

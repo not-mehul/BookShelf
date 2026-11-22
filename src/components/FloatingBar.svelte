@@ -1,6 +1,8 @@
 <script lang="ts" generics="V extends string">
   import { IconTabs } from 'dusk-dawn';
   import type { ComponentProps } from 'svelte';
+  import { ui } from '../state/ui.svelte';
+  import Icon from './Icon.svelte';
 
   // The library's tabs, floated in at the top once the page's own tabs have
   // scrolled away and the reader scrolls back up a little; it slides away again
@@ -66,6 +68,55 @@
 
 <div class="floating-bar" class:is-shown={shown} inert={!shown} aria-hidden={!shown}>
   <div class="floating-bar-inner">
+    <!-- The page header, collapsed: the name (back to the top) and Settings. -->
+    <div class="floating-bar-head">
+      <button
+        type="button"
+        class="floating-bar-name"
+        onclick={() =>
+          window.scrollTo({
+            top: 0,
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+          })}
+      >
+        Book<em>Shelf</em><span class="visually-hidden">, back to the top</span>
+      </button>
+      <button
+        type="button"
+        class="btn-icon"
+        aria-label="Settings"
+        title="Settings"
+        onclick={() => ui.open({ kind: 'settings' })}
+      >
+        <Icon name="settings" />
+      </button>
+    </div>
     <IconTabs {tabs} {value} label="Show" labels="selected" onselect={choose} />
   </div>
 </div>
+
+<style>
+  .floating-bar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 44px;
+  }
+  .floating-bar-name {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--text-heading);
+    cursor: pointer;
+  }
+  .floating-bar-name em {
+    font-style: italic;
+    color: var(--accent-amber);
+  }
+</style>

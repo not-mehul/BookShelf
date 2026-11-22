@@ -138,9 +138,9 @@
     />
     <div class="modal-two-col">
       <Field label="Author" id="e-author" placeholder="e.g. George Orwell" bind:value={author} />
-      <Field label="Source / Work" id="e-source" placeholder="e.g. 1984" bind:value={source} />
+      <Field label="From" id="e-source" placeholder="e.g. 1984" bind:value={source} />
     </div>
-    <Field label="Page / time" id="e-location" placeholder="e.g. p. 112 or 1:04:20" bind:value={location} />
+    <Field label="Where in it" id="e-location" placeholder="e.g. p. 112 or 1:04:20" bind:value={location} />
   {:else}
     <Field label="Title" id="e-title" placeholder="Required" bind:value={title} autofocus />
     {#if e.type !== 'book'}
@@ -172,7 +172,7 @@
         inputmode="numeric"
         bind:value={year}
       />
-      <Field label="Genres / Tags" id="e-genres" placeholder="Comma-separated" bind:value={genres} />
+      <Field label="Genres" id="e-genres" placeholder="Comma-separated" bind:value={genres} />
     </div>
     <div class="modal-two-col">
       <Field label="Series" id="e-series" placeholder="e.g. The Expanse" bind:value={seriesName} />

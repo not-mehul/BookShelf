@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { shelf } from '../../state/shelf.svelte';
+  import { shelfSpelling, uniqueTags } from '../../util/tags';
   import Icon from '../Icon.svelte';
 
   interface Props {
@@ -11,7 +13,7 @@
 </script>
 
 <div class="modal-section">
-  <div class="modal-section-label">Tags / Collections</div>
+  <div class="modal-section-label">Tags</div>
   <div class="tag-chip-row">
     {#each tags as tag (tag)}
       <span class="tag-chip"
@@ -36,7 +38,8 @@
       const val = draft.trim().replace(/,$/, '').trim();
       if (!val) return;
       draft = '';
-      onchange([...new Set([...tags, val])]);
+      // Written as the shelf already writes it, and never twice in any case.
+      onchange(uniqueTags([...tags, shelfSpelling(val, shelf.tags)]));
     }}
   />
 </div>

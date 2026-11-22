@@ -284,7 +284,7 @@ export function matchKeys(e: Pick<CatalogEntry, 'type' | 'title' | 'creators' | 
 /**
  * Fills what the shelf's copy doesn't have from the import; never overwrites
  * what is already there, with one exception: something on the wishlist that
- * the export says was read or watched is moved to Completed, with the
+ * the export says was read or watched is moved to Finished, with the
  * export's dates, since it can't be both.
  */
 export function mergeInto(existing: CatalogEntry, incoming: CatalogEntry): boolean {

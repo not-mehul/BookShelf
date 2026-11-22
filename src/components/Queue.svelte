@@ -11,6 +11,7 @@
   import CoverImage from './CoverImage.svelte';
   import Icon from './Icon.svelte';
   import ModalHead from './ModalHead.svelte';
+  import PlaceholderCover from './PlaceholderCover.svelte';
   import Segmented from './Segmented.svelte';
 
   // The ranked "want to" queue: reorder by drag (or keyboard / buttons), and
@@ -192,7 +193,11 @@
           <Icon name="grip" />
         </button>
         <span class="queue-pos" aria-hidden="true">{index + 1}</span>
-        <div class="queue-thumb"><CoverImage {src} /></div>
+        <div class="queue-thumb">
+          <CoverImage {src}>
+            {#snippet fallback()}<PlaceholderCover {entry} compact />{/snippet}
+          </CoverImage>
+        </div>
         <button type="button" class="queue-main" onclick={() => ui.openEntry(entry.id)}>
           <span class="queue-title">{entry.title}</span>
           <span class="queue-sub">{sub(entry)}</span>

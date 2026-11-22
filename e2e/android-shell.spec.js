@@ -69,13 +69,14 @@ test('Android Back closes an open menu first, then gives Back back', async ({ pa
 test('secrets typed in Settings go to the Keystore, not localStorage', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('dialog[open] summary', { hasText: 'Movies and TV' }).click();
   await page.getByLabel('API key', { exact: true }).fill('tvdb-secret');
   await expect.poll(() => page.evaluate(() => window.__keystore.tvdb_api_key)).toBe('tvdb-secret');
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('tvdb-secret');
 
   await page.getByRole('radio', { name: 'Dawn' }).click();
   expect(await lastOf(page, 'theme')).toEqual({ type: 'theme', mode: 'light' });
-  await expect(page.getByRole('switch', { name: 'Dawn theme' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('radio', { name: 'Dawn' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('text shared from another app opens a prefilled quote', async ({ page }) => {

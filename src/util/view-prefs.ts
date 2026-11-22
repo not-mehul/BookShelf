@@ -1,4 +1,4 @@
-// The library's last tab and sort order, remembered on this device.
+// The library's last tab, sort order and layout, remembered on this device.
 // A convenience only: storage can be missing or full, and then it is forgotten.
 
 const KEY = 'bookshelf:library_view';
@@ -6,6 +6,7 @@ const KEY = 'bookshelf:library_view';
 export interface LibraryView {
   type?: string;
   sort?: string;
+  layout?: string;
 }
 
 export function loadView(): LibraryView {

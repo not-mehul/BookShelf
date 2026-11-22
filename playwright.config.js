@@ -11,6 +11,9 @@ export default defineConfig({
   forbidOnly: CI,
   retries: CI ? 1 : 0,
   reporter: CI ? [['github'], ['html', { open: 'never' }]] : 'list',
+  // One baseline per screen, whatever the platform (see e2e/visual.spec.js).
+  snapshotPathTemplate: '{testDir}/__screenshots__/{arg}{ext}',
+  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
@@ -19,9 +22,19 @@ export default defineConfig({
   projects: [
     {
       name: 'phone',
+      testIgnore: 'visual.spec.js',
       use: {
         ...devices['Pixel 7'],
         colorScheme: 'dark',
+        launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {}
+      }
+    },
+    {
+      // Screenshots of the main screens in both themes: npm run test:visual.
+      name: 'visual',
+      testMatch: 'visual.spec.js',
+      use: {
+        ...devices['Pixel 7'],
         launchOptions: process.env.PW_CHROMIUM_PATH ? { executablePath: process.env.PW_CHROMIUM_PATH } : {}
       }
     }

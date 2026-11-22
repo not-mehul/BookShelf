@@ -3,6 +3,10 @@ name: CI
 # Every push to main and every pull request gets the quick checks: tokens,
 # colours, lint, types, unit tests and a production build (`npm run check`).
 #
+# Pull requests also get the screenshot tests (e2e/visual.spec.js). Started by
+# hand with "update screenshots" ticked, that job writes new baselines and
+# uploads them as an artifact to commit.
+#
 # The slower suites (Playwright at phone size and the Android build) run only
 # when started by hand from the Actions tab ("Run workflow"), and the release
 # workflow builds the APK on every version tag.
@@ -11,6 +15,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      update-screenshots:
+        description: Write new screenshot baselines instead of comparing
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -28,6 +37,30 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  visual:
+    name: Screenshots (Dusk and Dawn)
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:visual -- ${{ inputs.update-screenshots && '--update-snapshots' || '' }}
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: screenshot-diffs
+          path: test-results/
+      - uses: actions/upload-artifact@v7
+        if: inputs.update-screenshots
+        with:
+          name: screenshot-baselines
+          path: e2e/__screenshots__/
 
   e2e:
     name: End-to-end (Playwright, phone)

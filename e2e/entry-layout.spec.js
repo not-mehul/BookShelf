@@ -33,7 +33,8 @@ const layout = (page) =>
 
 for (const [width, rows] of [
   [412, 1],
-  [360, 2]
+  [360, 1],
+  [320, 2]
 ]) {
   test(`status buttons are equal and centred at ${width}px, in ${rows} row(s)`, async ({ page }) => {
     await openArrival(page, width);

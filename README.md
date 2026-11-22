@@ -31,7 +31,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 ### Keep track
 
-- **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Completed, and Did not finish for the ones you put down on purpose.
+- **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Finished, and Did not finish for the ones you put down on purpose.
 - **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Optional aspect scores (story, writing, acting and so on), notes, tags and collections.
 - **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day.
 - **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**.
@@ -44,7 +44,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **A year in review**: finished per month, pages in the books you finished, a yearly reading goal with its pace, the longest book and the highest rated.
 - **All-time statistics**: totals, rating distribution, most-shelved authors and directors, decades and top genres.
 - **Share cards.** Any book, film, show or quote as an image in the Dusk or Dawn style (post, square or story), or as text.
-- **Little things.** A different kept quote at the top of the library each day, the library remembers its tab and sort, and `/` jumps to the filter. Finishing something earns a little confetti, there is an idle cat to play with, and four easter eggs are counted in Settings.
+- **Little things.** A different kept quote at the top of the library each day, beside _Up next_, the library remembers its tab and sort, and `/` jumps to the filter. Finishing something earns a little confetti, there is an idle cat to play with, and four easter eggs are counted in Settings.
 
 ### Your data
 
@@ -56,7 +56,8 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
 - **Links from the other apps.** Rosetta and the other apps open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
-- **Themes.** System, Dusk (dark) or Dawn (light).
+- **Themes.** System, Dusk (dark) or Dawn (light), in Settings → Appearance.
+- **Grid or list.** The shelf as covers or as compact rows, from the library's ⋮ menu; it remembers which.
 
 ## Private by design
 

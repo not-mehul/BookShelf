@@ -1,5 +1,6 @@
 // Bulk edits for a multi-selection in the library: status, tags, delete.
 
+import { hasTag, tagKey } from './tags';
 import { getEntry, saveEntry, deleteEntry, listEntries, patchEntry } from '../db/database';
 import { applyStatus } from './apply-status';
 import type { CatalogEntry, EntryStatus } from '../types';
@@ -16,8 +17,8 @@ export function applyTagChanges(entry: CatalogEntry, { addTag, removeTag }: Bulk
   const before = (entry.tags || []).join('\u0000');
   let tags = [...(entry.tags || [])];
   const add = addTag?.trim();
-  if (add && !tags.includes(add)) tags.push(add);
-  if (removeTag) tags = tags.filter((t) => t !== removeTag);
+  if (add && !hasTag(tags, add)) tags.push(add);
+  if (removeTag) tags = tags.filter((t) => tagKey(t) !== tagKey(removeTag));
   entry.tags = tags;
   return tags.join('\u0000') !== before;
 }

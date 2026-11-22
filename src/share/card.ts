@@ -235,7 +235,7 @@ async function drawEntry(
     y += 50;
     ctx.font = `26px ${MONO}`;
     ctx.fillStyle = p.muted;
-    const status = statusLabel(entry.status);
+    const status = statusLabel(entry.status, entry.type);
     setSpacing(ctx, '4px');
     ctx.fillText([ratingLabel(rating), status].filter(Boolean).join('  ·  ').toUpperCase(), W / 2, y);
     setSpacing(ctx, '0px');

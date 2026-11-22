@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { ratingView } from '../state/rating-scale.svelte';
   import { thumbnailUrl } from '../db/database';
   import { ui } from '../state/ui.svelte';
-  import { TYPE_ICON, TYPE_LABEL } from '../util/labels';
-  import { ratingBrief } from '../util/stars';
+  import { TYPE_LABEL } from '../util/labels';
   import { statusLabel } from '../util/status';
   import type { CatalogEntry } from '../types';
   import CoverImage from './CoverImage.svelte';
-  import Icon from './Icon.svelte';
+  import PlaceholderCover from './PlaceholderCover.svelte';
+  import Stars from './Stars.svelte';
 
   interface Props {
     entry: CatalogEntry;
+    /** A cover over its words (grid), or a row with a small cover (list). */
+    layout?: 'grid' | 'list';
+    /** Inside a tab of one type, "Book" on every card says nothing. */
+    hideType?: boolean;
     /** Selection mode is on: the card is a checkbox. */
     selecting: boolean;
     selected: boolean;
@@ -19,7 +22,15 @@
     onlongpress: (id: string) => void;
   }
 
-  let { entry, selecting, selected, ontoggle, onlongpress }: Props = $props();
+  let {
+    entry,
+    layout = 'grid',
+    hideType = false,
+    selecting,
+    selected,
+    ontoggle,
+    onlongpress
+  }: Props = $props();
 
   const LONG_PRESS_MS = 450;
   let pressTimer: ReturnType<typeof setTimeout> | undefined;
@@ -32,9 +43,9 @@
   }
 
   const src = $derived(entry.type === 'quote' ? null : thumbnailUrl(entry) || entry.thumbnailUrl);
-  // A thin meter for shows under way (books no longer track pages), and a count for things returned to.
+  // A thin meter for a book or a show under way, and a count for things returned to.
   const progressPct = $derived(
-    entry.type === 'tv' && entry.status === 'in-progress' && entry.progress?.total
+    (entry.type === 'tv' || entry.type === 'book') && entry.status === 'in-progress' && entry.progress?.total
       ? Math.min(100, Math.round((entry.progress.current / entry.progress.total) * 100))
       : null
   );
@@ -44,7 +55,9 @@
 
 <button
   type="button"
-  class="entry-card dd-pressable dd-lift"
+  class="entry-card dd-pressable"
+  class:dd-lift={layout === 'grid'}
+  class:is-row={layout === 'list'}
   class:quote-card={entry.type === 'quote'}
   class:is-selectable={selecting}
   class:is-selected={selecting && selected}
@@ -82,22 +95,19 @@
         <div class="quote-card-author">— {attribution}</div>
       {/if}
       {#if entry.rating != null}
-        <div class="entry-rating-line">{ratingBrief(entry.rating, ratingView.scale)}</div>
+        <div class="entry-rating-line"><Stars rating={entry.rating} /></div>
       {/if}
     </div>
   {:else}
     <div class="entry-thumb">
       <CoverImage {src}>
         {#snippet fallback()}
-          <div class="entry-thumb-placeholder">
-            <span class="entry-thumb-icon"><Icon name={TYPE_ICON[entry.type]} /></span>
-            <span>{entry.title}</span>
-          </div>
+          <PlaceholderCover {entry} compact={layout === 'list'} />
         {/snippet}
       </CoverImage>
     </div>
     <div class="entry-meta">
-      <div class="entry-type-label">{TYPE_LABEL[entry.type]}</div>
+      {#if !hideType}<div class="entry-type-label">{TYPE_LABEL[entry.type]}</div>{/if}
       <div class="entry-title">{entry.title}</div>
       {#if entry.creators?.length}
         <div class="entry-creator">{entry.creators.slice(0, 2).join(', ')}</div>
@@ -107,20 +117,24 @@
           {entry.series.name}{entry.series.position != null ? ` #${entry.series.position}` : ''}
         </div>
       {/if}
-      {#if entry.rating != null}
-        <div class="entry-rating-line">{ratingBrief(entry.rating, ratingView.scale)}</div>
-      {/if}
-      {#if entry.status}
-        <span
-          class="entry-status-chip"
-          class:is-active={entry.status === 'in-progress'}
-          class:is-planned={entry.status === 'want'}
-          class:is-stopped={entry.status === 'abandoned'}
-          >{statusLabel(entry.status) || entry.status}{#if entry.status === 'finished' && times > 1}<span
-              class="entry-times"
-              aria-hidden="true">&nbsp;×{times}</span
-            ><span class="visually-hidden">, {times} times</span>{/if}</span
-        >
+      <!-- Rating and status share a line. -->
+      {#if entry.rating != null || entry.status}
+        <div class="entry-foot">
+          {#if entry.rating != null}<Stars rating={entry.rating} />{/if}
+          {#if entry.status}
+            <span
+              class="entry-status-chip"
+              class:is-active={entry.status === 'in-progress'}
+              class:is-planned={entry.status === 'want'}
+              class:is-stopped={entry.status === 'abandoned'}
+              >{statusLabel(entry.status, entry.type) ||
+                entry.status}{#if entry.status === 'finished' && times > 1}<span
+                  class="entry-times"
+                  aria-hidden="true">&nbsp;×{times}</span
+                ><span class="visually-hidden">, {times} times</span>{/if}</span
+            >
+          {/if}
+        </div>
       {/if}
       {#if progressPct != null}
         <div class="meter entry-meter" title="{progressPct}%" aria-hidden="true">
@@ -138,9 +152,5 @@
   }
   .entry-times {
     font-variant-numeric: tabular-nums;
-  }
-  .entry-thumb-icon {
-    color: var(--text-faint);
-    opacity: 0.45;
   }
 </style>

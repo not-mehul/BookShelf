@@ -77,7 +77,7 @@
       inputmode="numeric"
       bind:value={year}
     />
-    <Field label="Genres / Tags" id="m-genres" placeholder="Comma-separated" bind:value={genres} />
+    <Field label="Genres" id="m-genres" placeholder="Comma-separated" bind:value={genres} />
   </div>
   <Field
     label="Cover image URL"

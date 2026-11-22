@@ -67,8 +67,8 @@ export function setWatched(entry: CatalogEntry, ids: number[], watched: boolean)
 
 /**
  * Progress + status implied by the watched episodes. Status only moves
- * forward automatically: Completed once every aired episode of an ended show
- * is watched; Progressing once anything is watched.
+ * forward automatically: Finished once every aired episode of an ended show
+ * is watched; In progress once anything is watched.
  */
 export function derivedTvState(
   entry: CatalogEntry,

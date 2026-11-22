@@ -1,5 +1,6 @@
 // The catalog as the UI sees it: every entry, reloaded after each change.
 
+import { uniqueTags } from '../util/tags';
 import { listEntries } from '../db/database';
 import { pushWidgetSummary } from '../platform/widget';
 import { pushEpisodeReminders } from '../api/episode-sync';
@@ -10,7 +11,8 @@ class Shelf {
   entries = $state.raw<CatalogEntry[]>([]);
   loaded = $state(false);
   /** Every distinct tag, sorted, for the filter chips. */
-  tags = $derived([...new Set(this.entries.flatMap((e) => e.tags || []))].sort((a, b) => a.localeCompare(b)));
+  // One chip per tag, however its case varies between entries.
+  tags = $derived(uniqueTags(this.entries.flatMap((e) => e.tags || [])).sort((a, b) => a.localeCompare(b)));
 
   private scheduleSync: () => void = () => {};
 

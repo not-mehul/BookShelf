@@ -13,10 +13,10 @@
   let { prefill, onpick }: Props = $props();
 
   const MEDIA: { type: EntryType; label: string; icon: IconName; blurb: string }[] = [
-    { type: 'book', label: 'Book', icon: 'book', blurb: 'Search Google Books' },
-    { type: 'movie', label: 'Movie', icon: 'film', blurb: 'Search TheTVDB' },
-    { type: 'tv', label: 'TV', icon: 'tv', blurb: 'Search TheTVDB' },
-    { type: 'quote', label: 'Quote', icon: 'quote', blurb: 'Enter manually' }
+    { type: 'book', label: 'Book', icon: 'book', blurb: 'By title, author or ISBN, or scan it.' },
+    { type: 'movie', label: 'Movie', icon: 'film', blurb: 'By title.' },
+    { type: 'tv', label: 'TV show', icon: 'tv', blurb: 'By title; seasons follow.' },
+    { type: 'quote', label: 'Quote', icon: 'quote', blurb: 'A line worth keeping.' }
   ];
   // Shared text: show what arrived, then let the user pick what it is.
   const shared = $derived(prefill && (prefill.quoteText || prefill.query || prefill.link));
