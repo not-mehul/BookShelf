@@ -11,42 +11,66 @@ let upstream;
 beforeEach(() => {
   _resetTokenCache();
   upstream = { logins: 0, validToken: 'tok-1', calls: [] };
-  vi.stubGlobal('fetch', vi.fn(async (url, init = {}) => {
-    const u = String(url);
-    upstream.calls.push(u);
-    if (u.endsWith('/v4/login')) {
-      upstream.logins++;
-      expect(JSON.parse(init.body)).toMatchObject({ apikey: 'key' });
-      return Response.json({ data: { token: upstream.validToken } });
-    }
-    if (u.startsWith('https://artworks.thetvdb.com/')) {
-      return new Response('img', { headers: { 'Content-Type': 'image/jpeg' } });
-    }
-    if (init.headers?.Authorization !== `Bearer ${upstream.validToken}`) return new Response('no', { status: 401 });
-    return Response.json({ data: [{ name: 'Firefly' }], url: u });
-  }));
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url, init = {}) => {
+      const u = String(url);
+      upstream.calls.push(u);
+      if (u.endsWith('/v4/login')) {
+        upstream.logins++;
+        expect(JSON.parse(init.body)).toMatchObject({ apikey: 'key' });
+        return Response.json({ data: { token: upstream.validToken } });
+      }
+      if (u.startsWith('https://artworks.thetvdb.com/')) {
+        return new Response('img', { headers: { 'Content-Type': 'image/jpeg' } });
+      }
+      if (init.headers?.Authorization !== `Bearer ${upstream.validToken}`)
+        return new Response('no', { status: 401 });
+      return Response.json({ data: [{ name: 'Firefly' }], url: u });
+    })
+  );
 });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('route', () => {
   const r = (p) => route(new URL(`https://proxy.example${p}`));
   it('maps the allowlisted endpoints onto TheTVDB', () => {
-    expect(r('/search?query=dune&type=series')?.url).toBe('https://api4.thetvdb.com/v4/search?query=dune&limit=20&type=series');
+    expect(r('/search?query=dune&type=series')?.url).toBe(
+      'https://api4.thetvdb.com/v4/search?query=dune&limit=20&type=series'
+    );
     expect(r('/movies/123/extended')?.url).toBe('https://api4.thetvdb.com/v4/movies/123/extended');
     expect(r('/series/9/extended/')?.url).toBe('https://api4.thetvdb.com/v4/series/9/extended');
-    expect(r('/movies/123/translations/eng')?.url).toBe('https://api4.thetvdb.com/v4/movies/123/translations/eng');
-    expect(r('/series/9/translations/eng')?.url).toBe('https://api4.thetvdb.com/v4/series/9/translations/eng');
+    expect(r('/movies/123/translations/eng')?.url).toBe(
+      'https://api4.thetvdb.com/v4/movies/123/translations/eng'
+    );
+    expect(r('/series/9/translations/eng')?.url).toBe(
+      'https://api4.thetvdb.com/v4/series/9/translations/eng'
+    );
     expect(r('/series/9/translations/fra')).toBeNull();
-    expect(r('/series/9/episodes/default?page=2')?.url).toBe('https://api4.thetvdb.com/v4/series/9/episodes/default?page=2');
-    expect(r('/series/9/episodes/default?page=999')?.url).toBe('https://api4.thetvdb.com/v4/series/9/episodes/default?page=50');
+    expect(r('/series/9/episodes/default?page=2')?.url).toBe(
+      'https://api4.thetvdb.com/v4/series/9/episodes/default?page=2'
+    );
+    expect(r('/series/9/episodes/default?page=999')?.url).toBe(
+      'https://api4.thetvdb.com/v4/series/9/episodes/default?page=50'
+    );
     expect(r('/series/9/episodes/dvd')).toBeNull();
   });
   it('clamps the limit and drops unknown types', () => {
-    expect(r('/search?query=x&limit=999&type=people')?.url).toBe('https://api4.thetvdb.com/v4/search?query=x&limit=50');
+    expect(r('/search?query=x&limit=999&type=people')?.url).toBe(
+      'https://api4.thetvdb.com/v4/search?query=x&limit=50'
+    );
   });
   it('rejects everything else', () => {
-    for (const p of ['/', '/login', '/search', '/movies/abc/extended', '/series/1', '/user/favorites',
-      '/artwork?url=https://evil.example/x.jpg', '/artwork?url=http://artworks.thetvdb.com/x.jpg']) {
+    for (const p of [
+      '/',
+      '/login',
+      '/search',
+      '/movies/abc/extended',
+      '/series/1',
+      '/user/favorites',
+      '/artwork?url=https://evil.example/x.jpg',
+      '/artwork?url=http://artworks.thetvdb.com/x.jpg'
+    ]) {
       expect(r(p), p).toBeNull();
     }
   });
@@ -87,8 +111,12 @@ describe('worker', () => {
   it('enforces PROXY_TOKEN when configured', async () => {
     const env = { ...ENV, PROXY_TOKEN: 's3cret' };
     expect((await call('/search?query=x', { env })).status).toBe(401);
-    expect((await call('/search?query=x', { env, headers: { Authorization: 'Bearer wrong' } })).status).toBe(401);
-    expect((await call('/search?query=x', { env, headers: { Authorization: 'Bearer s3cret' } })).status).toBe(200);
+    expect((await call('/search?query=x', { env, headers: { Authorization: 'Bearer wrong' } })).status).toBe(
+      401
+    );
+    expect((await call('/search?query=x', { env, headers: { Authorization: 'Bearer s3cret' } })).status).toBe(
+      200
+    );
   });
 
   it('serves TheTVDB artwork with CORS but nothing else', async () => {
@@ -109,7 +137,10 @@ describe('worker', () => {
   });
 
   it('never forwards the client Authorization header upstream', async () => {
-    await call('/search?query=x', { env: { ...ENV, PROXY_TOKEN: 't' }, headers: { Authorization: 'Bearer t' } });
+    await call('/search?query=x', {
+      env: { ...ENV, PROXY_TOKEN: 't' },
+      headers: { Authorization: 'Bearer t' }
+    });
     const apiCall = vi.mocked(fetch).mock.calls.find(([u]) => String(u).includes('/search'));
     expect(apiCall?.[1]?.headers?.Authorization).toBe('Bearer tok-1');
   });

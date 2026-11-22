@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { mergeSnapshots } from '../src/sync/merge';
 
 const T = (n) => new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString(); // T(1) < T(2) < …
-const entry = (id, n, extra = {}) => ({ id, type: 'book', title: id, updatedAt: T(n), dateAdded: T(0), ...extra });
+const entry = (id, n, extra = {}) => ({
+  id,
+  type: 'book',
+  title: id,
+  updatedAt: T(n),
+  dateAdded: T(0),
+  ...extra
+});
 const tomb = (id, n) => ({ id, deletedAt: T(n) });
 const snap = (entries = [], tombstones = []) => ({ entries, tombstones });
 const NOW = { now: new Date(Date.UTC(2026, 0, 2)) };
@@ -36,7 +43,11 @@ describe('mergeSnapshots', () => {
   });
 
   it('is a no-op when both sides already agree', () => {
-    const r = mergeSnapshots(snap([entry('a', 1)], [tomb('x', 1)]), snap([entry('a', 1)], [tomb('x', 1)]), NOW);
+    const r = mergeSnapshots(
+      snap([entry('a', 1)], [tomb('x', 1)]),
+      snap([entry('a', 1)], [tomb('x', 1)]),
+      NOW
+    );
     expect(r.toPut).toEqual([]);
     expect(r.toDelete).toEqual([]);
     expect(r.pushNeeded).toBe(false);

@@ -7,7 +7,11 @@ const measure = (text, size) => text.length * size * 0.5;
 describe('wrapLines', () => {
   it('wraps on word boundaries within the width', () => {
     // 10px font → 5px per char → 50px fits 10 chars
-    expect(wrapLines('the quick brown fox jumps', 50, 10, measure)).toEqual(['the quick', 'brown fox', 'jumps']);
+    expect(wrapLines('the quick brown fox jumps', 50, 10, measure)).toEqual([
+      'the quick',
+      'brown fox',
+      'jumps'
+    ]);
   });
   it('keeps explicit newlines and splits over-long words', () => {
     expect(wrapLines('ab\ncd', 100, 10, measure)).toEqual(['ab', 'cd']);
@@ -17,7 +21,14 @@ describe('wrapLines', () => {
 
 describe('fitText', () => {
   it('uses the largest size that fits', () => {
-    const r = fitText({ text: 'short quote', maxWidth: 600, maxHeight: 200, maxSize: 80, minSize: 20, measure });
+    const r = fitText({
+      text: 'short quote',
+      maxWidth: 600,
+      maxHeight: 200,
+      maxSize: 80,
+      minSize: 20,
+      measure
+    });
     expect(r).toEqual({ size: 80, lines: ['short quote'], truncated: false });
   });
   it('shrinks long text to fit', () => {
@@ -28,14 +39,29 @@ describe('fitText', () => {
     expect(r.truncated).toBe(false);
   });
   it('truncates with an ellipsis when even the minimum size overflows', () => {
-    const r = fitText({ text: 'word '.repeat(200), maxWidth: 200, maxHeight: 60, maxSize: 40, minSize: 20, measure });
+    const r = fitText({
+      text: 'word '.repeat(200),
+      maxWidth: 200,
+      maxHeight: 60,
+      maxSize: 40,
+      minSize: 20,
+      measure
+    });
     expect(r.size).toBe(20);
     expect(r.truncated).toBe(true);
     expect(r.lines.at(-1)?.endsWith('…')).toBe(true);
     expect(r.lines.length * 20 * 1.25).toBeLessThanOrEqual(60);
   });
   it('respects maxLines', () => {
-    const r = fitText({ text: 'a b c d e f g h', maxWidth: 10, maxHeight: 1000, maxSize: 20, minSize: 20, maxLines: 2, measure });
+    const r = fitText({
+      text: 'a b c d e f g h',
+      maxWidth: 10,
+      maxHeight: 1000,
+      maxSize: 20,
+      minSize: 20,
+      maxLines: 2,
+      measure
+    });
     expect(r.lines).toHaveLength(2);
     expect(r.truncated).toBe(true);
   });

@@ -5,14 +5,14 @@ on any device** and without a third-party CORS proxy. It holds the key as a
 secret, logs in to TheTVDB, caches the bearer token, and forwards a fixed set
 of read-only endpoints:
 
-| Proxy path                        | TheTVDB                               |
-| :-------------------------------- | :------------------------------------ |
-| `GET /search?query=&type=&limit=` | `/v4/search` (type `movie`/`series`, limit ≤ 50) |
-| `GET /movies/:id/extended`        | `/v4/movies/:id/extended`             |
-| `GET /series/:id/extended`        | `/v4/series/:id/extended`             |
-| `GET /movies/:id/translations/eng` | `/v4/movies/:id/translations/eng` (English name; also `series`) |
-| `GET /series/:id/episodes/default?page=` | `/v4/series/:id/episodes/default` (also `official`; page ≤ 50) |
-| `GET /artwork?url=…`              | cover images from `artworks.thetvdb.com` (adds CORS) |
+| Proxy path                               | TheTVDB                                                         |
+| :--------------------------------------- | :-------------------------------------------------------------- |
+| `GET /search?query=&type=&limit=`        | `/v4/search` (type `movie`/`series`, limit ≤ 50)                |
+| `GET /movies/:id/extended`               | `/v4/movies/:id/extended`                                       |
+| `GET /series/:id/extended`               | `/v4/series/:id/extended`                                       |
+| `GET /movies/:id/translations/eng`       | `/v4/movies/:id/translations/eng` (English name; also `series`) |
+| `GET /series/:id/episodes/default?page=` | `/v4/series/:id/episodes/default` (also `official`; page ≤ 50)  |
+| `GET /artwork?url=…`                     | cover images from `artworks.thetvdb.com` (adds CORS)            |
 
 Everything else is `404`; non-GET is `405`. Responses are edge-cached for an
 hour. Browser requests are only accepted from `ALLOWED_ORIGINS` (with CORS);
@@ -35,9 +35,7 @@ npx wrangler deploy
 `wrangler deploy` prints the Worker URL, e.g.
 `https://bookshelf-tvdb-proxy.<you>.workers.dev`.
 
-If you host the web app (PWA) somewhere, add its origin to `ALLOWED_ORIGINS`
-in `wrangler.toml` (comma-separated) and redeploy. The Android app's origin is
-already included.
+The Android app's origin is already in `ALLOWED_ORIGINS` (`wrangler.toml`).
 
 ## Use it in BookShelf
 

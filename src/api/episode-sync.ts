@@ -1,6 +1,6 @@
 // Keeping TV episode guides fresh, and handing reminders to the Android app.
 
-import { listEntries, saveEntry } from '../db/database';
+import { listEntries, patchEntry } from '../db/database';
 import { getEpisodeGuide, isTvdbConfigured } from './tvdb';
 import { guideIsStale, derivedTvState, reminderItems } from '../util/episodes';
 import { isNativeShell, callNative } from '../platform/native';
@@ -10,13 +10,22 @@ import type { CatalogEntry } from '../types';
  * Fetch (or re-fetch) one show's guide and update its derived progress.
  * Saved without bumping updatedAt: it's reference data, not a user edit, so it
  * never wins a sync conflict against someone ticking episodes elsewhere.
+ * Only the guide and progress are written, onto the stored copy, so an edit
+ * made while the guide was downloading is kept.
+ * @returns The entry as now stored (or as given, if it has left the shelf).
  */
-export async function loadEpisodeGuide(entry: CatalogEntry) {
+export async function loadEpisodeGuide(entry: CatalogEntry): Promise<CatalogEntry> {
   if (entry.type !== 'tv' || !entry.sourceId) return entry;
-  entry.episodeGuide = await getEpisodeGuide(entry.sourceId);
-  if (entry.watchedEpisodes?.length) entry.progress = derivedTvState(entry).progress;
-  await saveEntry(entry, { touch: false });
-  return entry;
+  const guide = await getEpisodeGuide(entry.sourceId);
+  const saved = await patchEntry(
+    entry.id,
+    (d) => {
+      d.episodeGuide = guide;
+      if (d.watchedEpisodes?.length) d.progress = derivedTvState(d).progress;
+    },
+    { touch: false }
+  );
+  return saved ?? entry;
 }
 
 /**

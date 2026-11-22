@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Select } from 'dusk-dawn';
   import { tick } from 'svelte';
-  import { listEntries, saveEntry, thumbnailUrl } from '../db/database';
+  import { listEntries, patchEntry, thumbnailUrl } from '../db/database';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { applyStatus } from '../util/apply-status';
@@ -46,10 +46,15 @@
     return order;
   });
 
+  /** Save the ranks normalizeRanks() changed, onto the stored entries (nothing else is touched). */
+  async function saveRanks(changed: CatalogEntry[]) {
+    for (const e of changed) await patchEntry(e.id, (d) => void (d.queueRank = e.queueRank));
+  }
+
   async function load() {
     all = await listEntries();
     // First visit (or crowded ranks): give everything queued a stable rank.
-    for (const e of normalizeRanks(queueOrder(all))) await saveEntry(e);
+    await saveRanks(normalizeRanks(queueOrder(all)));
     all = [...all];
     loaded = true;
   }
@@ -65,9 +70,10 @@
     const list_ = items;
     if (from === to || to < 0 || to >= list_.length) return;
     const entry = list_[from]!;
-    entry.queueRank = rankForMove(list_, from, to);
-    await saveEntry(entry);
-    for (const e of normalizeRanks(queueOrder(all))) await saveEntry(e);
+    const rank = rankForMove(list_, from, to);
+    entry.queueRank = rank;
+    await patchEntry(entry.id, (d) => void (d.queueRank = rank));
+    await saveRanks(normalizeRanks(queueOrder(all)));
     all = [...all];
     announcement = `${entry.title} moved to position ${to + 1} of ${list_.length}.`;
     shelf.changed();
@@ -112,8 +118,7 @@
   }
 
   async function startNow(entry: CatalogEntry) {
-    await applyStatus(entry, 'in-progress', all);
-    await saveEntry(entry);
+    await patchEntry(entry.id, (d) => applyStatus(d, 'in-progress', all));
     shelf.changed();
     ui.openEntry(entry.id);
   }

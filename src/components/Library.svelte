@@ -19,6 +19,7 @@
   import ShelfLine from './ShelfLine.svelte';
   import UpNext from './UpNext.svelte';
   import { loadView, saveView } from '../util/view-prefs';
+  import { compareTitles } from '../util/text';
 
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
@@ -40,9 +41,9 @@
   ];
   const SORTERS: Record<SortKey, (a: CatalogEntry, b: CatalogEntry) => number> = {
     dateAdded: (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''),
-    rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.title.localeCompare(b.title),
-    title: (a, b) => a.title.localeCompare(b.title),
-    year: (a, b) => (b.year ?? 0) - (a.year ?? 0) || a.title.localeCompare(b.title),
+    rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || compareTitles(a, b),
+    title: (a, b) => compareTitles(a, b),
+    year: (a, b) => (b.year ?? 0) - (a.year ?? 0) || compareTitles(a, b),
     // Series grouped together in reading order; everything else after, A–Z.
     series: (a, b) => seriesSortKey(a).localeCompare(seriesSortKey(b)) || compareSeriesOrder(a, b)
   };
@@ -57,7 +58,9 @@
   let type = $state<TypeFilter>(
     TYPE_TABS.some((t) => t.id === saved.type) ? (saved.type as TypeFilter) : 'all'
   );
-  let sort = $state<SortKey>(saved.sort && saved.sort in SORTERS ? (saved.sort as SortKey) : 'dateAdded');
+  let sort = $state<SortKey>(
+    saved.sort && Object.hasOwn(SORTERS, saved.sort) ? (saved.sort as SortKey) : 'dateAdded'
+  );
   $effect(() => saveView({ type, sort }));
   let filterInput = $state<HTMLInputElement>();
   let typesRow = $state<HTMLElement>();

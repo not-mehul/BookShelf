@@ -87,8 +87,12 @@ class BookShelfPlugin : Plugin() {
         when {
             intent == null -> return
             // Another app's hand-off (style.md §14.1). The page reads it.
-            intent.action == Intent.ACTION_VIEW && intent.data?.scheme == MainActivity.LINK_SCHEME ->
-                emit("link", JSObject().put("url", intent.dataString.orEmpty().take(MAX_LINK_CHARS)))
+            // Too long to be one of ours: dropped whole, never cut (a cut link would
+            // still parse, with its last parameter clipped).
+            intent.action == Intent.ACTION_VIEW && intent.data?.scheme == MainActivity.LINK_SCHEME -> {
+                val url = intent.dataString.orEmpty()
+                if (url.length <= MAX_LINK_CHARS) emit("link", JSObject().put("url", url))
+            }
             intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
                 val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
@@ -268,7 +272,7 @@ class BookShelfPlugin : Plugin() {
         // Shared text becomes a quote; cap absurdly large payloads.
         private const val MAX_SHARED_CHARS = 20_000
 
-        // Matches MAX_LINK_LENGTH in src/platform/links.ts; longer links are dropped there.
+        // Matches MAX_LINK_LENGTH in src/platform/links.ts; longer links are dropped.
         private const val MAX_LINK_CHARS = 8_192
     }
 }

@@ -22,8 +22,7 @@
   const dateFmt = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   const fmt = (ymd: string | null) => (ymd ? dateFmt.format(new Date(`${ymd}T12:00:00`)) : '');
 
-  // Saving happens on a copy; markEpisodes saves it, update() saves again
-  // (cheap) and shows the result.
+  // update() hands markEpisodes the stored copy, saves it and shows the result.
   const mark = (s: SeasonState, on: boolean) =>
     update((d) =>
       markEpisodes(

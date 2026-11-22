@@ -21,9 +21,7 @@
   let toy = $state<HTMLButtonElement>();
   let settle: ReturnType<typeof setTimeout> | undefined;
   const line = $derived(
-    pets === 0
-      ? 'The library cat is asleep on the returns.'
-      : PURRS[(pets - 1) % PURRS.length]
+    pets === 0 ? 'The library cat is asleep on the returns.' : PURRS[(pets - 1) % PURRS.length]
   );
 
   function pet() {

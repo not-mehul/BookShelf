@@ -158,3 +158,58 @@ describe('matching the shelf', () => {
     expect(mergeInto(existing, { rating: 1 })).toBe(false);
   });
 });
+
+describe('Letterboxd folders', () => {
+  const diary = (name) =>
+    rows(
+      `Date,Name,Year,Letterboxd URI,Rating,Rewatch,Tags,Watched Date\n2024-05-01,${name},1999,https://boxd.it/x,2,,,2024-05-01`
+    );
+
+  it('reads only the export’s own files, not deleted/, orphaned/, likes/ or lists/', () => {
+    const films = fromLetterboxd([
+      { name: 'letterboxd-me-2026/diary.csv', rows: diary('Kept') },
+      { name: 'letterboxd-me-2026/deleted/diary.csv', rows: diary('Deleted') },
+      { name: 'orphaned/diary.csv', rows: diary('Orphaned') },
+      { name: 'likes/films.csv', rows: diary('Liked') },
+      { name: 'lists/watched.csv', rows: diary('A list named watched') }
+    ]);
+    expect(films.map((f) => f.title)).toEqual(['Kept']);
+  });
+});
+
+describe('merging an import into the shelf', () => {
+  it('treats a finish on a day already finished in the app as the same finish', () => {
+    // Finished in the app at 5:40 pm; the export has that day (at local noon).
+    const existing = { status: 'finished', finishes: [new Date(2025, 2, 9, 17, 40).toISOString()], tags: [] };
+    const [incoming] = fromGoodreads([
+      { Title: 'T', Author: 'X', 'Exclusive Shelf': 'read', 'Date Read': '2025/03/09' }
+    ]);
+    expect(mergeInto(existing, incoming)).toBe(false);
+    expect(existing.finishes).toHaveLength(1);
+  });
+
+  it('moves a wishlist entry the export says was read to Completed, with the export’s date', () => {
+    const existing = { status: 'want', queueRank: 3, finishes: [], tags: [] };
+    const [incoming] = fromGoodreads([
+      { Title: 'T', Author: 'X', 'Exclusive Shelf': 'read', 'Date Read': '2025/03/09' }
+    ]);
+    expect(mergeInto(existing, incoming)).toBe(true);
+    expect(existing.status).toBe('finished');
+    expect(existing.queueRank).toBeNull();
+    expect(existing.finishes).toEqual([new Date(2025, 2, 9, 12).toISOString()]);
+  });
+
+  it('leaves a wishlist entry alone when the export also has it to read', () => {
+    const existing = { status: 'want', queueRank: 3, finishes: [], tags: [] };
+    const [incoming] = fromGoodreads([{ Title: 'T', Author: 'X', 'Exclusive Shelf': 'to-read' }]);
+    expect(mergeInto(existing, incoming)).toBe(false);
+    expect(existing.status).toBe('want');
+  });
+});
+
+describe('dates in an export', () => {
+  it('leaves out a date that does not exist instead of rolling it over', () => {
+    const [e] = fromGoodreads([{ Title: 'T', 'Exclusive Shelf': 'read', 'Date Read': '2025/02/31' }]);
+    expect(e.finishes).toEqual([]);
+  });
+});

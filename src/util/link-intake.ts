@@ -9,6 +9,7 @@
 // Anything else that names BookShelf just opens it.
 
 import { dateParam, fractionParam, parseLink } from '../platform/links';
+import { fromDay } from './journal';
 import type { AddOptions, AddSeed } from '../state/ui.svelte';
 
 export type LinkIntake = { kind: 'add'; options: AddOptions } | { kind: 'open' } | null;
@@ -24,8 +25,9 @@ export function readBookShelfLink(url: string): LinkIntake {
   const finished = dateParam(link.params.finished);
   const progress = fractionParam(link.params.progress);
   const notes = (link.params.note ?? '').slice(0, MAX_NOTE);
-  const status: AddSeed | undefined = finished
-    ? { status: 'finished' }
+  const finishedAt = finished ? fromDay(finished) : null;
+  const status: AddSeed | undefined = finishedAt
+    ? { status: 'finished', finishedAt }
     : progress !== null && progress > 0
       ? { status: 'in-progress', progress }
       : undefined;

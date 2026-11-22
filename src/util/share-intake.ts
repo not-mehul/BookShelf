@@ -1,4 +1,4 @@
-// Turn text shared into the app (Android share sheet / PWA share target)
+// Turn text shared into the app (the Android share sheet)
 // into prefill values for the add flow.
 //
 // Typical inputs:

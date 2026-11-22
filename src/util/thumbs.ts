@@ -1,37 +1,23 @@
 // Download a remote thumbnail and store as a Blob for fully-offline cards.
 // Covers are downscaled to keep IndexedDB small. Falls back gracefully — if the
-// fetch is blocked (CORS, network) or downscaling is unavailable, we return
-// the original blob (or null), and callers keep the remote URL.
-
-import { getSetting } from './settings';
-import { isNativeShell } from '../platform/native';
+// fetch fails (network, not an image) or downscaling is unavailable, we return
+// the original blob (or null), and callers keep the remote URL. Requests go
+// through the Android app's native HTTP, so cover hosts need no CORS headers.
 
 const MAX_WIDTH = 400; // cover cards never render wider than this
 
 export async function fetchThumbBlob(url: string | null | undefined): Promise<Blob | null> {
   if (!url) return null;
   try {
-    const finalUrl = isNativeShell() ? url : await browserUrl(url);
-    const res = await fetch(finalUrl, { mode: 'cors' });
+    const res = await fetch(url);
     if (!res.ok) return null;
     const blob = await res.blob();
-    if (blob.size === 0) return null;
+    // An error page served with 200 is not a cover.
+    if (blob.size === 0 || (blob.type && !blob.type.startsWith('image/'))) return null;
     return (await downscale(blob)) || blob;
   } catch {
     return null;
   }
-}
-
-// In a plain browser, cover hosts may not send CORS headers. TheTVDB artwork
-// goes through the BookShelf proxy when one is set; otherwise a generic CORS
-// proxy (if configured) is prefixed.
-async function browserUrl(url: string) {
-  const tvdbProxy = (await getSetting('tvdb_proxy_url', '')).trim().replace(/\/+$/, '');
-  if (tvdbProxy && /^https:\/\/artworks\.thetvdb\.com\//.test(url)) {
-    return `${tvdbProxy}/artwork?url=${encodeURIComponent(url)}`;
-  }
-  const corsProxy = await getSetting('cors_proxy', '');
-  return corsProxy ? `${corsProxy}${url}` : url;
 }
 
 // Returns a smaller JPEG blob, or null if downscaling isn't possible/needed.

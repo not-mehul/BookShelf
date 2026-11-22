@@ -1,12 +1,16 @@
 // BookShelf — app entry point: applies the theme, loads the shelf and mounts
 // the Svelte UI, then wires up everything that arrives from outside (the
-// Android shell, links from the sibling apps, the PWA share target, sync).
+// Android shell, links from the sibling apps, sync).
+//
+// BookShelf is an Android app. The page runs only inside its shell; opened
+// in a browser it says so, except under `npm run dev`, where the UI runs on
+// its own for work on it (search, sync, sharing and backups need the shell).
 
 import { mount } from 'svelte';
 import { dismissOverlay } from 'dusk-dawn';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
-import { claimBackForMenus, installNativeBridge, isNativeShell, onNativeEvent } from './platform/native';
+import { claimBackForMenus, installNativeBridge, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
 import { startAutoBackup } from './sync/auto-backup';
@@ -16,8 +20,8 @@ import { readBookShelfLink } from './util/link-intake';
 import { parseSharedText, type SharedInput } from './util/share-intake';
 
 // Must run before anything fetches: routes cross-origin calls through the
-// Android shell's native HTTP. A no-op in a plain browser.
-installNativeBridge();
+// Android shell's native HTTP.
+const inShell = installNativeBridge();
 // Android Back closes an open Select menu before anything else.
 claimBackForMenus(dismissOverlay);
 
@@ -50,17 +54,6 @@ async function boot(): Promise<void> {
   // … or a new-episode notification (open that show).
   onNativeEvent('openEntry', (data) => data?.id && ui.openEntry(String(data.id)));
 
-  // The installed PWA's Web Share Target (manifest share_target).
-  const params = new URLSearchParams(location.search);
-  if (['share-text', 'share-title', 'share-url'].some((k) => params.has(k))) {
-    history.replaceState(null, '', location.pathname);
-    openShared({
-      text: params.get('share-text') || '',
-      subject: params.get('share-title') || '',
-      url: params.get('share-url') || ''
-    });
-  }
-
   // Encrypted folder sync (Android app, once configured): pull now, push after changes.
   shelf.startSync();
   // The weekly backup to Documents/BookShelf/Backups (Android app).
@@ -69,19 +62,27 @@ async function boot(): Promise<void> {
   void refreshFollowedGuides(() => void shelf.refresh());
 }
 
-boot().catch((err) => {
-  console.error(err);
+/** Shown when the page is opened outside the Android app. */
+function androidOnly() {
   const msg = document.createElement('div');
   msg.className = 'msg-error';
   msg.style.margin = '3rem 1.5rem';
-  msg.textContent = `Failed to start: ${messageOf(err)}`;
+  const link = document.createElement('a');
+  link.href = 'https://github.com/not-mehul/BookShelf/releases/latest';
+  link.textContent = 'Get the Android app';
+  msg.append('BookShelf is an Android app; it doesn’t run in a browser. ', link, '.');
   document.getElementById('app')?.replaceChildren(msg);
-});
+}
 
-// Register the service worker for offline support (web/PWA only). The native
-// Android shell already bundles the app, so skip it there.
-if ('serviceWorker' in navigator && !isNativeShell()) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW registration failed', err));
+if (inShell || import.meta.env.DEV) {
+  boot().catch((err) => {
+    console.error(err);
+    const msg = document.createElement('div');
+    msg.className = 'msg-error';
+    msg.style.margin = '3rem 1.5rem';
+    msg.textContent = `Failed to start: ${messageOf(err)}`;
+    document.getElementById('app')?.replaceChildren(msg);
   });
+} else {
+  androidOnly();
 }

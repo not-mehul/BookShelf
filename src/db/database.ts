@@ -48,12 +48,28 @@ export async function getEntry(id: string) {
   return db.entries.get(id);
 }
 
-/**
- * Save an entry. Local edits stamp `updatedAt` (`touch`); sync and restores
- * pass `touch: false` to keep the incoming timestamp. Saving an id clears any
- * tombstone for it (the entry is alive again).
- */
-export async function saveEntry(entry: CatalogEntry, { touch = true }: { touch?: boolean } = {}) {
+// Writes to one entry run one after another. A change that reads the entry,
+// waits (a status change reads the queue, an edit fetches a cover) and saves
+// must never interleave with another write to the same entry, or the later
+// save would put back what the earlier one read.
+const writes: Map<string, Promise<void>> = new Map();
+
+/** Run `work` once every earlier write to entry `id` has finished. */
+export function withEntryLock<T>(id: string, work: () => Promise<T>): Promise<T> {
+  const before = writes.get(id) ?? Promise.resolve();
+  const run = before.then(work);
+  const settled = run.then(
+    () => {},
+    () => {}
+  );
+  writes.set(id, settled);
+  void settled.then(() => {
+    if (writes.get(id) === settled) writes.delete(id);
+  });
+  return run;
+}
+
+async function put(entry: CatalogEntry, touch: boolean) {
   if (touch || !entry.updatedAt) entry.updatedAt = new Date().toISOString();
   await db.transaction('rw', db.entries, db.tombstones, async () => {
     await db.entries.put(entry);
@@ -63,14 +79,48 @@ export async function saveEntry(entry: CatalogEntry, { touch = true }: { touch?:
 }
 
 /**
+ * Save an entry. Local edits stamp `updatedAt` (`touch`); sync and restores
+ * pass `touch: false` to keep the incoming timestamp. Saving an id clears any
+ * tombstone for it (the entry is alive again).
+ *
+ * This writes the whole object as given. To change an entry that is already
+ * on the shelf, use `patchEntry`, which starts from the stored copy.
+ */
+export function saveEntry(entry: CatalogEntry, { touch = true }: { touch?: boolean } = {}) {
+  return withEntryLock(entry.id, () => put(entry, touch));
+}
+
+/**
+ * Change a stored entry: `change` gets the latest stored copy (after every
+ * earlier write to it), mutates it, and it is saved. Returns the saved entry,
+ * or null if it is no longer on the shelf. `change` may be async, but must not
+ * save or delete the same entry itself (that would wait on its own lock).
+ * Return `false` from `change` to leave the entry unsaved.
+ */
+export function patchEntry(
+  id: string,
+  change: (draft: CatalogEntry) => void | boolean | Promise<void | boolean>,
+  { touch = true }: { touch?: boolean } = {}
+): Promise<CatalogEntry | null> {
+  return withEntryLock(id, async () => {
+    const current = await db.entries.get(id);
+    if (!current) return null;
+    if ((await change(current)) === false) return current;
+    return put(current, touch);
+  });
+}
+
+/**
  * Delete an entry, leaving a tombstone for sync.
  * @param [deletedAt] Keep a remote deletion's timestamp when syncing.
  */
-export async function deleteEntry(id: string, deletedAt: string = new Date().toISOString()) {
-  await db.transaction('rw', db.entries, db.tombstones, async () => {
-    await db.entries.delete(id);
-    await db.tombstones.put({ id, deletedAt });
-  });
+export function deleteEntry(id: string, deletedAt: string = new Date().toISOString()) {
+  return withEntryLock(id, () =>
+    db.transaction('rw', db.entries, db.tombstones, async () => {
+      await db.entries.delete(id);
+      await db.tombstones.put({ id, deletedAt });
+    })
+  );
 }
 
 export async function listTombstones(): Promise<Tombstone[]> {

@@ -86,3 +86,23 @@ describe('year in review', () => {
     expect(dailyIndex('x', 0)).toBe(0);
   });
 });
+
+describe('year in review wording', () => {
+  it('shows the highest rating on the chosen scale', async () => {
+    const { setRatingScale } = await import('../src/util/stars');
+    const e = { id: 'a', type: 'movie', title: 'A', rating: 3.75, finishes: ['2025-05-01T12:00:00.000Z'] };
+    const detail = () =>
+      highlights([{ entry: e, at: e.finishes[0] }]).find((h) => h.label === 'Rated highest').detail;
+    setRatingScale(10);
+    expect(detail()).toBe('7.5/10');
+    setRatingScale(5);
+    expect(detail()).toBe('3.75/5');
+  });
+
+  it('says how many a day when more are left than days', () => {
+    const now = new Date(2025, 11, 25);
+    expect(paceSentence(goalPace(10, 50, 2025, now), now)).toBe(
+      '39 behind pace; about 6 a day would catch up.'
+    );
+  });
+});

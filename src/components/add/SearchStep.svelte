@@ -126,6 +126,8 @@
       seed.progress !== undefined && total ? { current: Math.round(seed.progress * total), total } : null;
     return {
       ...(seed.status ? { status: seed.status } : {}),
+      // The day the sender says it was finished, not today.
+      ...(seed.status === 'finished' && seed.finishedAt ? { finishes: [seed.finishedAt] } : {}),
       ...(progress ? { progress } : {}),
       ...(seed.notes ? { notes: seed.notes } : {})
     };
@@ -235,8 +237,7 @@
     enterkeyhint="search"
     bind:value={query}
   />
-  <!-- Books: scan an ISBN barcode instead of typing (native scanner or the
-       browser's BarcodeDetector; hidden when neither is available). -->
+  <!-- Books: scan an ISBN barcode instead of typing (Google's Code Scanner). -->
   {#if type === 'book' && canScanBarcodes()}
     <button type="button" class="btn btn-muted" aria-label="Scan barcode" disabled={scanning} onclick={scan}>
       <Icon name="barcode" /> <span class="btn-label">Scan</span>

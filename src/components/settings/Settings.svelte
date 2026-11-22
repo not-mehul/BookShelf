@@ -2,9 +2,7 @@
   import { EGGS, eggsFound } from '../../util/delight';
   import { importMarkdown } from '../../export/import';
   import { importJson, saveAndShareJson } from '../../export/json';
-  import { isNativeShell } from '../../platform/native';
   import { shelf } from '../../state/shelf.svelte';
-  import { syncSupported } from '../../sync/sync';
   import { messageOf } from '../../util/errors';
   import { getSetting, removeSetting } from '../../util/settings';
   import { useModalFocus } from '../Modal.svelte';
@@ -52,14 +50,6 @@
     hint: 'Book search works without one; a key raises the daily limit.',
     type: 'password'
   };
-  const CORS: Def = {
-    key: 'cors_proxy',
-    label: 'CORS proxy',
-    hint: 'In a plain browser, TheTVDB blocks cross-origin requests; a CORS proxy you trust gets around it. The Android app needs none.',
-    type: 'url'
-  };
-
-  const native = isNativeShell();
   let values = $state<Record<string, string> | null>(null);
   let tokenIssued = $state(0);
   let notice = $state<{ text: string; kind: 'ok' | 'err' } | null>(null);
@@ -75,7 +65,7 @@
 
   $effect(() => {
     void (async () => {
-      const keys = [...TVDB, GOOGLE, CORS].map((d) => d.key);
+      const keys = [...TVDB, GOOGLE].map((d) => d.key);
       const loaded = await Promise.all(keys.map((k) => getSetting(k, '')));
       tokenIssued = parseInt(await getSetting('tvdb_token_issued', '0'), 10) || 0;
       values = Object.fromEntries(keys.map((k, i) => [k, loaded[i] ?? '']));
@@ -102,8 +92,8 @@
   async function backup() {
     busy = 'backup';
     try {
-      const { method, filename } = await saveAndShareJson();
-      say(method === 'native' ? 'Backup shared.' : `Downloaded ${filename}.`);
+      await saveAndShareJson();
+      say('Backup shared.');
     } catch (err) {
       say('Backup failed: ' + messageOf(err), 'err');
     } finally {
@@ -119,10 +109,17 @@
     try {
       const text = await file.text();
       if (kind === 'json') {
-        const { imported, skippedExisting } = await importJson(text);
-        say(`Imported ${imported} entries${skippedExisting ? `, skipped ${skippedExisting} existing` : ''}.`);
+        const { imported, skippedExisting, skippedInvalid } = await importJson(text);
+        const skipped = [
+          skippedExisting ? `skipped ${skippedExisting} existing` : '',
+          skippedInvalid ? `left out ${skippedInvalid} that couldn’t be read` : ''
+        ].filter(Boolean);
+        say(`Imported ${imported} entries${skipped.length ? `, ${skipped.join(', ')}` : ''}.`);
       } else {
-        say(`Imported ${await importMarkdown(text)} entries from Markdown.`);
+        const { imported, skipped } = await importMarkdown(text);
+        say(
+          `Imported ${imported} entries from Markdown${skipped ? `, skipped ${skipped} already on the shelf` : ''}.`
+        );
       }
       shelf.changed();
     } catch (err) {
@@ -258,27 +255,11 @@
           <SettingField {...GOOGLE} initial={values[GOOGLE.key] ?? ''} />
         </div>
       </details>
-
-      {#if !native}
-        <details class="settings-fold" open={!tvdbReady}>
-          <summary>
-            <span class="settings-fold-name">Browser only</span>
-            <span class="settings-fold-state" class:is-ready={Boolean(values[CORS.key])}
-              >{values[CORS.key] ? 'Proxy set' : 'Optional'}</span
-            >
-          </summary>
-          <div class="settings-fold-body">
-            <SettingField {...CORS} initial={values[CORS.key] ?? ''} />
-          </div>
-        </details>
-      {/if}
     </section>
 
-    {#if syncSupported()}
-      <section class="settings-group">
-        <SyncSection />
-      </section>
-    {/if}
+    <section class="settings-group">
+      <SyncSection />
+    </section>
 
     <section class="settings-group" aria-labelledby="set-data">
       <h3 class="settings-section-heading" id="set-data">Your data</h3>
@@ -321,14 +302,12 @@
         A backup is one JSON file with everything, covers included. Restoring it again never duplicates
         entries.
       </p>
-      {#if native}
-        <p class="field-hint" id="weeklyBackup">
-          Once a week a copy also goes to Documents/BookShelf/Backups, keeping the last five. Last backed up: {lastWeeklyText}.
-        </p>
-        <button type="button" class="settings-text-link" disabled={busy !== null} onclick={weeklyNow}>
-          {busy === 'weekly' ? 'Backing up…' : 'Back up to Documents now'}
-        </button>
-      {/if}
+      <p class="field-hint" id="weeklyBackup">
+        Once a week a copy also goes to Documents/BookShelf/Backups, keeping the last five. Last backed up: {lastWeeklyText}.
+      </p>
+      <button type="button" class="settings-text-link" disabled={busy !== null} onclick={weeklyNow}>
+        {busy === 'weekly' ? 'Backing up…' : 'Back up to Documents now'}
+      </button>
       <button
         type="button"
         class="settings-text-link"

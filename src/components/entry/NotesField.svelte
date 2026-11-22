@@ -21,16 +21,30 @@
   };
   let text = $state(untrack(() => value));
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let field: HTMLTextAreaElement;
+
+  // Notes saved elsewhere (a sync from another device) show here, unless
+  // they're being typed in right now.
+  $effect(() => {
+    const next = value;
+    untrack(() => {
+      if (next !== text && timer === undefined && document.activeElement !== field) text = next;
+    });
+  });
 </script>
 
 <textarea
   class="textarea notes-field"
   placeholder={EXAMPLES[type]}
   aria-label="Notes"
+  bind:this={field}
   bind:value={text}
   oninput={() => {
     clearTimeout(timer);
-    timer = setTimeout(() => onsave(text), 300);
+    timer = setTimeout(() => {
+      timer = undefined;
+      onsave(text);
+    }, 300);
   }}
 ></textarea>
 

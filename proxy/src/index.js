@@ -101,7 +101,8 @@ export function route(url) {
     const raw = url.searchParams.get('url') || '';
     try {
       const art = new URL(raw);
-      if (art.protocol === 'https:' && ARTWORK_HOSTS.includes(art.hostname)) return { kind: 'artwork', url: art.href };
+      if (art.protocol === 'https:' && ARTWORK_HOSTS.includes(art.hostname))
+        return { kind: 'artwork', url: art.href };
     } catch {
       /* invalid URL */
     }
@@ -167,7 +168,10 @@ async function artwork(url, cors) {
  * @returns {Record<string, string> | null} null when a browser origin is not allowed.
  */
 export function corsHeaders(origin, env) {
-  const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const allowed = (env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!origin) return {};
   if (!allowed.includes(origin) && !allowed.includes('*')) return null;
   return {

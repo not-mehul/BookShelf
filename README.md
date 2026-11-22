@@ -5,12 +5,12 @@
 <p align="center"><em>Books, films, shows and the lines worth keeping.</em></p>
 
 <p align="center">
-  Android&nbsp;·&nbsp;Web&nbsp;·&nbsp;<a href="https://github.com/not-mehul/BookShelf/releases/latest">Latest release</a>&nbsp;·&nbsp;MIT&nbsp;·&nbsp;Created by <strong>Mehul Sen</strong>
+  Android 10+&nbsp;·&nbsp;<a href="https://github.com/not-mehul/BookShelf/releases/latest">Latest release</a>&nbsp;·&nbsp;MIT&nbsp;·&nbsp;Created by <strong>Mehul Sen</strong>
 </p>
 
 ---
 
-BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, track where you are, and see your year in review. It runs as an Android app and as an installable web app, and the library lives on your device.
+BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, track where you are, and see your year in review. It is an Android app, for Android 10 and later, and the library lives on your device.
 
 <p align="center">
   <img src="docs/screenshots/library.webp" width="200" alt="The library: shelf count, type tabs, Up next for a TV season and a quote from the shelf">
@@ -27,7 +27,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Films and TV** from TheTVDB, directly or through your own hosted proxy ([`proxy/`](proxy)), with cast and genres filled in when you open an entry.
 - **Quotes** with author, source and page or time, linked to the book, film or show they come from. Each entry lists its quotes.
 - **By hand**, when search comes up empty. Every entry can be edited afterwards.
-- **Share into BookShelf** a highlight, title or link from any app (the Android share sheet, or the installed web app's share target) to get a prefilled quote or search.
+- **Share into BookShelf** a highlight, title or link from any app, through the Android share sheet, to get a prefilled quote or search.
 
 ### Keep track
 
@@ -50,10 +50,10 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 - **On your device.** Everything lives in local storage with cached cover thumbnails.
 - **Backup and restore** as lossless JSON (re-importing never duplicates), plus a readable Markdown export.
-- **Weekly backups** (Android): once a week a dated copy goes to Documents/BookShelf/Backups, keeping the last five, with nothing to set up. Settings shows when it last ran.
+- **Weekly backups**: once a week a dated copy goes to Documents/BookShelf/Backups, keeping the last five, with nothing to set up. Settings shows when it last ran.
 - **Bring your shelf over** from Goodreads or StoryGraph (their CSV export) or Letterboxd (the export zip, as it is). Ratings, shelves, read dates, reviews and tags come with it, all on the device. Anything already on your shelf only gains what it was missing, so importing twice adds nothing.
-- **Encrypted sync** (Android): end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
-- **A home-screen widget** (Android): shelf count, what you are reading or watching, and your latest quote.
+- **Encrypted sync**: end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
+- **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
 - **Links from the other apps.** Rosetta and the other apps open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
 - **Themes.** System, Dusk (dark) or Dawn (light).
@@ -64,10 +64,9 @@ Your catalog never leaves the device. BookShelf talks to a catalog only when you
 
 ## Install
 
-- **Android:** download the signed APK from the [latest release](https://github.com/not-mehul/BookShelf/releases/latest) and open it on your phone.
-- **Web:** build it (see below) and host `dist/index.html` anywhere; it installs as a web app from the browser.
+Download the signed APK from the [latest release](https://github.com/not-mehul/BookShelf/releases/latest) and open it on your phone. BookShelf needs Android 10 or later.
 
-Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if your key needs one) for films and TV, or the URL of your [TheTVDB proxy](proxy). A **Google Books API key** is optional and raises the daily quota. In a plain browser, TheTVDB blocks cross-origin requests, so use the proxy or set a CORS proxy under Settings; the Android app needs neither.
+Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if your key needs one) for films and TV, or the URL of your [TheTVDB proxy](proxy). A **Google Books API key** is optional and raises the daily quota.
 
 ## The Dusk & Dawn apps
 
@@ -87,7 +86,7 @@ Svelte 5 and TypeScript, built by Vite into a single self-contained page, with D
 
 ```sh
 npm install
-npm run dev          # the app in a browser
+npm run dev          # the UI in a browser, for development (no search, sync or sharing)
 npm run check        # tokens, lint, typecheck, unit tests and build
 npm run sync         # build, then copy it into the Android project
 npm run android:apk  # a debug APK, in android/app/build/outputs/apk/debug/

@@ -7,7 +7,11 @@ const ITER = { iterations: 1_000 }; // cheap KDF for tests
 
 function memoryStorage() {
   const m = new Map();
-  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k)
+  };
 }
 
 // Answers plugin calls the way BookShelfPlugin.kt / FolderSync.kt do.
@@ -50,8 +54,20 @@ async function device(folder, passphrase = 'shared secret') {
   const sync = await import('../src/sync/sync.js');
   const add = (id, title) =>
     db.saveEntry({
-      id, type: 'book', sourceId: null, title, creators: [], year: null, summary: '', genres: [],
-      thumbnailUrl: null, thumbnailBlob: null, rating: null, notes: '', dateAdded: new Date().toISOString(), dateRated: null
+      id,
+      type: 'book',
+      sourceId: null,
+      title,
+      creators: [],
+      year: null,
+      summary: '',
+      genres: [],
+      thumbnailUrl: null,
+      thumbnailBlob: null,
+      rating: null,
+      notes: '',
+      dateAdded: new Date().toISOString(),
+      dateRated: null
     });
   const titles = async () => (await db.listEntries()).map((e) => e.title).sort();
   return { db, add, titles, sync: () => sync.syncNow(ITER) };

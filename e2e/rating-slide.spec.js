@@ -1,7 +1,7 @@
 // Rating by sliding a finger along the stars, with the magnified view while
 // sliding. Touch goes through Chromium's own input pipeline (CDP), so the
 // sideways-rates / vertical-scrolls split is the browser's real decision.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 
 async function openArrival(page) {
   await page.goto('/index.html');

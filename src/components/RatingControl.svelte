@@ -1,5 +1,6 @@
 <script lang="ts">
   import { play } from 'dusk-dawn';
+  import { untrack } from 'svelte';
   import { normalizeRating, ratingLabel } from '../util/stars';
   import { ratingView } from '../state/rating-scale.svelte';
   import Icon from './Icon.svelte';
@@ -27,7 +28,19 @@
   /** Points on the shown scale ↔ the stored rating. */
   const toPoints = (r: number) => Math.round(r * (scale / 5) * 2) / 2;
   const fromPoints = (p: number) => normalizeRating(p * (5 / scale));
-  const value = $derived(normalizeRating(raw));
+  // The rating just given, shown (and built on by the next key press) until the
+  // saved value comes back, so quick presses add up instead of each starting
+  // from the value before the first one was saved.
+  let given = $state<{ rating: number | null } | null>(null);
+  let givenTimer: ReturnType<typeof setTimeout> | undefined;
+  const stored = $derived(normalizeRating(raw));
+  $effect(() => {
+    const now = stored;
+    untrack(() => {
+      if (given && given.rating === now) given = null;
+    });
+  });
+  const value = $derived(given ? given.rating : stored);
   const points = $derived(value == null ? null : toPoints(value));
   let preview = $state<number | null>(null);
   let slider: HTMLDivElement;
@@ -50,6 +63,10 @@
   function commit(nextPoints: number | null) {
     const n = nextPoints == null ? null : fromPoints(nextPoints);
     if (n === value) return;
+    given = { rating: n };
+    // A save that never comes back (or one overtaken elsewhere) doesn't pin it.
+    clearTimeout(givenTimer);
+    givenTimer = setTimeout(() => (given = null), 3000);
     onchange(n);
     // The stars light up one after another, up to the new rating.
     if (n == null) return;

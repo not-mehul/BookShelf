@@ -1,7 +1,7 @@
 // Adding from search: the loading state while a result's cover downloads, no
 // duplicates from quick repeat taps, and Select several. Google Books and the
 // cover host are stubbed, the covers held back until the test lets them go.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 
 const VOLUMES = [
   ['dune-1', 'Dune', 'Frank Herbert', '1965'],

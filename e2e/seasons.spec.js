@@ -1,6 +1,6 @@
 // Every season at once, on a show with more than one aired: the button by the
 // Seasons label marks them all, clears them again, and Undo puts the entry back.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 import { readFileSync } from 'node:fs';
 
 /** The usual shelf, with Severance's second season aired (three episodes). */

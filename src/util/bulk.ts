@@ -1,6 +1,6 @@
 // Bulk edits for a multi-selection in the library: status, tags, delete.
 
-import { getEntry, saveEntry, deleteEntry, listEntries } from '../db/database';
+import { getEntry, saveEntry, deleteEntry, listEntries, patchEntry } from '../db/database';
 import { applyStatus } from './apply-status';
 import type { CatalogEntry, EntryStatus } from '../types';
 
@@ -27,17 +27,20 @@ export async function applyBulkChanges(ids: string[], changes: BulkChanges): Pro
   const all = await listEntries();
   let changed = 0;
   for (const id of ids) {
-    const entry = await getEntry(id);
-    if (!entry) continue;
-    let dirty = applyTagChanges(entry, changes);
-    if (changes.status !== undefined && entry.type !== 'quote' && (entry.status ?? null) !== changes.status) {
-      await applyStatus(entry, changes.status, all);
-      dirty = true;
-    }
-    if (dirty) {
-      await saveEntry(entry);
-      changed++;
-    }
+    let dirty = false;
+    await patchEntry(id, async (entry) => {
+      dirty = applyTagChanges(entry, changes);
+      if (
+        changes.status !== undefined &&
+        entry.type !== 'quote' &&
+        (entry.status ?? null) !== changes.status
+      ) {
+        await applyStatus(entry, changes.status, all);
+        dirty = true;
+      }
+      return dirty;
+    });
+    if (dirty) changed++;
   }
   return changed;
 }

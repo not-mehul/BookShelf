@@ -5,7 +5,9 @@ const FAST = { iterations: 1_000 }; // keep tests quick; production uses DEFAULT
 
 describe('sync encryption', () => {
   it('round-trips (including non-ASCII text) and gzips the payload', async () => {
-    const text = JSON.stringify({ entries: Array.from({ length: 200 }, (_, i) => ({ title: `Книга ${i} — “quoted”` })) });
+    const text = JSON.stringify({
+      entries: Array.from({ length: 200 }, (_, i) => ({ title: `Книга ${i} — “quoted”` }))
+    });
     const env = await encryptPayload(text, 'correct horse', FAST);
     expect(env.length).toBeLessThan(text.length); // compressed before encryption
     const { plaintext } = await decryptPayload(env, 'correct horse');
@@ -49,5 +51,22 @@ describe('sync encryption', () => {
 
   it('defaults to a strong key-derivation cost', () => {
     expect(DEFAULT_ITERATIONS).toBeGreaterThanOrEqual(600_000);
+  });
+});
+
+describe('damaged sync files', () => {
+  it('fail with a plain message, and never ask for unbounded work', async () => {
+    const { decryptPayload } = await import('../src/sync/crypto');
+    const head = { format: 'bookshelf-sync', v: 1, cipher: 'AES-256-GCM', iv: 'AAAA', data: 'AAAA' };
+    for (const env of [
+      { format: 'bookshelf-sync', v: 1 },
+      { ...head, kdf: { alg: 'PBKDF2-SHA256', salt: 'AAAA', iterations: 0 } },
+      { ...head, kdf: { alg: 'PBKDF2-SHA256', salt: 'AAAA', iterations: 1e12 } },
+      { ...head, kdf: { alg: 'PBKDF2-SHA256', salt: '!!', iterations: 1000 } }
+    ]) {
+      await expect(decryptPayload(JSON.stringify(env), 'pw')).rejects.toThrow(
+        'The sync file is not readable (corrupted?).'
+      );
+    }
   });
 });

@@ -10,10 +10,10 @@
 
 import { callNative, isNativeShell } from '../platform/native';
 import { getSetting, setSetting } from '../util/settings';
-import { listEntries, listTombstones, saveEntry, deleteEntry, getEntry, db } from '../db/database';
+import { listEntries, listTombstones, db, patchEntry, withEntryLock } from '../db/database';
 import { fetchThumbBlob } from '../util/thumbs';
 import { encryptPayload, decryptPayload } from './crypto';
-import { mergeSnapshots } from './merge';
+import { entryTime, mergeSnapshots } from './merge';
 import type { Snapshot, SyncEntry } from './merge';
 
 export type SyncStatus = { folderName: string } | null;
@@ -73,15 +73,41 @@ async function runSync({ iterations }: { iterations?: number }): Promise<SyncRep
     const local = { entries: (await listEntries()).map(toSyncEntry), tombstones: await listTombstones() };
     const result = mergeSnapshots(local, remote);
     const needCovers: import('../types').CatalogEntry[] = [];
+    let pulled = 0;
     for (const incoming of result.toPut) {
-      const existing = await getEntry(incoming.id);
-      // Keep our cached cover if the cover URL is unchanged; otherwise refetch later.
-      const keepBlob =
-        existing && existing.thumbnailUrl === incoming.thumbnailUrl ? existing.thumbnailBlob : null;
-      const saved = await saveEntry({ ...incoming, thumbnailBlob: keepBlob }, { touch: false });
-      if (!keepBlob && saved.thumbnailUrl) needCovers.push(saved);
+      const saved = await withEntryLock(incoming.id, async () => {
+        const existing = await db.entries.get(incoming.id);
+        // Edited here since the merge read the shelf: the local edit is newer, keep it
+        // (the next sync pushes it).
+        if (existing && entryTime(existing) >= entryTime(incoming)) return null;
+        // Keep our cached cover if the cover URL is unchanged; otherwise refetch later.
+        const keepBlob =
+          existing && existing.thumbnailUrl === incoming.thumbnailUrl ? existing.thumbnailBlob : null;
+        const entry = { ...incoming, thumbnailBlob: keepBlob };
+        await db.transaction('rw', db.entries, db.tombstones, async () => {
+          await db.entries.put(entry);
+          await db.tombstones.delete(entry.id);
+        });
+        return entry;
+      });
+      if (!saved) continue;
+      pulled++;
+      if (!saved.thumbnailBlob && saved.thumbnailUrl) needCovers.push(saved);
     }
-    for (const t of result.toDelete) await deleteEntry(t.id, t.deletedAt);
+    let removed = 0;
+    for (const t of result.toDelete) {
+      const done = await withEntryLock(t.id, async () => {
+        const existing = await db.entries.get(t.id);
+        // Edited here after it was deleted elsewhere: the edit is newer and brings it back.
+        if (existing && entryTime(existing) >= t.deletedAt) return false;
+        await db.transaction('rw', db.entries, db.tombstones, async () => {
+          await db.entries.delete(t.id);
+          await db.tombstones.put(t);
+        });
+        return true;
+      });
+      if (done) removed++;
+    }
     if (result.newTombstones.length) await db.tombstones.bulkPut(result.newTombstones);
 
     // 3. Push, only when the file is behind.
@@ -97,7 +123,7 @@ async function runSync({ iterations }: { iterations?: number }): Promise<SyncRep
     await setSetting('sync_last', new Date().toISOString());
     await setSetting('sync_last_error', '');
     void refetchCovers(needCovers);
-    return { pulled: result.toPut.length, removed: result.toDelete.length, pushed: result.pushNeeded };
+    return { pulled, removed, pushed: result.pushNeeded };
   } catch (err) {
     await setSetting('sync_last_error', err instanceof Error ? err.message : String(err));
     throw err;
@@ -124,11 +150,15 @@ async function refetchCovers(entries: import('../types').CatalogEntry[]) {
   for (const entry of entries) {
     const blob = await fetchThumbBlob(entry.thumbnailUrl);
     if (!blob) continue;
-    const current = await getEntry(entry.id);
-    // Only fill the cover in if nothing changed meanwhile; don't bump updatedAt.
-    if (current && current.updatedAt === entry.updatedAt && !current.thumbnailBlob) {
-      await saveEntry({ ...current, thumbnailBlob: blob }, { touch: false });
-    }
+    // Only fill the cover in if the cover is unchanged and still missing; don't bump updatedAt.
+    await patchEntry(
+      entry.id,
+      (current) => {
+        if (current.thumbnailUrl !== entry.thumbnailUrl || current.thumbnailBlob) return false;
+        current.thumbnailBlob = blob;
+      },
+      { touch: false }
+    );
   }
 }
 
