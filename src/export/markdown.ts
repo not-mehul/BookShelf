@@ -1,7 +1,8 @@
 // Serialize the catalog to Markdown, grouped by type and sorted by rating desc.
 
+import { compareTitles } from '../util/text';
 import { listEntries } from '../db/database';
-import { isNativeShell, nativeExport } from '../platform/native';
+import { nativeExport } from '../platform/native';
 import { starString, ratingLabel } from '../util/stars';
 import type { EntryType } from '../types';
 
@@ -23,6 +24,19 @@ function escapeMd(text: string | null | undefined): string {
   return text.replace(/[<>]/g, (c) => (c === '<' ? '&lt;' : '&gt;'));
 }
 
+/**
+ * Free text (a synopsis) as Markdown lines that can't be mistaken for the
+ * export's own structure: a line that would read as a rule, a heading, a
+ * quote, an author line or a field gets a backslash in front, which Markdown
+ * shows as the plain character and the importer takes off again.
+ */
+function escapeBlock(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (/^\s*(?:-{3,}|#{1,6}\s|>|\*|_|!\[|\\)/.test(line) ? `\\${line.trimStart()}` : line))
+    .join('\n');
+}
+
 export async function exportMarkdown() {
   const entries = await listEntries();
   const today = new Date().toISOString().slice(0, 10);
@@ -32,18 +46,24 @@ export async function exportMarkdown() {
   for (const type of TYPE_ORDER) {
     const slice = entries
       .filter((e) => e.type === type)
-      .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.title.localeCompare(b.title));
+      .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || compareTitles(a, b));
     if (!slice.length) continue;
     md += `\n## ${TYPE_LABEL[type]} (${slice.length})\n\n`;
     for (const e of slice) {
       if (type === 'quote') {
         const qText = escapeMd(e.quoteText || e.title).replace(/\n/g, '\n> ');
         md += `> ${qText}\n`;
+        // Author · source · where, so an author written "Le Guin, Ursula K." stays whole.
         const citeParts = [e.creators?.[0], e.source, e.location].filter(Boolean).map(escapeMd);
-        if (citeParts.length) md += `>\n> — ${citeParts.join(', ')}\n\n`;
+        if (citeParts.length) md += `>\n> — ${citeParts.join(' · ')}\n\n`;
         else md += '\n';
         if (e.rating != null) md += `${starString(e.rating)} **${ratingLabel(e.rating, 5)}**\n\n`;
-        if (e.notes?.trim()) md += `_${escapeMd(e.notes.trim())}_\n\n`;
+        if (e.notes?.trim()) {
+          const lines = escapeMd(e.notes.trim())
+            .split('\n')
+            .filter((l) => l.trim());
+          md += `${lines.map((l) => `_${l.trim()}_`).join('\n')}\n\n`;
+        }
         md += `_Added ${formatDate(e.dateAdded)}_\n\n---\n\n`;
         continue;
       }
@@ -64,7 +84,7 @@ export async function exportMarkdown() {
         e.finishes?.length ? `finished ${e.finishes.map(formatDate).join(', ')}` : ''
       ].filter(Boolean);
       if (journal.length) md += `**Journal:** ${journal.join(' · ')}\n\n`;
-      if (e.summary) md += `${escapeMd(e.summary).trim()}\n\n`;
+      if (e.summary?.trim()) md += `${escapeBlock(escapeMd(e.summary).trim())}\n\n`;
       if (e.notes?.trim()) md += `> ${escapeMd(e.notes.trim()).replace(/\n/g, '\n> ')}\n\n`;
       md += `_Added ${formatDate(e.dateAdded)}${e.dateRated ? ` · rated ${formatDate(e.dateRated)}` : ''}_\n\n---\n\n`;
     }
@@ -78,21 +98,7 @@ export async function saveAndShareMarkdown() {
   const today = new Date().toISOString().slice(0, 10);
   const filename = `bookshelf-${today}.md`;
 
-  // Native Android shell — hand the file to the system share sheet.
-  if (isNativeShell()) {
-    nativeExport(filename, md);
-    return { method: 'native', filename };
-  }
-
-  // Browser — trigger a download.
-  const blob = new Blob([md], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  return { method: 'download', filename };
+  // To the Android share sheet: Drive, Files, email, and so on.
+  nativeExport(filename, md);
+  return { filename };
 }

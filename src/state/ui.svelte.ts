@@ -6,6 +6,8 @@ import type { EntryStatus, EntryType } from '../types';
 /** What a link from another app knows about the book (style.md §14.1). */
 export interface AddSeed {
   status?: EntryStatus;
+  /** When it was finished (ISO, local noon), if the sender said. */
+  finishedAt?: string;
   /** 0–1 through the book; becomes pages read once the edition's page count is known. */
   progress?: number;
   /** The sender's note on the book, for the entry's notes. */

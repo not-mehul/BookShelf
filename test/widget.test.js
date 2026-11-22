@@ -2,8 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { buildWidgetSummary } from '../src/platform/widget';
 
 const e = (over) => ({
-  id: Math.random().toString(36), type: 'book', title: 'T', creators: [], status: null,
-  dateAdded: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', ...over
+  id: Math.random().toString(36),
+  type: 'book',
+  title: 'T',
+  creators: [],
+  status: null,
+  dateAdded: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  ...over
 });
 
 describe('buildWidgetSummary', () => {
@@ -16,7 +22,14 @@ describe('buildWidgetSummary', () => {
 
   it('lists up to three in-progress items, most recently touched first, with progress', () => {
     const items = [1, 2, 3, 4].map((n) =>
-      e({ type: 'tv', title: `B${n}`, status: 'in-progress', updatedAt: `2026-01-0${n}T00:00:00Z`, creators: ['A'], progress: { current: n, total: 4 } })
+      e({
+        type: 'tv',
+        title: `B${n}`,
+        status: 'in-progress',
+        updatedAt: `2026-01-0${n}T00:00:00Z`,
+        creators: ['A'],
+        progress: { current: n, total: 4 }
+      })
     );
     const s = buildWidgetSummary([...items, e({ title: 'done', status: 'finished' })], 'light');
     expect(s.inProgress.map((i) => i.title)).toEqual(['B4', 'B3', 'B2']);
@@ -38,7 +51,12 @@ describe('buildWidgetSummary', () => {
     const s = buildWidgetSummary(
       [
         e({ type: 'quote', quoteText: 'old', dateAdded: '2025-01-01T00:00:00Z' }),
-        e({ type: 'quote', quoteText: 'x'.repeat(500), creators: ['Orwell'], dateAdded: '2026-02-01T00:00:00Z' })
+        e({
+          type: 'quote',
+          quoteText: 'x'.repeat(500),
+          creators: ['Orwell'],
+          dateAdded: '2026-02-01T00:00:00Z'
+        })
       ],
       'dark'
     );

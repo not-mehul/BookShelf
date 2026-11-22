@@ -90,7 +90,7 @@ Keep these unchanged in any later change, or an update will open an empty shelf.
 | Setting                | Value                                  |
 | :--------------------- | :------------------------------------- |
 | Application ID         | `app.mehul.bookshelf`                  |
-| minSdk                 | 26 (Android 8.0)                       |
+| minSdk                 | 29 (Android 10)                        |
 | compileSdk / targetSdk | 37 (Android 17)                        |
 | Capacitor              | 8                                      |
 | AGP / Gradle           | 9.5 / 9.8 (built-in Kotlin)            |

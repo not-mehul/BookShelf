@@ -7,3 +7,8 @@ export function splitList(value: string | null | undefined): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/** A–Z by title, for sorting; copes with an entry that has none. */
+export function compareTitles(a: { title?: string | null }, b: { title?: string | null }): number {
+  return String(a.title ?? '').localeCompare(String(b.title ?? ''));
+}

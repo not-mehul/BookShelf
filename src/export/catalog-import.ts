@@ -5,7 +5,8 @@
 // later from each entry's page, as for a hand-added entry.
 
 import { unzipSync, strFromU8 } from 'fflate';
-import { listEntries, saveEntry } from '../db/database';
+import { listEntries, patchEntry, saveEntry } from '../db/database';
+import { toDay } from '../util/journal';
 import { newEntry } from '../util/new-entry';
 import { normalizeRating } from '../util/stars';
 import type { CatalogEntry, EntryStatus } from '../types';
@@ -69,8 +70,11 @@ export function detectSource(headers: readonly string[]): CatalogSource | null {
 function day(text: string | undefined): string | null {
   const m = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(text ?? '');
   if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  const [y, mo, da] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(y, mo - 1, da, 12);
+  // 2025/02/31 would roll over to 3 March: not a real date, so none.
+  if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
+  return d.toISOString();
 }
 
 /** Goodreads wraps ISBNs as ="0123456789" so spreadsheets keep the zeros. */
@@ -180,6 +184,8 @@ export function fromStoryGraph(rows: readonly Row[]): CatalogEntry[] {
     });
 }
 
+const SET_ASIDE = ['deleted', 'orphaned', 'likes', 'lists'];
+
 /**
  * Letterboxd's export is several files: watched, diary (one row per watch),
  * ratings and watchlist. They are folded into one entry per film.
@@ -200,11 +206,14 @@ export function fromLetterboxd(files: readonly { name: string; rows: readonly Ro
     }
     return e;
   };
-  const kind = (name: string) =>
-    name
-      .toLowerCase()
-      .replace(/^.*\//, '')
-      .replace(/\.csv$/, '');
+  // The export's own files sit at its top; its folders hold other things that
+  // share their columns: deleted/ (entries you removed), orphaned/, likes/, and
+  // lists/ (your lists, under names you chose, which could be "watched").
+  const kind = (name: string) => {
+    const parts = name.toLowerCase().split('/');
+    if (parts.slice(0, -1).some((dir) => SET_ASIDE.includes(dir))) return '';
+    return (parts.at(-1) ?? '').replace(/\.csv$/, '');
+  };
   // Watchlist first, so a film both watched and still listed ends up watched.
   const order = ['watchlist', 'watched', 'ratings', 'diary', 'reviews'];
   const sorted = [...files].sort((a, b) => order.indexOf(kind(a.name)) - order.indexOf(kind(b.name)));
@@ -264,17 +273,27 @@ export function matchKeys(e: Pick<CatalogEntry, 'type' | 'title' | 'creators' | 
   const keys: string[] = [];
   if (e.isbn) keys.push(`isbn:${e.isbn}`);
   const surname =
-    fold(e.creators[0] ?? '')
+    fold(e.creators?.[0] ?? '')
       .split(' ')
       .at(-1) ?? '';
-  if (e.type === 'book') keys.push(`book:${fold(e.title)}|${surname}`);
-  else keys.push(`${e.type}:${fold(e.title)}|${e.year ?? ''}`);
+  if (e.type === 'book') keys.push(`book:${fold(e.title ?? '')}|${surname}`);
+  else keys.push(`${e.type}:${fold(e.title ?? '')}|${e.year ?? ''}`);
   return keys;
 }
 
-/** Fills what the shelf's copy doesn't have from the import; never overwrites what is already there. */
+/**
+ * Fills what the shelf's copy doesn't have from the import; never overwrites
+ * what is already there, with one exception: something on the wishlist that
+ * the export says was read or watched is moved to Completed, with the
+ * export's dates, since it can't be both.
+ */
 export function mergeInto(existing: CatalogEntry, incoming: CatalogEntry): boolean {
   let changed = false;
+  if (existing.status === 'want' && incoming.status === 'finished') {
+    existing.status = 'finished';
+    existing.queueRank = null;
+    changed = true;
+  }
   const fill = <K extends keyof CatalogEntry>(k: K) => {
     const v = existing[k];
     const empty = v == null || v === '' || (Array.isArray(v) && v.length === 0);
@@ -287,9 +306,17 @@ export function mergeInto(existing: CatalogEntry, incoming: CatalogEntry): boole
   };
   for (const k of ['rating', 'dateRated', 'status', 'isbn', 'pageCount', 'notes', 'series', 'year'] as const)
     fill(k);
-  const finishes = [...new Set([...(existing.finishes ?? []), ...(incoming.finishes ?? [])])].sort();
-  if (finishes.length !== (existing.finishes ?? []).length) {
-    existing.finishes = finishes;
+  // A finish is a day: one already on the shelf for that day (finished in the
+  // app at 6 pm, say) is the same finish as the export's.
+  const days = new Set((existing.finishes ?? []).map(toDay));
+  const added = (incoming.finishes ?? []).filter((f) => {
+    const d = toDay(f);
+    if (days.has(d)) return false;
+    days.add(d);
+    return true;
+  });
+  if (added.length) {
+    existing.finishes = [...(existing.finishes ?? []), ...added].sort();
     changed = true;
   }
   const tags = [...new Set([...(existing.tags ?? []), ...(incoming.tags ?? [])])];
@@ -350,10 +377,11 @@ export async function importCatalogExport(files: readonly File[]): Promise<Catal
       .map((k) => byKey.get(k))
       .find(Boolean);
     if (match) {
-      if (mergeInto(match, e)) {
-        await saveEntry(match);
-        result.updated++;
-      } else result.unchanged++;
+      // Merged onto the stored copy; the list read above may be behind it.
+      let changed = false;
+      await patchEntry(match.id, (stored) => (changed = mergeInto(stored, e)));
+      if (changed) result.updated++;
+      else result.unchanged++;
       continue;
     }
     await saveEntry(e);

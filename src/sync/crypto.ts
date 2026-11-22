@@ -11,6 +11,8 @@
 export const FORMAT = 'bookshelf-sync';
 export const FORMAT_VERSION = 1;
 export const DEFAULT_ITERATIONS = 600_000;
+/** The most key-derivation work a sync file may ask for (~15 s on a phone). */
+export const MAX_ITERATIONS = 10_000_000;
 
 export interface Envelope {
   format: typeof FORMAT;
@@ -90,18 +92,43 @@ export async function decryptPayload(
   if (env?.format !== FORMAT) throw new Error('Not a BookShelf sync file.');
   if (env.v > FORMAT_VERSION)
     throw new Error('The sync file was written by a newer BookShelf. Update the app.');
-  const key = await deriveKey(passphrase, fromBase64(env.kdf.salt), env.kdf.iterations);
+  const unreadable = () => new Error('The sync file is not readable (corrupted?).');
+  const iterations = env.kdf?.iterations;
+  if (
+    env.kdf?.alg !== 'PBKDF2-SHA256' ||
+    env.cipher !== 'AES-256-GCM' ||
+    typeof env.kdf.salt !== 'string' ||
+    typeof env.iv !== 'string' ||
+    typeof env.data !== 'string' ||
+    !Number.isInteger(iterations) ||
+    // The header is authenticated, but only once the key is derived: bound the
+    // work a damaged file can ask for, so it fails instead of hanging the app.
+    iterations < 1 ||
+    iterations > MAX_ITERATIONS
+  )
+    throw unreadable();
+  let salt, iv, data;
+  try {
+    [salt, iv, data] = [fromBase64(env.kdf.salt), fromBase64(env.iv), fromBase64(env.data)];
+  } catch {
+    throw unreadable();
+  }
+  const key = await deriveKey(passphrase, salt, iterations);
   let compressed;
   try {
     compressed = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: fromBase64(env.iv), additionalData: headerAad(env) },
+      { name: 'AES-GCM', iv, additionalData: headerAad(env) },
       key,
-      fromBase64(env.data)
+      data
     );
   } catch {
     throw new Error('Wrong sync passphrase, or the sync file is corrupted.');
   }
-  return { plaintext: dec.decode(await gunzip(new Uint8Array(compressed))), salt: env.kdf.salt };
+  try {
+    return { plaintext: dec.decode(await gunzip(new Uint8Array(compressed))), salt: env.kdf.salt };
+  } catch {
+    throw unreadable();
+  }
 }
 
 // ── helpers ────────────────────────────────────────────────────

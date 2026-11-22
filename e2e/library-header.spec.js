@@ -1,6 +1,6 @@
 // The library's media tabs (icons, the chosen one with its word), the count
 // under them, and the floating bar that brings the tabs back on scroll-up.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 
 async function importFixture(page) {
   await page.getByRole('button', { name: 'Settings' }).click();

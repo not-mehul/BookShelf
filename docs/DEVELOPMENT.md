@@ -11,7 +11,13 @@ npm install
 npm run dev
 ```
 
-Open the shown localhost URL. Open **Settings** (gear, top-right) and paste:
+BookShelf is an Android app (Android 10+); `npm run dev` runs its UI in a
+browser so you can work on it. Search, sync, sharing, backups and the barcode
+scanner go through the Android shell, so try those in the app (`npm run android:run`)
+or in the e2e suite's simulated shell. A production build opened in a browser
+only says that BookShelf is an Android app.
+
+In the app, open **Settings** (gear, top-right) and paste:
 
 - A **TheTVDB API key** (project key from your TheTVDB account)
 - Your **TheTVDB subscriber PIN** (if your project key uses end-user subscription funding)
@@ -20,20 +26,16 @@ Open the shown localhost URL. Open **Settings** (gear, top-right) and paste:
 Or, instead of a TheTVDB key on every device, deploy the [TheTVDB proxy](../proxy)
 and enter its URL (and access token) under Settings → TheTVDB.
 
-> **Privacy:** catalog data lives locally in IndexedDB. In the Android app, API
-> keys, the TheTVDB token and the sync passphrase are encrypted with an Android
-> Keystore key; in a plain browser they sit in localStorage. Nothing is sent
+> **Privacy:** catalog data lives locally in IndexedDB. API keys, the TheTVDB
+> token and the sync passphrase are encrypted with an Android Keystore key
+> (under `npm run dev`, outside the app, they sit in localStorage). Nothing is sent
 > anywhere except to the respective API when you search — and, if you enable
 > sync, an end-to-end encrypted file to the folder you chose.
-
-In a plain browser, TheTVDB blocks cross-origin requests: use the TheTVDB proxy,
-or set a generic CORS proxy under Settings → Browser Compatibility. The Android
-app needs neither.
 
 ## Scripts
 
 ```bash
-npm run dev          # Vite dev server
+npm run dev          # Vite dev server (the UI only, outside the app)
 npm run build        # production build (single self-contained index.html)
 npm run test         # Vitest unit tests (web + proxy)
 npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
@@ -61,8 +63,7 @@ Ledger's: Capacitor hosts the web build, and one Kotlin plugin
 (`BookShelfPlugin.kt` ↔ `src/platform/native.ts`) adds native HTTP to bypass
 WebView CORS (restricted to the app's API hosts), file export/share, predictive
 Back, and the Keystore, barcode scanner, folder sync, new-episode alerts and the
-home-screen widget. Everything is feature-detected, so the same build runs
-unchanged in a plain browser. See [`android/README.md`](../android/README.md) for
+home-screen widget. The app supports Android 10 (API 29) and later. See [`android/README.md`](../android/README.md) for
 how to build and run it, and how your data carries over from the old WebView
 shell.
 
@@ -70,7 +71,7 @@ shell.
 
 ```
 src/
-  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync, service worker
+  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync (outside the app: a notice)
   components/        Svelte 5 UI (runes)
     App.svelte       Header, stats bar, library, add button, the one dialog
     Library.svelte   Grid: type filter, search, sort, tag chips, selection mode
@@ -79,7 +80,7 @@ src/
     entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
     add/             Add flow: medium → search / manual / quote
     settings/        Preferences, sync setup, backup & restore
-    Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte, CameraScanner.svelte
+    Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte
   state/
     shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts
     ui.svelte.ts     Which dialog is open
@@ -90,14 +91,14 @@ src/
     normalize.ts     API responses → unified CatalogEntry shape
     episode-sync.ts  Episode-guide refresh + Android reminder schedule
   db/
-    database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD
+    database.ts      Dexie schema (v4: tags, tombstones, quote links) + CRUD; patchEntry for safe edits
   share/
     card.ts          Canvas share-card renderer (palette read from the tokens)
     layout.ts        Text wrapping / fit-to-box (pure)
-    share-image.ts   Native share sheet, Web Share (files) or download
+    share-image.ts   Share cards to the Android share sheet
   export/
     markdown.ts      DB → Markdown serializer
-    import.ts        Markdown parser (best-effort)
+    import.ts        Markdown parser (round-trips the export; skips what is already on the shelf)
     json.ts          Lossless JSON backup / restore
     share.ts         Single-entry share
   platform/
@@ -114,7 +115,7 @@ src/
     app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first
   types.d.ts         Shared data types (CatalogEntry, …)
 public/
-  manifest.webmanifest, sw.js, icon.svg   PWA assets
+  icon.svg           The app icon (README)
 test/                Vitest unit tests
 e2e/                 Playwright smoke tests (+ a simulated Android shell)
 proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
@@ -137,7 +138,7 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
   end-to-end sync between two simulated devices), the widget summary, half-star
   ratings, series detection, queue ranking and picks, episode progress,
   share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
-- **E2E (Playwright)** — the built app at phone size, in a plain browser and in a
+- **E2E (Playwright)** — the built app at phone size, in a
   simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
   (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
   entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half

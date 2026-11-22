@@ -91,16 +91,3 @@ export interface Tombstone {
   id: string;
   deletedAt: string;
 }
-
-// Shape Detection API (Chromium) — not yet in TypeScript's DOM lib.
-declare global {
-  interface DetectedBarcode {
-    rawValue: string;
-    format: string;
-  }
-  class BarcodeDetector {
-    constructor(options?: { formats?: string[] });
-    static getSupportedFormats(): Promise<string[]>;
-    detect(source: CanvasImageSource | ImageBitmapSource): Promise<DetectedBarcode[]>;
-  }
-}

@@ -2,6 +2,7 @@
 // the all-time lists (creators, decades) on the Statistics screen. Pure.
 
 import { daysToFinish } from './journal';
+import { ratingLabel } from './stars';
 import type { CatalogEntry } from '../types';
 
 export type FinishedType = 'book' | 'movie' | 'tv';
@@ -99,8 +100,11 @@ export function paceSentence(p: Pace, now: Date = new Date()): string {
     1,
     Math.ceil((new Date(now.getFullYear() + 1, 0, 1).getTime() - now.getTime()) / 86_400_000)
   );
+  // More left than days: say how many a day, not "one a day".
+  const perDay = Math.ceil(left / daysLeft);
   const every = Math.max(1, Math.floor(daysLeft / left));
-  const cadence = every === 1 ? 'about one a day' : `about one every ${every} days`;
+  const cadence =
+    perDay > 1 ? `about ${perDay} a day` : every === 1 ? 'about one a day' : `about one every ${every} days`;
   if (p.delta > 0) return `${p.delta} ahead of pace. ${left} to go.`;
   if (p.delta < 0) return `${-p.delta} behind pace; ${cadence} would catch up.`;
   return `On pace; ${cadence} keeps it there.`;
@@ -137,7 +141,7 @@ export function highlights(finishes: Finish[]): Highlight[] {
     .sort(
       (a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.dateRated || '').localeCompare(a.dateRated || '')
     )[0];
-  if (best) out.push({ label: 'Rated highest', entry: best, detail: `${best.rating}/5` });
+  if (best) out.push({ label: 'Rated highest', entry: best, detail: ratingLabel(best.rating) });
 
   return out;
 }

@@ -1,5 +1,6 @@
 // Series helpers: detect a series from a title, order a series, find what's next.
 
+import { compareTitles } from './text';
 import type { CatalogEntry } from '../types';
 
 export type Series = { name: string; position: number | null };
@@ -57,7 +58,7 @@ export function seriesEntries(entries: CatalogEntry[], name: string) {
 export function compareSeriesOrder(a: CatalogEntry, b: CatalogEntry) {
   const pa = a.series?.position ?? Infinity;
   const pb = b.series?.position ?? Infinity;
-  return pa - pb || (a.year ?? 0) - (b.year ?? 0) || a.title.localeCompare(b.title);
+  return pa - pb || (a.year ?? 0) - (b.year ?? 0) || compareTitles(a, b);
 }
 
 /**
@@ -89,5 +90,5 @@ export function nextInSeries(entries: CatalogEntry[], entry: CatalogEntry) {
 
 /** Sort key for "series order" in the library: series name, then position. */
 export function seriesSortKey(e: CatalogEntry) {
-  return e.series?.name ? `0 ${seriesKey(e.series.name)}` : `1 ${e.title.toLowerCase()}`;
+  return e.series?.name ? `0 ${seriesKey(e.series.name)}` : `1 ${String(e.title ?? '').toLowerCase()}`;
 }

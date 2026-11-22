@@ -28,7 +28,9 @@ export interface MergeResult {
 export const TOMBSTONE_RETENTION_DAYS = 365;
 const EPOCH = new Date(0).toISOString();
 
-const entryTime = (e: SyncEntry) => e.updatedAt || e.dateAdded || EPOCH;
+/** When an entry last changed, as the merge compares it. */
+export const entryTime = (e: Pick<SyncEntry, 'updatedAt' | 'dateAdded'>) =>
+  e.updatedAt || e.dateAdded || EPOCH;
 export function mergeSnapshots(
   local: Snapshot,
   remote: Snapshot,

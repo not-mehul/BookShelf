@@ -5,7 +5,6 @@
 // exposes the same paths.
 
 import { getSetting, setSetting } from '../util/settings';
-import { isNativeShell } from '../platform/native';
 import {
   normalizeTvdbSearchHit,
   enrichFromTvdbDetail,
@@ -38,11 +37,7 @@ async function refreshToken() {
   const pin = await getSetting('tvdb_pin', '');
 
   const body = pin ? { apikey, pin } : { apikey };
-  const url = `${BASE}/login`;
-  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
-  const finalUrl = proxy ? `${proxy}${url}` : url;
-
-  const res = await fetch(finalUrl, {
+  const res = await fetch(`${BASE}/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body)
@@ -74,15 +69,13 @@ async function tvdbFetch(path: string, params?: Record<string, string>) {
   let token = await getToken();
   const qs = params ? `?${new URLSearchParams(params)}` : '';
   const url = `${BASE}${path}${qs}`;
-  const proxy = isNativeShell() ? '' : await getSetting('cors_proxy', '');
-  const finalUrl = proxy ? `${proxy}${url}` : url;
 
-  let res = await fetch(finalUrl, {
+  let res = await fetch(url, {
     headers: { authorization: `Bearer ${token}` }
   });
   if (res.status === 401) {
     token = await refreshToken();
-    res = await fetch(finalUrl, {
+    res = await fetch(url, {
       headers: { authorization: `Bearer ${token}` }
     });
   }
@@ -139,14 +132,18 @@ export async function getEnglishTitle(type: 'movie' | 'tv', id: string): Promise
   }
 }
 
-export async function enrichEntry(entry: CatalogEntry): Promise<CatalogEntry> {
-  if (!entry.sourceId) return entry;
+/** TheTVDB's extended record for a film or show on the shelf, or null (no id, offline, no key). */
+export async function fetchDetail(entry: CatalogEntry): Promise<TvdbDetail | null> {
+  if (!entry.sourceId) return null;
   try {
-    const detail = entry.type === 'movie' ? await getMovie(entry.sourceId) : await getSeries(entry.sourceId);
-    return enrichFromTvdbDetail(entry, detail);
+    return entry.type === 'movie' ? await getMovie(entry.sourceId) : await getSeries(entry.sourceId);
   } catch {
-    return entry;
+    return null;
   }
+}
+
+export async function enrichEntry(entry: CatalogEntry): Promise<CatalogEntry> {
+  return enrichFromTvdbDetail(entry, await fetchDetail(entry));
 }
 
 const EPISODE_PAGE_SIZE = 500; // TheTVDB's page size for episode lists

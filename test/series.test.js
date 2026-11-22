@@ -24,11 +24,18 @@ describe('parseSeriesFromTitle', () => {
 });
 
 describe('series ordering', () => {
-  const e = (id, title, position, extra = {}) => ({ id, type: 'book', title, series: { name: 'The Expanse', position }, year: 2011, ...extra });
+  const e = (id, title, position, extra = {}) => ({
+    id,
+    type: 'book',
+    title,
+    series: { name: 'The Expanse', position },
+    year: 2011,
+    ...extra
+  });
   const shelf = [
     e('3', "Abaddon's Gate", 3),
     e('1', 'Leviathan Wakes', 1),
-    e('n', 'Memory\'s Legion', null),
+    e('n', "Memory's Legion", null),
     e('5', 'Nemesis Games', 5),
     { id: 'x', type: 'book', title: 'Dune', series: { name: 'Dune', position: 1 } }
   ];

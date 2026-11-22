@@ -1,6 +1,6 @@
 // The status buttons in an entry: equal, centred in their section, never wider
 // than it, four across when every word fits whole and two by two when not.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 
 async function openArrival(page, width) {
   await page.setViewportSize({ width, height: 800 });

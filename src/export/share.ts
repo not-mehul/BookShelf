@@ -1,7 +1,6 @@
-// Share a single catalog entry. Uses the Android export bridge on-device,
-// the Web Share API where available, and a clipboard copy as a last resort.
+// Share a single catalog entry as text, through the Android share sheet.
 
-import { isNativeShell, nativeExport } from '../platform/native';
+import { nativeExport } from '../platform/native';
 import { starString, ratingLabel } from '../util/stars';
 import type { CatalogEntry } from '../types';
 export function entryToText(entry: CatalogEntry): string {
@@ -16,31 +15,9 @@ export function entryToText(entry: CatalogEntry): string {
   return parts.join('\n');
 }
 
-// Returns a short status string for UI feedback.
-export async function shareEntry(entry: CatalogEntry) {
-  const text = entryToText(entry);
+/** Hands the entry, as text, to the Android share sheet. */
+export function shareEntry(entry: CatalogEntry): void {
   const title = entry.type === 'quote' ? 'A quote' : entry.title;
-
-  if (isNativeShell()) {
-    const safe = (title || 'entry').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 40);
-    nativeExport(`${safe}.txt`, text);
-    return 'shared';
-  }
-  if (navigator.share) {
-    try {
-      await navigator.share({ title, text });
-      return 'shared';
-    } catch {
-      return 'cancelled';
-    }
-  }
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return 'copied';
-    } catch {
-      return 'failed';
-    }
-  }
-  return 'failed';
+  const safe = (title || 'entry').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 40);
+  nativeExport(`${safe}.txt`, entryToText(entry));
 }

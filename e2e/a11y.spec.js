@@ -1,7 +1,7 @@
 // Accessibility: axe finds no WCAG A/AA problems on the main screens, and the
 // app still fits a phone with text at 200% (WCAG 1.4.4), and the new features
 // (catalog import, Did not finish, ratings out of 10) work end to end.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 import AxeBuilder from '@axe-core/playwright';
 
 const card = (page, title) =>

@@ -1,7 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { queueOrder, rankBetween, normalizeRanks, rankForMove, rankAtEnd, pickFromQueue } from '../src/util/queue';
+import {
+  queueOrder,
+  rankBetween,
+  normalizeRanks,
+  rankForMove,
+  rankAtEnd,
+  pickFromQueue
+} from '../src/util/queue';
 
-const want = (id, queueRank, extra = {}) => ({ id, type: 'book', title: id, status: 'want', queueRank, dateAdded: `2026-01-0${id.length}`, ...extra });
+const want = (id, queueRank, extra = {}) => ({
+  id,
+  type: 'book',
+  title: id,
+  status: 'want',
+  queueRank,
+  dateAdded: `2026-01-0${id.length}`,
+  ...extra
+});
 
 describe('queue ordering', () => {
   it('lists only queued, non-quote entries: ranked first, then unranked by date added', () => {

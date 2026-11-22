@@ -2,6 +2,7 @@
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { localDate, seasonProgress, type SeasonState } from '../util/episodes';
+  import { patchEntry } from '../db/database';
   import { markEpisodes } from '../util/mark-episodes';
   import type { CatalogEntry } from '../types';
   import Icon from './Icon.svelte';
@@ -23,10 +24,12 @@
   });
 
   async function markWatched(entry: CatalogEntry, s: SeasonState) {
-    await markEpisodes(
-      { ...entry },
-      s.aired.map((ep) => ep.id),
-      true
+    await patchEntry(entry.id, (d) =>
+      markEpisodes(
+        d,
+        s.aired.map((ep) => ep.id),
+        true
+      )
     );
     shelf.changed();
   }

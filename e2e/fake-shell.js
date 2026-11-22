@@ -14,13 +14,19 @@
 // subscribe, as Capacitor does for BookShelfPlugin's events.
 //
 // Runs inside the page, so it must be self-contained (no imports/closures).
+// Every spec gets it through e2e/app-test.js; a spec may install it again with
+// its own options (the later install replaces the earlier one).
 export function installFakeShell({
   scanResult = '9780441172719',
   syncFolder = null,
   notificationsAllowed = true,
   // [name, data] pairs the shell emits before the page loads (a cold start).
-  pendingEvents = []
+  pendingEvents = [],
+  // Native HTTP: 'empty' answers every API with no results; 'fetch' makes the
+  // request from the page, so a test's page.route() stubs answer it.
+  http = 'empty'
 } = {}) {
+  const pageFetch = window.fetch.bind(window);
   const keystore = {};
   let folder = syncFolder;
   window.__sent = [];
@@ -53,7 +59,9 @@ export function installFakeShell({
     PluginHeaders: [
       {
         name: 'BookShelf',
-        methods: [...Object.keys(methods), ...special, 'removeListener'].map(promise).concat({ name: 'addListener', rtype: 'callback' })
+        methods: [...Object.keys(methods), ...special, 'removeListener']
+          .map(promise)
+          .concat({ name: 'addListener', rtype: 'callback' })
       },
       { name: 'SystemBars', methods: ['setStyle', 'show', 'hide', 'setAnimation'].map(promise) }
     ],
@@ -62,14 +70,30 @@ export function installFakeShell({
       return new Promise((resolve, reject) =>
         setTimeout(() => {
           if (plugin === 'SystemBars') {
-            if (method === 'setStyle') window.__sent.push({ type: 'theme', mode: options.style === 'DARK' ? 'dark' : 'light' });
+            if (method === 'setStyle')
+              window.__sent.push({ type: 'theme', mode: options.style === 'DARK' ? 'dark' : 'light' });
             return resolve(undefined);
           }
           if (method === 'removeListener') return resolve(undefined);
           if (method === 'http') {
             window.__sent.push({ type: 'http', ...options });
+            if (http === 'fetch') {
+              const { url, method: verb, headers, body } = options;
+              return pageFetch(url, { method: verb, headers, body: body ?? undefined })
+                .then(async (res) => {
+                  const bytes = new Uint8Array(await res.arrayBuffer());
+                  let bin = '';
+                  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+                  resolve({ status: res.status, headers: Object.fromEntries(res.headers), body: btoa(bin) });
+                })
+                .catch((err) => resolve({ status: 0, error: String(err) }));
+            }
             // Empty search results for any API (Google Books, Open Library, TheTVDB).
-            return resolve({ status: 200, headers: { 'content-type': 'application/json' }, body: btoa('{"items":[],"docs":[],"data":[]}') });
+            return resolve({
+              status: 200,
+              headers: { 'content-type': 'application/json' },
+              body: btoa('{"items":[],"docs":[],"data":[]}')
+            });
           }
           if (method === 'setBackHandler') {
             window.__sent.push({ type: 'backHandler', enabled: options.enabled });

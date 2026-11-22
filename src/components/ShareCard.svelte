@@ -6,7 +6,7 @@
   import { currentTheme, type ThemeMode } from '../platform/theme.svelte';
   import { canvasToBlob, renderCard } from '../share/card';
   import { FORMATS } from '../share/layout';
-  import { canDownload, cardFilename, downloadImage, shareImage } from '../share/share-image';
+  import { cardFilename, shareImage } from '../share/share-image';
   import { ui } from '../state/ui.svelte';
   import { messageOf } from '../util/errors';
   import type { CatalogEntry } from '../types';
@@ -79,8 +79,8 @@
   async function share() {
     if (!blob || !entry) return;
     try {
-      const result = await shareImage(blob, filename, entry.title);
-      status = result === 'downloaded' ? `Saved ${filename}.` : '';
+      await shareImage(blob, filename);
+      status = '';
     } catch (err) {
       status = messageOf(err);
     }
@@ -131,27 +131,7 @@
       <button type="button" class="btn btn-primary" disabled={!blob} onclick={share}>
         <Icon name="share" /> <span>Share image</span>
       </button>
-      {#if canDownload()}
-        <button
-          type="button"
-          class="btn btn-muted"
-          disabled={!blob}
-          onclick={() => {
-            if (!blob) return;
-            downloadImage(blob, filename);
-            status = `Saved ${filename}.`;
-          }}
-        >
-          <Icon name="download" /> <span>Save image</span>
-        </button>
-      {/if}
-      <button
-        type="button"
-        class="btn btn-muted"
-        onclick={async () => {
-          if ((await shareEntry(e)) === 'copied') status = 'Copied to the clipboard.';
-        }}>Share as text</button
-      >
+      <button type="button" class="btn btn-muted" onclick={() => shareEntry(e)}>Share as text</button>
     </div>
     <p class="field-hint share-card-status" role="status" aria-live="polite">{status}</p>
   </div>

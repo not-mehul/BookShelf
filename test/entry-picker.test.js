@@ -29,7 +29,9 @@ describe('findEntryByTitle', () => {
   });
   it('returns null when nothing or more than one entry matches', () => {
     expect(findEntryByTitle(shelf, 'Neuromancer')).toBeNull();
-    expect(findEntryByTitle([...shelf, { id: '9', type: 'movie', title: 'Dune', creators: [] }], 'Dune')).toBeNull();
+    expect(
+      findEntryByTitle([...shelf, { id: '9', type: 'movie', title: 'Dune', creators: [] }], 'Dune')
+    ).toBeNull();
     expect(findEntryByTitle(shelf, '')).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 // The app as it runs inside the Android shell, with Capacitor's native layer
 // and the BookShelf plugin simulated by e2e/fake-shell.js.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 import { installFakeShell } from './fake-shell.js';
 
 const sent = (page) => page.evaluate(() => window.__sent);

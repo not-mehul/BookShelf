@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readBookShelfLink } from '../src/util/link-intake';
+import { newEntry } from '../src/util/new-entry';
 
 describe('readBookShelfLink', () => {
   it('opens a book search for a log link, keeping the reading state', () => {
@@ -18,7 +19,7 @@ describe('readBookShelfLink', () => {
           query: 'Dune Frank Herbert',
           link: null
         },
-        seed: { status: 'finished' }
+        seed: { status: 'finished', finishedAt: new Date(2026, 10, 1, 12).toISOString() }
       }
     });
   });
@@ -80,9 +81,21 @@ describe('quotes from another app', () => {
 
   it('carries a note on the book with a log', () => {
     const intake = readBookShelfLink('bookshelf://log?title=Dune&finished=2026-11-01&note=Spice.');
-    expect(intake.options.seed).toEqual({ status: 'finished', notes: 'Spice.' });
+    expect(intake.options.seed).toEqual({
+      status: 'finished',
+      finishedAt: new Date(2026, 10, 1, 12).toISOString(),
+      notes: 'Spice.'
+    });
     expect(readBookShelfLink('bookshelf://log?title=Dune&note=Spice.').options.seed).toEqual({
       notes: 'Spice.'
     });
+  });
+
+  it('logs the book on the day the sender finished it, not today', () => {
+    const { seed } = readBookShelfLink('bookshelf://log?title=Dune&finished=2025-12-30').options;
+    // What the search step saves for the picked result.
+    const entry = newEntry('book', { title: 'Dune', status: seed.status, finishes: [seed.finishedAt] });
+    expect(entry.finishes).toEqual([new Date(2025, 11, 30, 12).toISOString()]);
+    expect(new Date(entry.finishes[0]).getFullYear()).toBe(2025);
   });
 });

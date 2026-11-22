@@ -1,10 +1,12 @@
 // Shelf features, against e2e/fixtures/shelf.json imported through Settings.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './app-test.js';
 import { installFakeShell } from './fake-shell.js';
 
 /** A library card by its exact title (quotes can mention titles too). */
 const card = (page, title) =>
-  page.locator('.entry-card').filter({ has: page.locator('.entry-title', { hasText: new RegExp(`^${title}$`) }) });
+  page
+    .locator('.entry-card')
+    .filter({ has: page.locator('.entry-title', { hasText: new RegExp(`^${title}$`) }) });
 
 async function importFixture(page) {
   await page.getByRole('button', { name: 'Settings' }).click();
@@ -14,7 +16,7 @@ async function importFixture(page) {
   await expect(page.locator('dialog')).toHaveCount(0);
 }
 
-test.describe('in the browser', () => {
+test.describe('on the shelf', () => {
   test.beforeEach(async ({ page }) => {
     page.__errors = [];
     page.on('pageerror', (e) => page.__errors.push(e.message));
@@ -56,7 +58,9 @@ test.describe('in the browser', () => {
 
     await page.getByRole('button', { name: 'View statistics' }).click();
     await expect(dialog.locator('.stats-grid').first()).toContainText('290');
-    await expect(dialog.locator('.stats-undated')).toContainText('2 entries were finished before BookShelf kept dates');
+    await expect(dialog.locator('.stats-undated')).toContainText(
+      '2 entries were finished before BookShelf kept dates'
+    );
     await dialog.getByRole('button', { name: 'Set a goal' }).click();
     await expect(dialog.locator('.stats-goal-figure')).toHaveText(/1\s*of 12 books/);
     await dialog.getByRole('button', { name: 'Raise the goal by one' }).click();
@@ -156,7 +160,9 @@ test.describe('in the browser', () => {
 
     await card(page, 'Severance').click();
     const section = page.locator('dialog[open] .seasons-section');
-    await expect(section.locator('.seasons-summary')).toHaveText('1 of 1 season watched · season 2 is coming');
+    await expect(section.locator('.seasons-summary')).toHaveText(
+      '1 of 1 season watched · season 2 is coming'
+    );
     await expect(section.getByRole('button', { name: /Season 1/ })).toHaveAttribute('aria-pressed', 'true');
     // Unaired seasons can't be marked; specials aren't listed.
     await expect(section.getByRole('button', { name: /Season 2/ })).toBeDisabled();
@@ -175,15 +181,17 @@ test.describe('in the browser', () => {
     await expect.poll(size).toBe('1080x1920');
     await page.locator('.share-card-controls button', { hasText: 'Square' }).click();
     await expect.poll(size).toBe('1080x1080');
-    await expect(page.getByRole('button', { name: 'Save image' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Share image' })).toBeEnabled();
     // Dusk vs Dawn produce visibly different images.
-    const pixel = () => preview.evaluate(async (img) => {
-      const c = document.createElement('canvas');
-      c.width = img.naturalWidth; c.height = img.naturalHeight;
-      const g = c.getContext('2d');
-      g.drawImage(img, 0, 0);
-      return Array.from(g.getImageData(10, 10, 1, 1).data.slice(0, 3)).reduce((a, b) => a + b, 0);
-    });
+    const pixel = () =>
+      preview.evaluate(async (img) => {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0);
+        return Array.from(g.getImageData(10, 10, 1, 1).data.slice(0, 3)).reduce((a, b) => a + b, 0);
+      });
     const dusk = await pixel();
     await page.locator('.share-card-controls button', { hasText: 'Dawn' }).click();
     await expect.poll(pixel).toBeGreaterThan(dusk + 300);
@@ -228,6 +236,8 @@ test.describe('in the Android shell', () => {
     const toggle = page.getByRole('switch', { name: /New-episode alerts/ });
     await toggle.click();
     await expect(toggle).toBeChecked();
-    await expect.poll(() => page.evaluate(() => window.__sent.filter((m) => m.method === 'episodeReminders').length)).toBeGreaterThan(0);
+    await expect
+      .poll(() => page.evaluate(() => window.__sent.filter((m) => m.method === 'episodeReminders').length))
+      .toBeGreaterThan(0);
   });
 });
