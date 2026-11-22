@@ -53,9 +53,9 @@ test('scrolling back up a little brings the tabs back in a floating bar', async 
   for (let i = 0; i < 3; i++) await page.mouse.wheel(0, -20);
   await expect(bar).toHaveClass(/is-shown/);
   await expect(page.getByRole('tablist', { name: 'Show' })).toHaveCount(2);
-  // Only the tabs: no theme toggle or Settings in the bar.
+  // The tabs, with the wordmark and Settings above them; the theme lives in Settings.
   await expect(bar.getByRole('switch')).toHaveCount(0);
-  await expect(bar.getByRole('button', { name: 'Settings' })).toHaveCount(0);
+  await expect(bar.getByRole('button', { name: 'Settings' })).toHaveCount(1);
 
   // A few pixels of jitter don't hide it; scrolling down does.
   await page.mouse.wheel(0, 4);

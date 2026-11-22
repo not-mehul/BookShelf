@@ -39,8 +39,9 @@ npm run dev          # Vite dev server (the UI only, outside the app)
 npm run build        # production build (single self-contained index.html)
 npm run test         # Vitest unit tests (web + proxy)
 npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
+npm run test:visual  # screenshots of the main screens in Dusk and Dawn (-- --update-snapshots to accept)
 npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
-npm run lint         # ESLint
+npm run lint         # ESLint, Stylelint (type scale, breakpoints, gap tokens), literal colours
 npm run format       # Prettier (write)
 npm run check        # tokens + lint + typecheck + test + build (what CI runs on each push)
 npm run sync         # build, then copy it into the Android project (cap sync android)
@@ -53,7 +54,7 @@ Toolchain: Svelte 5 (runes), TypeScript 6 (strict, checked by svelte-check), Vit
 (Rolldown), Vitest 5, Playwright, ESLint 10 (flat config, typescript-eslint,
 eslint-plugin-svelte), Prettier 3, Dexie 4. The same stack as Ledger.
 
-For `test:e2e`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
+For `test:e2e` and `test:visual`, Playwright downloads Chromium on first run (`npx playwright install chromium`),
 or point `PW_CHROMIUM_PATH` at an existing Chromium.
 
 ## Android
@@ -73,13 +74,16 @@ shell.
 src/
   main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync (outside the app: a notice)
   components/        Svelte 5 UI (runes)
-    App.svelte       Header, stats bar, library, add button, the one dialog
-    Library.svelte   Grid: type filter, search, sort, tag chips, selection mode
-    EntryCard.svelte, UpNext.svelte, RatingControl.svelte, EntryPicker.svelte, …
-    Modal.svelte     The native <dialog> every view opens in (focus, Escape, Android Back)
+    App.svelte       Header, library, add button, the one dialog
+    Library.svelte   Grid or list: type tabs, filter, sort, tag chips, the overflow menu, selection mode
+    HomeStrip.svelte Up next for TV seasons and the day's quote, one card each, above the shelf
+    EntryCard.svelte, Stars.svelte, PlaceholderCover.svelte, OverflowMenu.svelte, RatingControl.svelte, …
+    Modal.svelte     The native <dialog> every view opens in: a bottom sheet below 900px with a sticky
+                     title bar (handle, back, title once scrolled, actions, close); focus, Escape, Android Back
     entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
     add/             Add flow: medium → search / manual / quote
-    settings/        Preferences, sync setup, backup & restore
+    settings/        Preferences: appearance (theme, rating scale), sync, your data, search keys
+    stats/           Statistics parts: the goal card, the month chart, bar lists
     Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte
   state/
     shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts
@@ -143,17 +147,24 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
   (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
   entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
   stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
+- **Screenshots (Playwright)** — `e2e/visual.spec.js` takes the library (grid, list,
+  menu), a book, a show, a quote, adding, Settings, Statistics and the queue in Dusk
+  and Dawn at phone size, and the library and a book at tablet width, from
+  `e2e/fixtures/visual-shelf.json`. Fonts (`e2e/fonts`), the clock, the time zone and
+  motion are pinned so a run matches the baselines in `e2e/__screenshots__`. Take
+  baselines on Linux, or from CI (Run workflow with _update screenshots_ ticked, then
+  commit the uploaded artifact).
 - **Android (JVM)** — native HTTP host allowlist, filename sanitizing and MIME types,
   Keystore name validation, the widget summary contract, and which new-episode
   alerts are due.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `npm run check` (tokens, colours,
-lint, typecheck, unit tests, build) on every push to main and every pull request.
-The Playwright suite and an Android debug build run only when the workflow is
+lint, typecheck, unit tests, build) on every push to main and every pull request,
+and the screenshot tests on every pull request. The Playwright suite and an Android debug build run only when the workflow is
 started by hand (Actions → CI → Run workflow). The release workflow builds the
 signed APK on each version tag and checks that R8 kept the plugin, widget UI and
 reminder worker.
 
 ## Design system
 
-BookShelf uses Editorial Dusk & Dawn from the [`dusk-dawn`](https://github.com/not-mehul/dusk-dawn) package, shared with Waymark, Ledger, Rosetta and Mise: the tokens, Fraunces, the shared component styles and the `IconTabs` (compact, §8.5.2), `ThemeToggle` and `Toast` components. Every color is a semantic CSS variable from `dusk-dawn/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). `dusk-dawn colours` (part of `npm run lint`) fails on any literal color in `src/`, and `dusk-dawn check` tests contrast in both themes. To change the design, change the package and move its tag in `package.json` (`style.md` §18 in the package).
+BookShelf uses Editorial Dusk & Dawn from the [`dusk-dawn`](https://github.com/not-mehul/dusk-dawn) package, shared with Waymark, Ledger, Rosetta and Mise: the tokens, Fraunces, the shared component styles and the `IconTabs` (compact, §8.5.2), `Select` and `Toast` components, and the sheet (§8.11), menu and settings-row patterns. The theme is chosen in Settings → Appearance. Every color is a semantic CSS variable from `dusk-dawn/tokens.css`. The `:root` block holds Dusk (dark, default). `[data-theme="light"]` holds Dawn (light). `dusk-dawn colours` (part of `npm run lint`) fails on any literal color in `src/`, Stylelint (`stylelint.config.js`) keeps font sizes on the type scale, media queries on the 640px and 900px breakpoints and gaps on the spacing tokens, and `dusk-dawn check` tests contrast in both themes. To change the design, change the package and move its tag in `package.json` (`style.md` §18 in the package).

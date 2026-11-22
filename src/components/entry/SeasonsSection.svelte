@@ -218,7 +218,7 @@
   }
   .season-name {
     font-family: var(--font-serif);
-    font-size: 1.0625rem;
+    font-size: 1rem;
     color: var(--text-heading);
   }
   .season-row:disabled .season-name {

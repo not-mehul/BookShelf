@@ -54,7 +54,7 @@ test('adding a quote puts it on the shelf', async ({ page }) => {
   await page.mouse.click(6, 6); // outside the card dismisses
   await expect(page.locator('dialog')).toHaveCount(0);
   await expect(page.locator('.quote-card')).toHaveCount(1);
-  await expect(page.locator('.header-count')).toContainText('1 entry');
+  await expect(page.locator('.lib-count')).toHaveText('1 entry');
 });
 
 test('phone layout: filter gets its own row; settings has sync and no browser options', async ({ page }) => {
@@ -65,6 +65,9 @@ test('phone layout: filter gets its own row; settings has sync and no browser op
   await page.getByRole('button', { name: 'Settings' }).click();
   expect(await dialogName(page)).toBe('Preferences');
   await expect(page.locator('.sync-section')).toHaveCount(1);
+  // Search keys start folded away; the summary opens them.
+  await expect(page.getByLabel('Proxy URL (optional)')).toBeHidden();
+  await page.locator('dialog[open] summary', { hasText: 'Movies and TV' }).click();
   await expect(page.getByLabel('Proxy URL (optional)')).toBeVisible();
   await expect(page.getByLabel('CORS proxy')).toHaveCount(0);
   await expect(page.locator('#weeklyBackup')).toBeVisible();

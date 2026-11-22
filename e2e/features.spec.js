@@ -34,7 +34,7 @@ test.describe('on the shelf', () => {
     await expect(slider).toHaveAttribute('aria-valuetext', '3.5 of 5 stars');
     await page.keyboard.press('Escape');
     await expect(page.locator('dialog')).toHaveCount(0);
-    await expect(card(page, "Rocannon's World").locator('.entry-rating-line')).toHaveText('★★★½☆');
+    await expect(card(page, "Rocannon's World").getByRole('img', { name: '3.5 of 5 stars' })).toBeVisible();
   });
 
   test('journal: status starts and finishes a book, and the year in review counts it', async ({ page }) => {
@@ -50,13 +50,13 @@ test.describe('on the shelf', () => {
     await expect(dialog.locator('#journal-span')).toHaveAttribute('data-value', /\d{4}-\d{2}-\d{2}/);
     await expect(dialog.locator('#journal-span')).toHaveAttribute('data-end', '');
 
-    await status.getByRole('radio', { name: 'Completed' }).click();
+    await status.getByRole('radio', { name: 'Finished' }).click();
     await expect(dialog.locator('.journal')).toContainText('Started and finished on the same day.');
     await expect(dialog.getByRole('button', { name: 'Read again' })).toHaveCount(0);
     await page.keyboard.press('Escape');
-    await expect(card(page, 'The Hobbit').locator('.entry-status-chip')).toHaveText('Completed');
+    await expect(card(page, 'The Hobbit').locator('.entry-status-chip')).toHaveText('Finished');
 
-    await page.getByRole('button', { name: 'View statistics' }).click();
+    await page.getByRole('button', { name: 'Stats', exact: true }).click();
     await expect(dialog.locator('.stats-grid').first()).toContainText('290');
     await expect(dialog.locator('.stats-undated')).toContainText(
       '2 entries were finished before BookShelf kept dates'
@@ -111,11 +111,13 @@ test.describe('on the shelf', () => {
   });
 
   test('queue: reorder persists, and pick-for-me respects filters', async ({ page }) => {
-    const openQueue = () => page.getByRole('button', { name: 'Your queue' }).click();
+    const openQueue = () => page.getByRole('button', { name: 'Queue', exact: true }).click();
     const order = () => page.locator('dialog[open] .queue-title').allTextContents();
     await openQueue();
     await expect.poll(order).toEqual(['The Hobbit', 'The Dispossessed', 'Arrival']); // loads async
-    await page.getByRole('button', { name: 'Move The Hobbit down' }).click();
+    // The move buttons are for the keyboard: they show once focused.
+    await page.getByRole('button', { name: 'Move The Hobbit down' }).focus();
+    await page.keyboard.press('Enter');
     await expect.poll(order).toEqual(['The Dispossessed', 'The Hobbit', 'Arrival']);
     // Keyboard on the drag handle.
     await page.getByRole('button', { name: /^Reorder Arrival/ }).focus();
@@ -131,7 +133,8 @@ test.describe('on the shelf', () => {
   });
 
   test('bulk select: tag several entries, then delete them', async ({ page }) => {
-    await page.getByRole('button', { name: 'Select entries' }).click();
+    await page.getByRole('button', { name: 'More library actions' }).click();
+    await page.getByRole('menuitem', { name: 'Select entries' }).click();
     await card(page, 'Arrival').click();
     await card(page, 'The Hobbit').click();
     await expect(card(page, 'Arrival')).toHaveAttribute('aria-checked', 'true');
@@ -144,11 +147,11 @@ test.describe('on the shelf', () => {
 
     // Deleting offers an undo instead of asking first.
     await page.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.locator('.header-count')).toContainText('5 entries');
+    await expect(page.locator('.lib-count')).toContainText('5 entries');
     await expect(page.locator('.select-bar')).toBeHidden();
     await expect(page.locator('#toast')).toContainText('Deleted 2 entries.');
     await page.locator('#toast').getByRole('button', { name: 'Undo' }).click();
-    await expect(page.locator('.header-count')).toContainText('7 entries');
+    await expect(page.locator('.lib-count')).toContainText('7 entries');
   });
 
   test('TV seasons: up next, mark a season watched', async ({ page }) => {
@@ -156,7 +159,7 @@ test.describe('on the shelf', () => {
     await page.getByRole('button', { name: 'Mark season 1 of Severance watched' }).click();
     // Season 2 hasn't aired: Up next says when it does.
     await expect(page.locator('.up-next-ep')).toHaveText('Season 2');
-    await expect(page.locator('.up-next-when')).toHaveText(/^airs 2099-01-17$/);
+    await expect(page.locator('.up-next-when')).toHaveText(/^airs Jan 17, 2099$/);
 
     await card(page, 'Severance').click();
     const section = page.locator('dialog[open] .seasons-section');
@@ -173,7 +176,8 @@ test.describe('on the shelf', () => {
 
   test('share cards render in every format and theme', async ({ page }) => {
     await card(page, 'The Left Hand of Darkness').click();
-    await page.locator('dialog[open]').getByRole('button', { name: 'Share' }).click();
+    await page.locator('dialog[open]').getByRole('button', { name: 'Actions for this entry' }).click();
+    await page.getByRole('menuitem', { name: 'Share' }).click();
     const preview = page.locator('.share-card-preview');
     const size = () => preview.evaluate((img) => `${img.naturalWidth}x${img.naturalHeight}`);
     await expect.poll(size).toBe('1080x1350');
@@ -205,7 +209,8 @@ test.describe('in the Android shell', () => {
     await importFixture(page);
     await page.getByRole('tab', { name: 'Quotes' }).click();
     await page.locator('.quote-card').first().click();
-    await page.locator('dialog[open]').getByRole('button', { name: 'Share' }).click();
+    await page.locator('dialog[open]').getByRole('button', { name: 'Actions for this entry' }).click();
+    await page.getByRole('menuitem', { name: 'Share' }).click();
     await expect(page.locator('.share-card-preview')).toHaveAttribute('src', /^blob:/);
     await expect(page.getByRole('button', { name: 'Save image' })).toHaveCount(0); // no downloads in the app
     await page.getByRole('button', { name: 'Share image' }).click();

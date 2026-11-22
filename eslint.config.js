@@ -10,7 +10,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...svelte.configs.recommended,
   {
-    languageOptions: { globals: { ...globals.browser } },
+    languageOptions: { globals: { ...globals.browser, __APP_VERSION__: 'readonly' } },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'smart'],
@@ -42,6 +42,12 @@ export default tseslint.config(
     // Playwright: specs run in Node; fake-shell.js is injected into the page.
     files: ['e2e/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } }
+  },
+  {
+    // Fixture builders are Node scripts run by hand.
+    files: ['e2e/fixtures/*.mjs'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-console': 'off' }
   },
   {
     files: ['test/**/*.js', 'proxy/test/**/*.js'],

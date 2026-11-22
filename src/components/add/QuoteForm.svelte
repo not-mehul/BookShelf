@@ -77,13 +77,13 @@
   <div class="modal-two-col">
     <Field label="Author" id="q-author" placeholder="e.g. George Orwell" bind:value={author} />
     <Field
-      label="Source / Work"
+      label="From"
       id="q-source"
       placeholder="e.g. 1984, Hamlet, or a person's name"
       bind:value={source}
     />
   </div>
-  <Field label="Page / time" id="q-location" placeholder="e.g. p. 112 or 1:04:20" bind:value={location} />
+  <Field label="Where in it" id="q-location" placeholder="e.g. p. 112 or 1:04:20" bind:value={location} />
   <div class="modal-actions add-form-actions">
     <button type="submit" class="btn btn-primary" disabled={saving}><Icon name="plus" /> Add quote</button>
   </div>

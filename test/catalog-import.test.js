@@ -188,7 +188,7 @@ describe('merging an import into the shelf', () => {
     expect(existing.finishes).toHaveLength(1);
   });
 
-  it('moves a wishlist entry the export says was read to Completed, with the export’s date', () => {
+  it('moves a wishlist entry the export says was read to Finished, with the export’s date', () => {
     const existing = { status: 'want', queueRank: 3, finishes: [], tags: [] };
     const [incoming] = fromGoodreads([
       { Title: 'T', Author: 'X', 'Exclusive Shelf': 'read', 'Date Read': '2025/03/09' }

@@ -1,10 +1,12 @@
 <script lang="ts">
+  // An entry's actions, in its sheet's bar: Edit, Share and Delete. Deleting can
+  // be undone for a few seconds instead of being confirmed (style.md §8.12).
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
   import type { CatalogEntry } from '../../types';
   import { deleteEntries, restoreEntries } from '../../util/bulk';
   import { messageOf } from '../../util/errors';
-  import Icon from '../Icon.svelte';
+  import OverflowMenu from '../OverflowMenu.svelte';
 
   interface Props {
     entry: CatalogEntry;
@@ -13,12 +15,11 @@
 
   let { entry, onedit }: Props = $props();
 
-  // Removing can be undone for a few seconds instead of being confirmed (style.md §8.12).
   async function remove() {
     const removed = await deleteEntries([entry.id]);
     ui.close();
     shelf.changed();
-    ui.notify(entry.type === 'quote' ? 'Removed the quote.' : `Removed ${entry.title}.`, 'info', {
+    ui.notify(entry.type === 'quote' ? 'Deleted the quote.' : `Deleted ${entry.title}.`, 'info', {
       label: 'Undo',
       run: () =>
         void restoreEntries(removed).then(
@@ -29,14 +30,11 @@
   }
 </script>
 
-<div class="modal-actions">
-  <button type="button" class="btn btn-muted" onclick={onedit}>
-    <Icon name="edit" /> <span class="btn-label">Edit</span>
-  </button>
-  <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'share', id: entry.id })}>
-    <Icon name="share" /> <span class="btn-label">Share</span>
-  </button>
-  <button type="button" class="btn btn-danger" title="Remove" onclick={remove}>
-    <Icon name="trash" /> <span class="btn-label">Remove</span>
-  </button>
-</div>
+<OverflowMenu
+  label="Actions for this entry"
+  items={[
+    { label: 'Edit details', icon: 'edit', onselect: onedit },
+    { label: 'Share', icon: 'share', onselect: () => ui.open({ kind: 'share', id: entry.id }) },
+    { label: 'Delete', icon: 'trash', danger: true, onselect: () => void remove() }
+  ]}
+/>

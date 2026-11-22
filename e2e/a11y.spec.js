@@ -63,7 +63,7 @@ test('the shelf, an entry, statistics and settings pass axe', async ({ page }) =
   await card(page, 'The Hobbit').click();
   await axe(page);
   await close(page);
-  await page.getByRole('button', { name: 'View statistics' }).click();
+  await page.getByRole('button', { name: 'Stats', exact: true }).click();
   await axe(page);
 });
 
@@ -75,7 +75,7 @@ test('everything fits with text at 200%', async ({ page }) => {
   await card(page, 'The Hobbit').click();
   await fits(page);
   await close(page);
-  await page.getByRole('button', { name: 'View statistics' }).click();
+  await page.getByRole('button', { name: 'Stats', exact: true }).click();
   await fits(page);
 });
 
@@ -92,7 +92,7 @@ test('Did not finish is a status of its own', async ({ page }) => {
 test('ratings out of 10 take half points', async ({ page }) => {
   await page.locator('dialog[open]').getByRole('radio', { name: 'Out of 10' }).click();
   await close(page);
-  await expect(card(page, "Rocannon's World").locator('.entry-rating-line')).toHaveText('6/10');
+  await expect(card(page, "Rocannon's World").locator('.stars-number')).toHaveText('6/10');
   await card(page, "Rocannon's World").click();
   const slider = page.getByRole('slider', { name: 'Rating' });
   await expect(slider).toHaveAttribute('aria-valuemax', '10');
@@ -100,7 +100,7 @@ test('ratings out of 10 take half points', async ({ page }) => {
   await page.keyboard.press('ArrowRight');
   await expect(slider).toHaveAttribute('aria-valuetext', '6.5 out of 10');
   await close(page);
-  await expect(card(page, "Rocannon's World").locator('.entry-rating-line')).toHaveText('6.5/10');
+  await expect(card(page, "Rocannon's World").locator('.stars-number')).toHaveText('6.5/10');
 });
 
 test('a Goodreads export imports, and importing it again adds nothing', async ({ page }) => {
@@ -120,5 +120,5 @@ test('a Goodreads export imports, and importing it again adds nothing', async ({
   await expect(page.getByText(/^From Goodreads: 0 new entries/)).toBeVisible();
   await close(page);
   await expect(card(page, 'Piranesi')).toHaveCount(1);
-  await expect(card(page, 'Piranesi').locator('.entry-rating-line')).toHaveText('★★★★★');
+  await expect(card(page, 'Piranesi').getByRole('img', { name: '5 of 5 stars' })).toBeVisible();
 });

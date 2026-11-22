@@ -2,8 +2,9 @@
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
   import type { CatalogEntry } from '../../types';
+  import { barTitle, useSheetBar } from '../Modal.svelte';
   import RatingControl from '../RatingControl.svelte';
-  import EntryActions from './EntryActions.svelte';
+  import EntryMenu from './EntryMenu.svelte';
   import NotesField from './NotesField.svelte';
   import TagsEditor from './TagsEditor.svelte';
 
@@ -24,13 +25,24 @@
       .filter(Boolean)
       .join(', ')
   );
+
+  const bar = useSheetBar();
+  $effect(() => {
+    if (!bar) return;
+    bar.actions = menu;
+    return () => {
+      if (bar.actions === menu) bar.actions = null;
+    };
+  });
 </script>
+
+{#snippet menu()}<EntryMenu {entry} {onedit} />{/snippet}
 
 <!-- The same hero as a book, film or show: centred, eyebrow first. -->
 <div class="modal-hero modal-quote-block">
   <span class="modal-quote-glyph" aria-hidden="true">“</span>
   <div class="modal-eyebrow">Quote</div>
-  <blockquote class="modal-quote-text" id="modal-title" tabindex="-1">
+  <blockquote class="modal-quote-text" id="modal-title" tabindex="-1" {@attach barTitle(bar, 'Quote')}>
     {entry.quoteText || entry.title}
   </blockquote>
   {#if citation}
@@ -61,5 +73,3 @@
 </div>
 
 <TagsEditor tags={entry.tags || []} onchange={(tags) => update((d) => void (d.tags = tags))} />
-
-<EntryActions {entry} {onedit} />

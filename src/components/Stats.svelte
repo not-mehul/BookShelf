@@ -1,27 +1,25 @@
 <script lang="ts">
   import { Select } from 'dusk-dawn';
-  import { untrack } from 'svelte';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { plural } from '../util/labels';
-  import { getSetting, setSetting } from '../util/settings';
   import { ratingDistribution, ratingValue } from '../util/stars';
   import { ratingView } from '../state/rating-scale.svelte';
   import {
     bookPages,
     decades,
     finishesIn,
-    goalPace,
     highlights,
     journalYears,
     medianDays,
     monthly,
-    paceSentence,
     topCreators,
-    undatedFinished,
-    type FinishedType
+    undatedFinished
   } from '../util/year-stats';
   import ModalHead from './ModalHead.svelte';
+  import BarList from './stats/BarList.svelte';
+  import GoalCard from './stats/GoalCard.svelte';
+  import MonthChart from './stats/MonthChart.svelte';
 
   // A read-only summary of the catalog: the year in review first (what was
   // finished, against a goal), then the shelf as a whole.
@@ -32,16 +30,8 @@
     ['tv', 'TV'],
     ['quote', 'Quotes']
   ] as const;
-  const SERIES: { type: FinishedType; label: string; token: string }[] = [
-    { type: 'book', label: 'Books', token: '--series-1' },
-    { type: 'movie', label: 'Films', token: '--series-2' },
-    { type: 'tv', label: 'Shows', token: '--series-3' }
-  ];
   const now = new Date();
   const thisYear = now.getFullYear();
-  const MONTHS = Array.from({ length: 12 }, (_, m) =>
-    new Date(2000, m, 1).toLocaleDateString(undefined, { month: 'short' })
-  );
 
   const entries = $derived(shelf.entries);
 
@@ -58,7 +48,6 @@
     finishes.filter((f) => f.entry.type === 'book').reduce((s, f) => s + bookPages(f.entry), 0)
   );
   const months = $derived(monthly(finishes));
-  const maxMonth = $derived(Math.max(1, ...months.map((m) => m.book + m.movie + m.tv)));
   const median = $derived(medianDays(finishes));
   const notable = $derived(highlights(finishes));
   const undated = $derived(undatedFinished(entries).length);
@@ -68,27 +57,6 @@
       3
     )
   );
-  const monthsLabel = $derived(
-    'Finished per month: ' + months.map((m, i) => `${MONTHS[i]} ${m.book + m.movie + m.tv}`).join(', ')
-  );
-
-  // The year's book goal, kept per year so last year's stays as it was.
-  let goal = $state(0);
-  const goalKey = (y: number) => `reading_goal_${y}`;
-  $effect(() => {
-    const y = year;
-    untrack(() => {
-      void getSetting(goalKey(y), '0').then((v) => {
-        if (year === y) goal = Math.max(0, parseInt(v, 10) || 0);
-      });
-    });
-  });
-  function setGoal(next: number) {
-    goal = Math.max(0, Math.min(999, next));
-    void setSetting(goalKey(year), goal);
-  }
-  const pace = $derived(goalPace(byType.book, goal, year, now));
-  const goalPct = $derived(goal ? Math.min(100, Math.round((byType.book / goal) * 100)) : 0);
 
   // ── The whole shelf ───────────────────────────────────────────
   const counts = $derived(
@@ -100,8 +68,8 @@
       ? `${Number(ratingValue(ratings.reduce((s, r) => s + r, 0) / ratings.length, ratingView.scale)).toFixed(1)}/${ratingView.scale}`
       : ''
   );
-  const bins = $derived(ratingDistribution(ratings, ratingView.scale));
-  const maxBin = $derived(Math.max(...bins.map((b) => b.count), 1));
+  // Only the ratings given: ten rows, four of them empty, says less than six.
+  const bins = $derived(ratingDistribution(ratings, ratingView.scale).filter((b) => b.count));
   const topGenres = $derived.by(() => {
     const counts: Record<string, number> = {};
     for (const e of entries) for (const g of e.genres || []) counts[g] = (counts[g] || 0) + 1;
@@ -110,9 +78,7 @@
       .slice(0, 8);
   });
   const creators = $derived(topCreators(entries));
-  const maxCreator = $derived(Math.max(1, ...creators.map(([, n]) => n)));
   const eras = $derived(decades(entries));
-  const maxEra = $derived(Math.max(1, ...eras.map(([, n]) => n)));
   const finished = $derived(entries.filter((e) => e.status === 'finished').length);
   const inProgress = $derived(entries.filter((e) => e.status === 'in-progress').length);
   const stopped = $derived(entries.filter((e) => e.status === 'abandoned').length);
@@ -123,20 +89,6 @@
   <div class="stat-tile">
     <div class="t-stat">{value}</div>
     <div class="t-field-label">{label}</div>
-  </div>
-{/snippet}
-
-{#snippet bars(rows: [string, number][], max: number)}
-  <div class="stats-bars">
-    {#each rows as [key, n] (key)}
-      <div class="stats-bar-row">
-        <span class="stats-bar-key">{key}</span>
-        <div class="stats-bar-track">
-          <div class="stats-bar-fill" style:width="{Math.round((n / max) * 100)}%"></div>
-        </div>
-        <span class="stats-bar-val">{n}</span>
-      </div>
-    {/each}
   </div>
 {/snippet}
 
@@ -163,50 +115,7 @@
         {/if}
       </div>
 
-      <div class="stats-goal">
-        <div class="stats-goal-row">
-          <span class="t-field-label">Reading goal</span>
-          {#if goal}
-            <div class="stats-goal-stepper">
-              <button
-                type="button"
-                class="chip"
-                aria-label="Lower the goal by one"
-                disabled={goal <= 1}
-                onclick={() => setGoal(goal - 1)}>−</button
-              >
-              <button
-                type="button"
-                class="chip"
-                aria-label="Raise the goal by one"
-                onclick={() => setGoal(goal + 1)}>+</button
-              >
-            </div>
-          {/if}
-        </div>
-        {#if goal}
-          <p class="stats-goal-figure">
-            <span class="t-stat">{byType.book}</span>
-            <span class="stats-goal-of">of {plural(goal, 'book')}</span>
-          </p>
-          <div
-            class="meter"
-            role="progressbar"
-            aria-label="Books towards the goal"
-            aria-valuemin={0}
-            aria-valuemax={goal}
-            aria-valuenow={Math.min(byType.book, goal)}
-          >
-            <div class="meter-fill" class:is-complete={goalPct === 100} style:width="{goalPct}%"></div>
-          </div>
-          <p class="t-hint stats-goal-pace">{paceSentence(pace, now)}</p>
-        {:else}
-          <p class="t-hint">A number of books to read in {year}, measured as you finish them.</p>
-          <button type="button" class="btn btn-muted btn-sm stats-goal-set" onclick={() => setGoal(12)}
-            >Set a goal</button
-          >
-        {/if}
-      </div>
+      <GoalCard {year} books={byType.book} {now} />
 
       {#if finishes.length}
         <div class="hairline-grid stats-grid">
@@ -217,35 +126,7 @@
           {#if median != null}{@render tile(median, 'Days a book')}{/if}
         </div>
 
-        <div class="stats-months" role="img" aria-label={monthsLabel}>
-          {#each months as m, i (i)}
-            {@const sum = m.book + m.movie + m.tv}
-            <div class="stats-month" class:is-now={year === thisYear && i === now.getMonth()}>
-              <span class="stats-month-n">{sum || ''}</span>
-              <div class="stats-month-col">
-                {#each SERIES as s (s.type)}
-                  {#if m[s.type]}
-                    <div
-                      class="stats-month-seg"
-                      style:height="{(m[s.type] / maxMonth) * 100}%"
-                      style:background="var({s.token})"
-                    ></div>
-                  {/if}
-                {/each}
-              </div>
-              <span class="stats-month-key">{MONTHS[i]?.slice(0, 1)}</span>
-            </div>
-          {/each}
-        </div>
-        <div class="stats-legend" aria-hidden="true">
-          {#each SERIES as s (s.type)}
-            {#if byType[s.type]}
-              <span class="stats-legend-item"
-                ><span class="stats-swatch" style:background="var({s.token})"></span>{s.label}</span
-              >
-            {/if}
-          {/each}
-        </div>
+        <MonthChart {months} current={year === thisYear ? now.getMonth() : -1} />
 
         {#if notable.length}
           <div class="stats-highlights">
@@ -291,7 +172,7 @@
       {#if finished || inProgress}
         <div class="hairline-grid stats-grid">
           {#if inProgress}{@render tile(inProgress, 'In progress')}{/if}
-          {#if finished}{@render tile(finished, 'Completed')}{/if}
+          {#if finished}{@render tile(finished, 'Finished')}{/if}
           {#if stopped}{@render tile(stopped, 'Did not finish')}{/if}
           {#if reread}{@render tile(reread, 'Returned to')}{/if}
         </div>
@@ -299,20 +180,19 @@
 
       {#if ratings.length}
         <div class="stats-label">Ratings · average {average} across {ratings.length}</div>
-        {@render bars(
-          bins.map((b) => [ratingView.scale === 10 ? `${b.rating}` : `${b.rating}★`, b.count]),
-          maxBin
-        )}
+        <BarList
+          rows={bins.map((b) => [ratingView.scale === 10 ? `${b.rating}` : `${b.rating}★`, b.count])}
+        />
       {/if}
 
       {#if creators.length}
         <div class="stats-label">Most on the shelf</div>
-        {@render bars(creators, maxCreator)}
+        <BarList rows={creators} />
       {/if}
 
       {#if eras.length > 1}
         <div class="stats-label">By decade</div>
-        {@render bars(eras, maxEra)}
+        <BarList rows={eras} />
       {/if}
 
       {#if topGenres.length}
@@ -331,7 +211,7 @@
   .stats-body {
     padding: 1.25rem 2rem 1.5rem;
   }
-  @media (max-width: 640px) {
+  @media (max-width: 639px) {
     .stats-body {
       padding: 1rem 1.25rem 1.25rem;
     }
@@ -349,13 +229,21 @@
     margin-bottom: var(--space-4);
   }
   /* A hairline grid that wraps: a short last row stretches instead of leaving a hole. */
+  /* Two tiles a row on a phone (an odd last one spans both), more on wider screens. */
   .stats-grid {
-    display: flex;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: var(--space-4);
   }
-  .stats-grid > :global(.stat-tile) {
-    flex: 1 1 96px;
+  .stats-grid > :global(.stat-tile:last-child:nth-child(odd)) {
+    grid-column: span 2;
+  }
+  @media (min-width: 640px) {
+    .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    .stats-grid > :global(.stat-tile:last-child:nth-child(odd)) {
+      grid-column: auto;
+    }
   }
   .stats-label {
     font-family: var(--font-mono);
@@ -364,143 +252,6 @@
     text-transform: uppercase;
     color: var(--text-dim);
     margin: var(--space-5) 0 var(--space-3);
-  }
-
-  /* Goal */
-  .stats-goal {
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-    background: var(--panel-bg-faint);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--corner-lg);
-  }
-  .stats-goal-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 32px;
-  }
-  .stats-goal-stepper {
-    display: flex;
-    gap: var(--space-2);
-  }
-  .stats-goal-stepper .chip {
-    min-width: 44px;
-    justify-content: center;
-    font-family: var(--font-mono);
-  }
-  .stats-goal-figure {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    margin: var(--space-2) 0 var(--space-3);
-  }
-  .stats-goal-of {
-    font-family: var(--font-serif);
-    font-style: italic;
-    color: var(--text-dim);
-  }
-  .stats-goal .meter-fill {
-    transition: width var(--dur-settle) var(--ease-settle);
-  }
-  .stats-goal-pace {
-    margin-top: var(--space-3);
-  }
-  .stats-goal-set {
-    margin-top: var(--space-3);
-  }
-
-  /* Month chart */
-  .stats-months {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: var(--space-1);
-    align-items: end;
-    margin-top: var(--space-2);
-  }
-  .stats-month {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
-    min-width: 0;
-  }
-  .stats-month-n {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-dim);
-    min-height: 1em;
-  }
-  .stats-month-col {
-    width: 100%;
-    max-width: 28px;
-    height: 96px;
-    display: flex;
-    flex-direction: column-reverse;
-    background: var(--chart-track);
-    border-radius: var(--corner-xs);
-    overflow: hidden;
-  }
-  /* Bars rise to their value once, when the chart appears (style.md §8.15). */
-  .stats-month-seg {
-    width: 100%;
-    transform-origin: bottom;
-    animation: stats-rise var(--dur-settle) var(--ease-settle) both;
-  }
-  @keyframes stats-rise {
-    from {
-      transform: scaleY(0);
-    }
-  }
-  .stats-bar-fill {
-    transform-origin: left;
-    animation: stats-grow var(--dur-settle) var(--ease-settle) both;
-  }
-  @keyframes stats-grow {
-    from {
-      transform: scaleX(0);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .stats-month-seg,
-    .stats-bar-fill {
-      animation: none;
-    }
-  }
-  .stats-month-key {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-  }
-  .stats-month.is-now .stats-month-col {
-    box-shadow: inset 0 0 0 1px rgba(var(--accent-amber-rgb), 0.4);
-  }
-  .stats-month.is-now .stats-month-key {
-    color: var(--accent-amber);
-  }
-  .stats-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    margin-top: var(--space-3);
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-  .stats-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-  .stats-swatch {
-    width: 10px;
-    height: 10px;
-    border-radius: var(--corner-xs);
   }
 
   /* Highlights */
@@ -548,42 +299,5 @@
   }
   .stats-undated em {
     color: var(--accent-amber);
-  }
-
-  /* Bar list (style.md §8.15) */
-  .stats-bars {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  .stats-bar-row {
-    display: grid;
-    grid-template-columns: minmax(3rem, 9rem) 1fr 2rem;
-    align-items: center;
-    gap: var(--space-3);
-  }
-  .stats-bar-key {
-    font-size: 0.8125rem;
-    color: var(--text-body);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .stats-bar-track {
-    height: 4px;
-    border-radius: var(--corner-full);
-    background: var(--chart-track);
-    overflow: hidden;
-  }
-  .stats-bar-fill {
-    height: 100%;
-    background: var(--series-1);
-  }
-  .stats-bar-val {
-    text-align: right;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-muted);
   }
 </style>

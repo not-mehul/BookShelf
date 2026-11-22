@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { uniqueTags } from '../util/tags';
   import { Select } from 'dusk-dawn';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
@@ -20,7 +21,7 @@
   let busy = $state(false);
   // Offer only tags the selection actually has.
   const tags = $derived(
-    [...new Set(shelf.entries.filter((e) => ids.includes(e.id)).flatMap((e) => e.tags || []))].sort()
+    uniqueTags(shelf.entries.filter((e) => ids.includes(e.id)).flatMap((e) => e.tags || [])).sort()
   );
 
   async function submit(ev: SubmitEvent) {

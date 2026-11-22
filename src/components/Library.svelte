@@ -16,13 +16,16 @@
   import { IconTabs } from 'dusk-dawn';
   import type { Snippet } from 'svelte';
   import FloatingBar from './FloatingBar.svelte';
-  import ShelfLine from './ShelfLine.svelte';
-  import UpNext from './UpNext.svelte';
+  import HomeStrip from './HomeStrip.svelte';
+  import LibraryEmpty from './LibraryEmpty.svelte';
+  import OverflowMenu from './OverflowMenu.svelte';
   import { loadView, saveView } from '../util/view-prefs';
   import { compareTitles } from '../util/text';
+  import { hasTag } from '../util/tags';
 
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
+  type Layout = 'grid' | 'list';
 
   // Icons only, the chosen tab opening to its word (style.md §8.5.2).
   const TYPE_TABS: { id: TypeFilter; label: string; icon: Snippet }[] = [
@@ -47,11 +50,6 @@
     // Series grouped together in reading order; everything else after, A–Z.
     series: (a, b) => seriesSortKey(a).localeCompare(seriesSortKey(b)) || compareSeriesOrder(a, b)
   };
-  const EMPTY_LABEL: Record<Exclude<EntryType, 'quote'>, string> = {
-    book: 'books',
-    movie: 'movies',
-    tv: 'shows'
-  };
 
   // The tab and sort come back as they were left (this device only).
   const saved = loadView();
@@ -61,7 +59,9 @@
   let sort = $state<SortKey>(
     saved.sort && Object.hasOwn(SORTERS, saved.sort) ? (saved.sort as SortKey) : 'dateAdded'
   );
-  $effect(() => saveView({ type, sort }));
+  // Covers in a grid, or a denser list of rows (style.md §7.2).
+  let layout = $state<Layout>(saved.layout === 'list' ? 'list' : 'grid');
+  $effect(() => saveView({ type, sort, layout }));
   let filterInput = $state<HTMLInputElement>();
   let typesRow = $state<HTMLElement>();
   let query = $state('');
@@ -70,7 +70,7 @@
   const visible = $derived.by(() => {
     let list = shelf.entries;
     if (type !== 'all') list = list.filter((e) => e.type === type);
-    if (tag) list = list.filter((e) => (e.tags || []).includes(tag!));
+    if (tag) list = list.filter((e) => hasTag(e.tags, tag!));
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter((e) =>
@@ -166,7 +166,8 @@
     }
   }
 
-  const showUpNext = $derived(!query && !selecting && (type === 'all' || type === 'tv'));
+  const showUpNext = $derived(!query && !tag && !selecting && (type === 'all' || type === 'tv'));
+  const showQuote = $derived(!query && !tag && !selecting && type === 'all');
 
   // An easter egg: the word for a pile of books bought and not yet read.
   let piled = false;
@@ -231,47 +232,29 @@
     <div class="select-wrap select-wrap-sm">
       <Select class="select-sm" label="Sort by" bind:value={sort} options={SORT_OPTS} />
     </div>
-    <button
-      type="button"
-      class="btn btn-muted"
-      title="View statistics"
-      aria-label="View statistics"
-      onclick={() => ui.open({ kind: 'stats' })}
-    >
+    <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'stats' })}>
       <Icon name="chart" /> <span class="btn-label">Stats</span>
     </button>
-    <button
-      type="button"
-      class="btn btn-muted"
-      title="Your queue"
-      aria-label="Your queue"
-      onclick={() => ui.open({ kind: 'queue' })}
-    >
+    <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'queue' })}>
       <Icon name="queue" /> <span class="btn-label">Queue</span>
     </button>
-    <button
-      type="button"
-      class="btn btn-muted"
-      title="Select entries"
-      aria-label="Select entries"
-      aria-pressed={selecting}
-      onclick={() => (selecting ? exitSelection() : enterSelection())}
-    >
-      <Icon name="select" /> <span class="btn-label">Select</span>
-    </button>
-    <button
-      type="button"
-      class="btn btn-muted"
-      title="Export catalog as Markdown"
-      disabled={exporting}
-      onclick={exportMarkdown}
-    >
-      <Icon name="download" /> <span class="btn-label">Export</span>
-    </button>
+    <OverflowMenu
+      label="More library actions"
+      items={[
+        {
+          label: layout === 'list' ? 'Show as a grid' : 'Show as a list',
+          icon: layout === 'list' ? 'grid' : 'list',
+          onselect: () => (layout = layout === 'list' ? 'grid' : 'list')
+        },
+        { label: 'Select entries', icon: 'select', onselect: () => enterSelection() },
+        { label: 'Export as Markdown', icon: 'download', disabled: exporting, onselect: exportMarkdown }
+      ]}
+    />
   </div>
 
   {#if shelf.tags.length}
-    <div class="lib-tags-row">
+    <!-- One row that scrolls sideways, however many tags there are. -->
+    <div class="lib-tags-row" role="group" aria-label="Filter by tag">
       <button type="button" class="chip" aria-pressed={tag === null} onclick={() => (tag = null)}>
         All tags
       </button>
@@ -282,65 +265,32 @@
   {/if}
 </div>
 
-{#if showUpNext}
-  <UpNext />
-{/if}
+<HomeStrip upNext={showUpNext} quote={showQuote} />
 
-{#if !query && !tag && !selecting && type === 'all'}
-  <ShelfLine />
-{/if}
-
-<div class="entry-grid" class:quote-grid={type === 'quote'}>
+<div
+  class="entry-grid"
+  class:quote-grid={type === 'quote' && layout === 'grid'}
+  class:is-list={layout === 'list'}
+>
   {#each visible as entry (entry.id)}
     <EntryCard
       {entry}
+      {layout}
+      hideType={type !== 'all'}
       {selecting}
       selected={selected.has(entry.id)}
       ontoggle={toggle}
       onlongpress={enterSelection}
     />
   {:else}
-    {#if query || tag}
-      <!-- style.md §8.14: a filter found nothing. -->
-      <div class="empty-match">
-        <p class="t-hint">Nothing on the shelf matches that filter.</p>
-        <button
-          type="button"
-          class="btn btn-muted"
-          onclick={() => {
-            query = '';
-            tag = null;
-          }}>Clear filter</button
-        >
-      </div>
-    {:else}
-      <!-- style.md §8.14: nothing here yet. -->
-      <div class="empty-state">
-        {#if type === 'all'}
-          <Icon name="bookmark" />
-          <p class="empty-title">The shelf is empty</p>
-          <p class="empty-text">Books, films, shows and quotes you keep will live here.</p>
-        {:else if type === 'quote'}
-          <Icon name="quote" />
-          <p class="empty-title">No quotes yet</p>
-          <p class="empty-text">Lines worth keeping, from anything you read or watch.</p>
-        {:else}
-          <Icon name={TYPE_ICON[type]} />
-          <p class="empty-title">No {EMPTY_LABEL[type]} yet</p>
-          <p class="empty-text">Add one and it will appear here.</p>
-        {/if}
-        <button
-          type="button"
-          class="btn btn-secondary"
-          onclick={() =>
-            type === 'quote'
-              ? ui.openAdd({ startWith: 'quote' })
-              : type === 'all'
-                ? ui.openAdd()
-                : ui.openAdd({ startWith: 'search', searchType: type })}>Add the first one</button
-        >
-      </div>
-    {/if}
+    <LibraryEmpty
+      {type}
+      filtered={Boolean(query || tag)}
+      onclear={() => {
+        query = '';
+        tag = null;
+      }}
+    />
   {/each}
 </div>
 

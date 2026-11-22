@@ -11,6 +11,18 @@ export const icons = {
       14,
       2.2
     ),
+  more: () =>
+    wrap(
+      '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+      16,
+      2.5
+    ),
+  grid: () =>
+    wrap(
+      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'
+    ),
+  list: () => wrap('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'),
+  minus: () => wrap('<path d="M5 12h14"/>'),
   search: () => wrap('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>'),
   x: () => wrap('<path d="M18 6 6 18M6 6l12 12"/>'),
   plus: () => wrap('<path d="M5 12h14M12 5v14"/>'),

@@ -57,8 +57,8 @@
 </script>
 
 {#if entry.status === 'in-progress' || entry.status === 'finished' || entry.dateStarted || finishes.length}
-  <div class="modal-section journal">
-    <div class="modal-section-label">Journal</div>
+  <!-- Inside the entry's "your take" section: the date field names itself. -->
+  <div class="journal">
     <div class="journal-dates">
       {#if entry.type === 'book'}
         <DateField
