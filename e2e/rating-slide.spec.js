@@ -12,6 +12,10 @@ async function openArrival(page) {
   await page.locator('.entry-card', { hasText: 'Arrival' }).click();
   const slider = page.locator('dialog[open]').getByRole('slider', { name: 'Rating' });
   await expect(slider).toHaveAttribute('aria-valuenow', '0');
+  // Measure the stars only once the sheet has finished sliding up.
+  await page
+    .locator('dialog[open]')
+    .evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   return slider;
 }
 
