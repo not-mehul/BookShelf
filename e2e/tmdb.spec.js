@@ -61,8 +61,7 @@ test.describe('with a key', () => {
     expect(asked.find((a) => a.startsWith('/3/search/movie'))).toMatch(/api_key=abc123/);
     expect(asked.find((a) => a.startsWith('/3/search/movie'))).toMatch(/language=en-US/);
     await page.getByRole('button', { name: 'Add Arrival' }).click();
-    await page.keyboard.press('Escape');
-    await page.locator('.entry-card', { hasText: 'Arrival' }).click();
+    // Adding opens the new entry, which loads its credits.
     await expect(page.locator('dialog[open]')).toContainText('Denis Villeneuve');
     const stored = await page.evaluate(
       () =>
