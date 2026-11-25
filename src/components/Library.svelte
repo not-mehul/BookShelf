@@ -23,9 +23,17 @@
   import { loadView, saveView } from '../util/view-prefs';
   import { compareTitles } from '../util/text';
   import { hasTag } from '../util/tags';
+  import {
+    byLastFinish,
+    onShelf,
+    SHELF_IDS,
+    shelfDescription,
+    shelfLabel,
+    type ShelfId
+  } from '../util/shelves';
 
   type TypeFilter = 'all' | EntryType;
-  type SortKey = 'dateAdded' | 'rating' | 'title' | 'year' | 'series';
+  type SortKey = 'dateAdded' | 'finished' | 'rating' | 'title' | 'year' | 'series';
   type Layout = 'grid' | 'list';
 
   // Icons only, the chosen tab opening to its word (style.md §8.5.2).
@@ -38,6 +46,7 @@
   ];
   const SORT_OPTS: { value: SortKey; label: string }[] = [
     { value: 'dateAdded', label: 'Recent' },
+    { value: 'finished', label: 'Finished' },
     { value: 'rating', label: 'Rating' },
     { value: 'title', label: 'Title' },
     { value: 'year', label: 'Year' },
@@ -45,6 +54,7 @@
   ];
   const SORTERS: Record<SortKey, (a: CatalogEntry, b: CatalogEntry) => number> = {
     dateAdded: (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''),
+    finished: (a, b) => byLastFinish(a, b) || compareTitles(a, b),
     rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || compareTitles(a, b),
     title: (a, b) => compareTitles(a, b),
     year: (a, b) => (b.year ?? 0) - (a.year ?? 0) || compareTitles(a, b),
@@ -62,7 +72,19 @@
   );
   // Covers in a grid, or a denser list of rows (style.md §7.2).
   let layout = $state<Layout>(saved.layout === 'list' ? 'list' : 'grid');
-  $effect(() => saveView({ type, sort, layout }));
+  // Where things stand: Reading or watching, Wishlist, Finished in a year…
+  let shelfId = $state<ShelfId>(
+    SHELF_IDS.includes(saved.shelf as ShelfId) ? (saved.shelf as ShelfId) : 'all'
+  );
+  $effect(() => saveView({ type, sort, layout, shelf: shelfId }));
+  const thisYear = new Date().getFullYear();
+  // The shelves this tab has anything on (and the chosen one, even if empty).
+  const shelves = $derived.by(() => {
+    const inTab = shelf.entries.filter((e) => e.type !== 'quote' && (type === 'all' || e.type === type));
+    return SHELF_IDS.filter(
+      (id) => id === 'all' || id === shelfId || inTab.some((e) => onShelf(e, id, thisYear))
+    ).map((id) => ({ id, label: shelfLabel(id, type), description: shelfDescription(id, thisYear) }));
+  });
   let filterInput = $state<HTMLInputElement>();
   let typesRow = $state<HTMLElement>();
   let query = $state('');
@@ -72,6 +94,7 @@
     let list = shelf.entries;
     if (type !== 'all') list = list.filter((e) => e.type === type);
     if (tag) list = list.filter((e) => hasTag(e.tags, tag!));
+    if (shelfId !== 'all' && type !== 'quote') list = list.filter((e) => onShelf(e, shelfId, thisYear));
     const q = foldText(query.trim());
     if (q) {
       list = list.filter((e) =>
@@ -167,8 +190,9 @@
     }
   }
 
-  const showUpNext = $derived(!query && !tag && !selecting && (type === 'all' || type === 'tv'));
-  const showQuote = $derived(!query && !tag && !selecting && type === 'all');
+  const filtering = $derived(Boolean(query || tag) || (shelfId !== 'all' && type !== 'quote'));
+  const showUpNext = $derived(!filtering && !selecting && (type === 'all' || type === 'tv'));
+  const showQuote = $derived(!filtering && !selecting && type === 'all');
 
   // An easter egg: the word for a pile of books bought and not yet read.
   let piled = false;
@@ -253,6 +277,21 @@
     />
   </div>
 
+  {#if type !== 'quote' && shelves.length > 1}
+    <!-- Quiet text tabs, so the shelves don't read as more tags. -->
+    <div class="lib-shelves-row" role="group" aria-label="Shelf">
+      {#each shelves as s (s.id)}
+        <button
+          type="button"
+          class="shelf-tab"
+          aria-pressed={shelfId === s.id}
+          title={s.description !== s.label ? s.description : undefined}
+          onclick={() => (shelfId = s.id)}>{s.label}</button
+        >
+      {/each}
+    </div>
+  {/if}
+
   {#if shelf.tags.length}
     <!-- One row that scrolls sideways, however many tags there are. -->
     <div class="lib-tags-row" role="group" aria-label="Filter by tag">
@@ -286,10 +325,11 @@
   {:else}
     <LibraryEmpty
       {type}
-      filtered={Boolean(query || tag)}
+      filtered={Boolean(query || tag) || (shelfId !== 'all' && type !== 'quote')}
       onclear={() => {
         query = '';
         tag = null;
+        shelfId = 'all';
       }}
     />
   {/each}

@@ -134,3 +134,20 @@ export function decades(entries: CatalogEntry[]): [string, number][] {
   }
   return [...counts.entries()].sort((a, b) => a[0] - b[0]).map(([d, n]) => [`${d}s`, n]);
 }
+
+/**
+ * Hours spent watching, from TMDB runtimes: each finished film once per time
+ * it was finished, and each ticked episode. Entries with no runtime don't count.
+ */
+export function hoursWatched(entries: CatalogEntry[]): number {
+  let minutes = 0;
+  for (const e of entries) {
+    if (e.type === 'movie' && e.runtime && e.status === 'finished') {
+      minutes += e.runtime * Math.max(1, e.finishes?.length ?? 0);
+    } else if (e.type === 'tv' && e.watchedEpisodes?.length && e.episodeGuide) {
+      const watched = new Set(e.watchedEpisodes);
+      for (const ep of e.episodeGuide.episodes) if (watched.has(ep.id) && ep.runtime) minutes += ep.runtime;
+    }
+  }
+  return Math.round(minutes / 60);
+}

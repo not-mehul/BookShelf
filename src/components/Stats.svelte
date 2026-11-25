@@ -14,7 +14,8 @@
     medianDays,
     monthly,
     topCreators,
-    undatedFinished
+    undatedFinished,
+    hoursWatched
   } from '../util/year-stats';
   import ModalHead from './ModalHead.svelte';
   import BarList from './stats/BarList.svelte';
@@ -82,6 +83,7 @@
   const inProgress = $derived(entries.filter((e) => e.status === 'in-progress').length);
   const stopped = $derived(entries.filter((e) => e.status === 'abandoned').length);
   const reread = $derived(entries.filter((e) => (e.finishes?.length || 0) > 1).length);
+  const hours = $derived(hoursWatched(entries));
 </script>
 
 {#snippet tile(value: number | string, label: string)}
@@ -172,6 +174,7 @@
           {#if finished}{@render tile(finished, 'Finished')}{/if}
           {#if stopped}{@render tile(stopped, 'Did not finish')}{/if}
           {#if reread}{@render tile(reread, 'Returned to')}{/if}
+          {#if hours}{@render tile(hours.toLocaleString(), 'Hours watched')}{/if}
         </div>
       {/if}
 

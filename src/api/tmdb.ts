@@ -92,7 +92,27 @@ export async function fetchDetail(
   const id = tmdbNumber(entry.sourceId);
   if (!id || (entry.type !== 'movie' && entry.type !== 'tv')) return null;
   try {
-    return await tmdbFetch<TmdbDetail>(`/${entry.type}/${id}`, { append_to_response: 'credits' });
+    const detail = await tmdbFetch<TmdbDetail>(`/${entry.type}/${id}`, { append_to_response: 'credits' });
+    if (entry.type === 'movie' && detail.belongs_to_collection) {
+      detail.collection_position = await collectionPosition(detail.belongs_to_collection.id, detail.id);
+    }
+    return detail;
+  } catch {
+    return null;
+  }
+}
+
+/** A film's place in its TMDB collection, counting by release date (unreleased last). */
+async function collectionPosition(collectionId: number, filmId: number): Promise<number | null> {
+  try {
+    const json = await tmdbFetch<{ parts?: { id: number; release_date?: string }[] }>(
+      `/collection/${collectionId}`
+    );
+    const parts = [...(json.parts || [])].sort((a, b) =>
+      (a.release_date || '9999').localeCompare(b.release_date || '9999')
+    );
+    const i = parts.findIndex((p) => p.id === filmId);
+    return i >= 0 ? i + 1 : null;
   } catch {
     return null;
   }

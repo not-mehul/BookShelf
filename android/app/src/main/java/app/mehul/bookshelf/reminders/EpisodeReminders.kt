@@ -19,15 +19,24 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import app.mehul.bookshelf.MainActivity
 import app.mehul.bookshelf.R
+import app.mehul.bookshelf.SecureStore
 import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 /**
  * New-episode alerts. The page sends the upcoming episodes of shows with
  * alerts on (`episodeReminders`); a periodic WorkManager job posts a
- * notification on the day each one airs. Works with the app closed, and needs
- * no network: the schedule was computed by the page.
+ * notification on the day each one airs. Works with the app closed.
+ *
+ * The page also sends which TMDB shows those are (`follow`). While the app is
+ * closed, the job asks TMDB (with the user's own key, from the Keystore) for
+ * each show's latest and next episode, so a season announced since the app
+ * last ran is still announced. Without a key or a network it posts what it has.
  */
 object EpisodeReminders {
 
@@ -38,6 +47,8 @@ object EpisodeReminders {
     private const val PREFS = "episode_reminders"
     private const val KEY_ITEMS = "items"
     private const val KEY_NOTIFIED = "notified"
+    private const val KEY_FOLLOW = "follow"
+    private const val TMDB_KEY = "tmdb_api_key"
     private const val CHANNEL_ID = "new_episodes"
     private const val WORK_NAME = "episode-reminders"
     /** Notify for episodes that aired up to this many days ago (missed runs, late installs). */
@@ -57,12 +68,76 @@ object EpisodeReminders {
         Item(o.optString("entryId"), o.optString("show"), o.optString("code"), o.optString("name"), aired, o.optLong("episodeId"))
     }
 
-    /** Store the schedule from the page and make sure the job is (or isn't) running. */
-    fun update(context: Context, items: JSONArray) {
+    /** A show to check on TMDB while the app is closed. */
+    data class Follow(val entryId: String, val show: String, val tmdbId: String)
+
+    fun parseFollow(json: JSONArray): List<Follow> = (0 until json.length()).mapNotNull { i ->
+        val o = json.optJSONObject(i) ?: return@mapNotNull null
+        val id = o.optString("tmdbId")
+        if (id.isBlank() || !id.all { it.isDigit() }) return@mapNotNull null
+        Follow(o.optString("entryId"), o.optString("show"), id)
+    }
+
+    /** The latest and next episode in a TMDB show record, as items for [show]. */
+    fun itemsFromShow(show: Follow, record: JSONObject): List<Item> =
+        listOf("last_episode_to_air", "next_episode_to_air").mapNotNull { field ->
+            val ep = record.optJSONObject(field) ?: return@mapNotNull null
+            val aired = ep.optString("air_date")
+            val season = ep.optInt("season_number", -1)
+            if (!Regex("\\d{4}-\\d{2}-\\d{2}").matches(aired) || season <= 0) return@mapNotNull null
+            Item(show.entryId, show.show, "S$season E${ep.optInt("episode_number")}", ep.optString("name"), aired, ep.optLong("id"))
+        }
+
+    /** [items] with [extra] added where an episode isn't there yet. */
+    fun merged(items: List<Item>, extra: List<Item>): List<Item> {
+        val keys = items.map { it.key }.toMutableSet()
+        return items + extra.filter { keys.add(it.key) }
+    }
+
+    private fun toJson(items: List<Item>) = JSONArray(items.map {
+        JSONObject().put("entryId", it.entryId).put("show", it.show).put("code", it.code)
+            .put("name", it.name).put("aired", it.aired).put("episodeId", it.episodeId)
+    })
+
+    /** Ask TMDB about each followed show and add any episode the schedule lacks. Blocking. */
+    fun refreshFromTmdb(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        prefs.edit { putString(KEY_ITEMS, items.toString()) }
+        val follow = runCatching { parseFollow(JSONArray(prefs.getString(KEY_FOLLOW, "[]"))) }.getOrDefault(emptyList())
+        if (follow.isEmpty()) return
+        val key = runCatching { SecureStore(context).get(TMDB_KEY) }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        val found = follow.flatMap { show ->
+            runCatching { itemsFromShow(show, fetchShow(show.tmdbId, key)) }.getOrDefault(emptyList())
+        }
+        if (found.isEmpty()) return
+        val items = runCatching { parse(JSONArray(prefs.getString(KEY_ITEMS, "[]"))) }.getOrDefault(emptyList())
+        prefs.edit { putString(KEY_ITEMS, toJson(merged(items, found)).toString()) }
+    }
+
+    private fun fetchShow(id: String, key: String): JSONObject {
+        val token = key.startsWith("eyJ")
+        val query = "language=en-US" + if (token) "" else "&api_key=" + URLEncoder.encode(key, "UTF-8")
+        val conn = URL("https://api.themoviedb.org/3/tv/$id?$query").openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 15_000
+            if (token) conn.setRequestProperty("Authorization", "Bearer $key")
+            conn.setRequestProperty("Accept", "application/json")
+            if (conn.responseCode != 200) throw IllegalStateException("TMDB ${conn.responseCode}")
+            return JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** Store the schedule (and the shows to check) from the page; make sure the job is (or isn't) running. */
+    fun update(context: Context, items: JSONArray, follow: JSONArray = JSONArray()) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit {
+            putString(KEY_ITEMS, items.toString())
+            putString(KEY_FOLLOW, follow.toString())
+        }
         val work = WorkManager.getInstance(context)
-        if (items.length() == 0) {
+        if (items.length() == 0 && follow.length() == 0) {
             work.cancelUniqueWork(WORK_NAME)
         } else {
             work.enqueueUniquePeriodicWork(
@@ -124,6 +199,7 @@ object EpisodeReminders {
 
 class EpisodeReminderWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
+        runCatching { EpisodeReminders.refreshFromTmdb(applicationContext) }
         EpisodeReminders.notifyDue(applicationContext)
         return Result.success()
     }

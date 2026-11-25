@@ -242,5 +242,35 @@ test.describe('in the Android shell', () => {
     await expect
       .poll(() => page.evaluate(() => window.__sent.filter((m) => m.method === 'episodeReminders').length))
       .toBeGreaterThan(0);
+    // The show goes with the schedule, so the Android job can ask TMDB about new episodes.
+    const last = await page.evaluate(() =>
+      window.__sent.filter((m) => m.method === 'episodeReminders').at(-1)
+    );
+    expect(last.params.follow).toEqual([expect.objectContaining({ show: 'Severance', tmdbId: '95396' })]);
+  });
+
+  test('an episode ticked on the widget is applied when the app opens', async ({ page }) => {
+    await page.goto('/index.html');
+    await importFixture(page);
+    const show = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const open = indexedDB.open('bookshelf');
+          open.onsuccess = () => {
+            const all = open.result.transaction('entries').objectStore('entries').getAll();
+            all.onsuccess = () => resolve(all.result.find((e) => e.title === 'Severance'));
+          };
+        })
+    );
+    const unwatched = show.episodeGuide.episodes.find(
+      (ep) => ep.s > 0 && ep.aired && ep.aired <= '2026-01-01' && !show.watchedEpisodes.includes(ep.id)
+    );
+    await page.evaluate(
+      ([entry, episode]) => (window.__widgetWatched = [{ entry, episode }]),
+      [show.id, unwatched.id]
+    );
+    // Coming back to the app reads the widget's marks.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.getByText('Marked an episode watched from the widget.')).toBeVisible();
   });
 });

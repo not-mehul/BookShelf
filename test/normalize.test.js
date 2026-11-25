@@ -166,3 +166,21 @@ describe('episodes from TMDB', () => {
     expect(normalizeTmdbEpisode({ id: 9, episode_number: 1 })).toBeNull();
   });
 });
+
+describe('films in a TMDB collection', () => {
+  it('become a series, unless the entry already has one', () => {
+    const detail = {
+      id: 121,
+      belongs_to_collection: { id: 119, name: 'The Lord of the Rings Collection' },
+      collection_position: 2
+    };
+    expect(enrichFromTmdbDetail({ type: 'movie', title: 'The Two Towers' }, detail).series).toEqual({
+      name: 'The Lord of the Rings',
+      position: 2
+    });
+    const own = { name: 'Middle-earth', position: 5 };
+    expect(enrichFromTmdbDetail({ type: 'movie', title: 'The Two Towers', series: own }, detail).series).toBe(
+      own
+    );
+  });
+});

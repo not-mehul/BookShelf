@@ -45,6 +45,12 @@ export function installFakeShell({
     syncRead: () => window.__syncFile ?? null,
     syncWrite: ({ text }) => ((window.__syncFile = text), true),
     widgetUpdate: () => true,
+    // Episodes ticked on the widget: a test sets window.__widgetWatched first.
+    widgetTakeWatched: () => {
+      const marks = window.__widgetWatched ?? [];
+      window.__widgetWatched = [];
+      return marks;
+    },
     shareFile: () => true,
     episodeReminders: () => true,
     requestNotificationPermission: () => notificationsAllowed

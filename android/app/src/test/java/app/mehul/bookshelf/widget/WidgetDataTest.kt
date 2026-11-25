@@ -38,4 +38,22 @@ class WidgetDataTest {
         assertNull(data.quote) // blank quote is dropped
         assertTrue(data.darkTheme) // Dusk by default
     }
+
+    @Test
+    fun `reads a show's next episodes, and drops one marked on the widget`() {
+        val json = JSONObject(
+            """
+            {"inProgress":[{"title":"Severance","type":"tv","progress":0.5,"id":"sev",
+                            "next":[{"id":901,"label":"S2 E1"},{"id":902,"label":"S2 E2"}]}]}
+            """
+        )
+        val show = WidgetData.parse(json).inProgress.single()
+        assertEquals("sev", show.id)
+        assertEquals(listOf(WidgetData.Episode(901, "S2 E1"), WidgetData.Episode(902, "S2 E2")), show.next)
+
+        WidgetData.dropEpisode(json, "sev", 901)
+        assertEquals(listOf(WidgetData.Episode(902, "S2 E2")), WidgetData.parse(json).inProgress.single().next)
+        WidgetData.dropEpisode(json, "other", 902)
+        assertEquals(1, WidgetData.parse(json).inProgress.single().next.size)
+    }
 }

@@ -14,6 +14,7 @@ import androidx.glance.appwidget.updateAll
 import app.mehul.bookshelf.reminders.EpisodeReminders
 import app.mehul.bookshelf.widget.BookShelfWidget
 import app.mehul.bookshelf.widget.WidgetData
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -202,8 +203,9 @@ class BookShelfPlugin : Plugin() {
     @PluginMethod
     fun episodeReminders(call: PluginCall) = respond(call) {
         val items = call.data.getJSONArray("items")
+        val follow = call.data.optJSONArray("follow") ?: org.json.JSONArray()
         withContext(Dispatchers.IO) {
-            EpisodeReminders.update(context, items)
+            EpisodeReminders.update(context, items, follow)
             EpisodeReminders.notifyDue(context)
         }
         true
@@ -224,6 +226,12 @@ class BookShelfPlugin : Plugin() {
     fun onNotificationPermission(call: PluginCall) = respond(call) { EpisodeReminders.canNotify(context) }
 
     // ── Widget ──────────────────────────────────────────────────────
+
+    /** Episodes marked watched on the widget since the last call: `[{ entry, episode }]`. */
+    @PluginMethod
+    fun widgetTakeWatched(call: PluginCall) = respond(call) {
+        JSArray(WidgetData.takeWatched(context).toString())
+    }
 
     @PluginMethod
     fun widgetUpdate(call: PluginCall) = respond(call) {

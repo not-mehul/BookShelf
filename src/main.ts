@@ -11,6 +11,7 @@ import { dismissOverlay } from 'dusk-dawn';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
 import { moveToTmdb } from './api/tmdb-move';
+import { applyWidgetWatched } from './platform/widget';
 import { dropTvdbSettings } from './util/settings';
 import { claimBackForMenus, installNativeBridge, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
@@ -57,6 +58,19 @@ async function boot(): Promise<void> {
   onNativeEvent('openAdd', () => ui.openAdd());
   // … or a new-episode notification (open that show).
   onNativeEvent('openEntry', (data) => data?.id && ui.openEntry(String(data.id)));
+
+  // Episodes ticked on the home-screen widget while the app was closed.
+  const widgetMarks = () =>
+    void applyWidgetWatched().then((n) => {
+      if (n) {
+        shelf.changed();
+        ui.notify(`Marked ${n === 1 ? 'an episode' : `${n} episodes`} watched from the widget.`, 'success');
+      }
+    });
+  widgetMarks();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') widgetMarks();
+  });
 
   // Encrypted folder sync (Android app, once configured): pull now, push after changes.
   shelf.startSync();
