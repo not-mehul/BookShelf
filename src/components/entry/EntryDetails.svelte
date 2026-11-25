@@ -23,9 +23,10 @@
     entry: CatalogEntry;
     update: (change: (draft: CatalogEntry) => void | Promise<void>) => Promise<void>;
     onedit: () => void;
+    onmatch?: () => void;
   }
 
-  let { entry, update, onedit }: Props = $props();
+  let { entry, update, onedit, onmatch }: Props = $props();
 
   const hasGuide = $derived(entry.type === 'tv' && Boolean(entry.episodeGuide?.episodes.length));
 
@@ -39,9 +40,16 @@
   });
 </script>
 
-{#snippet menu()}<EntryMenu {entry} {onedit} />{/snippet}
+{#snippet menu()}<EntryMenu {entry} {onedit} {onmatch} />{/snippet}
 
 <Hero {entry} />
+
+{#if entry.needsMatch && onmatch}
+  <p class="field-hint needs-match">
+    Not matched to the catalog, so it has no cover or details from it.
+    <button type="button" class="link-button" onclick={onmatch}>Find a match</button>
+  </p>
+{/if}
 
 <section class="modal-section entry-take" aria-label="Your take">
   <div class="take-group">
@@ -96,6 +104,9 @@
 {/if}
 
 <style>
+  .needs-match {
+    margin: 0 0 var(--space-4);
+  }
   .entry-take {
     display: flex;
     flex-direction: column;

@@ -89,6 +89,7 @@ src/
     openlibrary.ts   Open Library client + ISBN detection
     tmdb.ts          TMDB v3 client (search, details with credits, seasons, find by TheTVDB id)
     tmdb-move.ts     One-time move of films and shows from TheTVDB ids to TMDB
+    match.ts         Find a match: catalog candidates, the sure pick, filling only empty fields
     normalize.ts     API responses → unified CatalogEntry shape
     episode-sync.ts  Episode-guide refresh + Android reminder schedule
   db/
@@ -110,7 +111,7 @@ src/
     crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
     merge.ts         Last-writer-wins merge with deletion tombstones (pure)
     sync.ts          Pull → merge → push orchestration, auto-sync
-  util/              Pure helpers: settings, share intake, barcode, stars, series,
+  util/              Pure helpers: settings, share intake, barcode, stars, series, duplicates,
                      queue ranks, episodes, bulk edits, entry matching, icons, covers
   styles/
     app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first

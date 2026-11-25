@@ -2,14 +2,14 @@
   import { LoadingIndicator } from 'dusk-dawn';
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import { searchBooks } from '../../api/books';
-  import { looksLikeIsbn, searchOpenLibrary } from '../../api/openlibrary';
+  import { searchAllBooks } from '../../api/books';
   import { isTmdbConfigured, searchTmdb } from '../../api/tmdb';
   import { findBySource, saveEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
   import { ui, type AddSeed } from '../../state/ui.svelte';
   import { canScanBarcodes, scanBarcode } from '../../util/barcode';
   import { deleteEntries } from '../../util/bulk';
+  import { findCopy } from '../../util/duplicates';
   import { messageOf } from '../../util/errors';
   import { plural, TYPE_ICON, TYPE_NOUN } from '../../util/labels';
   import { newEntry } from '../../util/new-entry';
@@ -57,21 +57,6 @@
 
   // Books: ISBNs go straight to Open Library; otherwise try Google Books first
   // and fall back to Open Library if it returns nothing or rate-limits.
-  async function searchBooksMerged(q: string): Promise<SearchHit[]> {
-    if (looksLikeIsbn(q)) {
-      const ol = await searchOpenLibrary(q);
-      return ol.length ? ol : searchBooks(q);
-    }
-    try {
-      const g = await searchBooks(q);
-      if (g.length) return g;
-    } catch (err) {
-      const ol = await searchOpenLibrary(q);
-      if (ol.length) return ol;
-      throw err;
-    }
-    return searchOpenLibrary(q);
-  }
 
   async function runSearch() {
     const mine = ++seq;
@@ -90,8 +75,8 @@
     }
     results = { state: 'loading' };
     try {
-      const hits = type === 'book' ? await searchBooksMerged(q) : await searchTmdb(q, type);
-      const existing = await Promise.all(hits.map((h) => findBySource(h.type, h.sourceId)));
+      const hits = type === 'book' ? await searchAllBooks(q) : await searchTmdb(q, type);
+      const existing = await Promise.all(hits.map(onShelf));
       if (stale()) return;
       results = { state: 'done', hits: hits.map((hit, i) => ({ hit, existingId: existing[i]?.id ?? null })) };
     } catch (err) {
@@ -140,9 +125,17 @@
   let selecting = $state(false);
   const picked = new SvelteSet<number>();
 
+  /**
+   * The shelf's copy of a result: the same catalog record, or (for an entry
+   * from an import or the manual form) the same ISBN, or title and author.
+   */
+  async function onShelf(hit: SearchHit): Promise<CatalogEntry | null> {
+    return (await findBySource(hit.type, hit.sourceId)) ?? findCopy(shelf.entries, hit);
+  }
+
   /** The entry for a result: the one already on the shelf, or a new one, saved. */
   async function entryFor(hit: SearchHit, withSeed: boolean): Promise<{ id: string; created: boolean }> {
-    const existing = await findBySource(hit.type, hit.sourceId);
+    const existing = await onShelf(hit);
     if (existing) return { id: existing.id, created: false };
     const entry = newEntry(hit.type, {
       sourceId: hit.sourceId != null ? String(hit.sourceId) : null,

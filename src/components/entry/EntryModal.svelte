@@ -12,12 +12,14 @@
   import type { CatalogEntry } from '../../types';
   import { useModalFocus } from '../Modal.svelte';
   import EditEntry from './EditEntry.svelte';
+  import MatchEntry from './MatchEntry.svelte';
   import EntryDetails from './EntryDetails.svelte';
   import QuoteDetails from './QuoteDetails.svelte';
 
   let { id }: { id: string } = $props();
   let entry = $state.raw<CatalogEntry | null>(null);
   let editing = $state(false);
+  let matching = $state(false);
   const settleFocus = useModalFocus();
 
   /**
@@ -135,9 +137,19 @@
         editing = false;
       }}
     />
+  {:else if matching}
+    <MatchEntry
+      {entry}
+      onback={() => (matching = false)}
+      onmatched={(saved) => {
+        matching = false;
+        show(saved);
+        void load(saved.id);
+      }}
+    />
   {:else if entry.type === 'quote'}
     <QuoteDetails {entry} {update} onedit={() => (editing = true)} />
   {:else}
-    <EntryDetails {entry} {update} onedit={() => (editing = true)} />
+    <EntryDetails {entry} {update} onedit={() => (editing = true)} onmatch={() => (matching = true)} />
   {/if}
 {/if}
