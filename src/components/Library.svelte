@@ -285,7 +285,7 @@
           type="button"
           class="shelf-tab"
           aria-pressed={shelfId === s.id}
-          aria-label={s.description}
+          title={s.description !== s.label ? s.description : undefined}
           onclick={() => (shelfId = s.id)}>{s.label}</button
         >
       {/each}
