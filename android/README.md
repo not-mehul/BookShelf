@@ -98,7 +98,7 @@ Keep these unchanged in any later change, or an update will open an empty shelf.
 | UI extras              | Jetpack Glance 1.2 (Compose compiler plugin), Play services Code Scanner |
 | Release                | R8 minify + resource shrinking         |
 
-API keys (TheTVDB, optional Google Books) are entered in the app's **Settings**
+API keys (TMDB, optional Google Books) are entered in the app's **Settings**
 and stored encrypted in the Android Keystore, never compiled into the build.
 Android Auto Backup includes the catalog (but not the Keystore-encrypted
 secrets), so a reinstall or new phone restores the shelf; re-enter keys and the

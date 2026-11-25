@@ -14,7 +14,7 @@ globalThis.localStorage = {
 const show = () => ({
   id: 'tv1',
   type: 'tv',
-  sourceId: '123',
+  sourceId: 'tmdb:123',
   title: 'Show',
   status: 'in-progress',
   rating: null,
@@ -72,11 +72,12 @@ describe('patchEntry', () => {
 
 describe('episode guide refresh', () => {
   it('keeps an edit made while the guide downloads, and its timestamp', async () => {
-    vi.doMock('../src/api/tvdb', () => ({
-      isTvdbConfigured: async () => true,
+    vi.doMock('../src/api/tmdb', () => ({
+      isTmdbConfigured: async () => true,
+      tmdbNumber: (id) => (id?.startsWith('tmdb:') ? id.slice(5) : null),
       getEpisodeGuide: async () => {
         await tick(40);
-        return { fetchedAt: new Date().toISOString(), status: 'Continuing', episodes: [] };
+        return { fetchedAt: new Date().toISOString(), status: 'Returning Series', episodes: [] };
       }
     }));
     const db = await import('../src/db/database');
@@ -93,7 +94,7 @@ describe('episode guide refresh', () => {
     expect(after.rating).toBe(4.5);
     expect(after.notes).toBe('great');
     expect(after.updatedAt).toBe(edited.updatedAt);
-    expect(after.episodeGuide.status).toBe('Continuing');
-    vi.doUnmock('../src/api/tvdb');
+    expect(after.episodeGuide.status).toBe('Returning Series');
+    vi.doUnmock('../src/api/tmdb');
   });
 });

@@ -45,14 +45,14 @@ describe('installNativeBridge', () => {
     expect(native.installNativeBridge(shell.win, shell.native)).toBe(true);
     expect(native.isNativeShell()).toBe(true);
 
-    const res = await shell.win.fetch('https://api4.thetvdb.com/v4/search?query=x', {
+    const res = await shell.win.fetch('https://api.themoviedb.org/3/search/movie?query=x', {
       headers: { Authorization: 'Bearer t' }
     });
     expect(shell.calls[0]).toEqual({
       method: 'http',
       params: {
         method: 'GET',
-        url: 'https://api4.thetvdb.com/v4/search?query=x',
+        url: 'https://api.themoviedb.org/3/search/movie?query=x',
         headers: { authorization: 'Bearer t' },
         body: null
       }
@@ -68,16 +68,17 @@ describe('installNativeBridge', () => {
     native.installNativeBridge(shell.win, shell.native);
     await shell.win.fetch(`${ORIGIN}/index.html`);
     await shell.win.fetch('blob:abc');
-    await shell.win.fetch('https://bookshelf-tvdb-proxy.example.workers.dev/search?query=x'); // self-hosted proxy
-    await shell.win.fetch('http://api4.thetvdb.com/v4/search'); // plain http is never sent natively
+    await shell.win.fetch('https://example.workers.dev/search?query=x'); // not one of the app's APIs
+    await shell.win.fetch('http://api.themoviedb.org/3/search/movie'); // plain http is never sent natively
     expect(shell.webFetch).toHaveBeenCalledTimes(4);
     expect(shell.calls).toHaveLength(0);
   });
 
   it('matches allowlisted hosts exactly, not by look-alike suffix', () => {
     expect(native.usesNativeHttp('https://www.googleapis.com/books/v1/volumes')).toBe(true);
-    expect(native.usesNativeHttp('https://evilthetvdb.com/')).toBe(false);
-    expect(native.usesNativeHttp('https://thetvdb.com.evil.net/')).toBe(false);
+    expect(native.usesNativeHttp('https://image.tmdb.org/t/p/w500/a.jpg')).toBe(true);
+    expect(native.usesNativeHttp('https://eviltmdb.org/')).toBe(false);
+    expect(native.usesNativeHttp('https://themoviedb.org.evil.net/')).toBe(false);
     expect(native.usesNativeHttp('not a url')).toBe(false);
   });
 

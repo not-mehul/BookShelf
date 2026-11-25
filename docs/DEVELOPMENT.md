@@ -19,15 +19,11 @@ only says that BookShelf is an Android app.
 
 In the app, open **Settings** (gear, top-right) and paste:
 
-- A **TheTVDB API key** (project key from your TheTVDB account)
-- Your **TheTVDB subscriber PIN** (if your project key uses end-user subscription funding)
+- A **TMDB API key** or read access token (free with a TMDB account, under Settings → API on themoviedb.org)
 - Optionally a **Google Books API key** (raises the daily quota)
 
-Or, instead of a TheTVDB key on every device, deploy the [TheTVDB proxy](../proxy)
-and enter its URL (and access token) under Settings → TheTVDB.
-
-> **Privacy:** catalog data lives locally in IndexedDB. API keys, the TheTVDB
-> token and the sync passphrase are encrypted with an Android Keystore key
+> **Privacy:** catalog data lives locally in IndexedDB. API keys and the sync
+> passphrase are encrypted with an Android Keystore key
 > (under `npm run dev`, outside the app, they sit in localStorage). Nothing is sent
 > anywhere except to the respective API when you search — and, if you enable
 > sync, an end-to-end encrypted file to the folder you chose.
@@ -37,7 +33,7 @@ and enter its URL (and access token) under Settings → TheTVDB.
 ```bash
 npm run dev          # Vite dev server (the UI only, outside the app)
 npm run build        # production build (single self-contained index.html)
-npm run test         # Vitest unit tests (web + proxy)
+npm run test         # Vitest unit tests
 npm run test:e2e     # Playwright smoke tests on the built app, phone-sized
 npm run test:visual  # screenshots of the main screens in Dusk and Dawn (-- --update-snapshots to accept)
 npm run typecheck    # TypeScript checks the JS (checkJs + JSDoc types)
@@ -91,7 +87,8 @@ src/
   api/
     books.ts         Google Books client
     openlibrary.ts   Open Library client + ISBN detection
-    tvdb.ts          TheTVDB v4 client (login, token cache, extended enrichment)
+    tmdb.ts          TMDB v3 client (search, details with credits, seasons, find by TheTVDB id)
+    tmdb-move.ts     One-time move of films and shows from TheTVDB ids to TMDB
     normalize.ts     API responses → unified CatalogEntry shape
     episode-sync.ts  Episode-guide refresh + Android reminder schedule
   db/
@@ -122,7 +119,6 @@ public/
   icon.svg           The app icon (README)
 test/                Vitest unit tests
 e2e/                 Playwright smoke tests (+ a simulated Android shell)
-proxy/               Cloudflare Worker proxying TheTVDB (see proxy/README.md)
 index.html
 capacitor.config.ts  App id, web origin, SystemBars
 android/             Capacitor Android project (BookShelfPlugin and native features)
@@ -130,7 +126,7 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
 
 ## Notes on the APIs
 
-**TheTVDB v4** issues a bearer token from `/login` that lasts ~1 month. The client caches it and refreshes when it ages past 25 days, or whenever a request returns 401. Movies and series are both served from `/search`; opening a saved entry enriches it with cast/genre from `/extended`. On Android the request is routed through the native HTTP bridge to bypass WebView CORS.
+**TMDB v3** takes the user's own key: a v3 API key goes in the `api_key` parameter, a v4 read access token (a JWT) as a bearer token. Films and shows are searched separately (`/search/movie`, `/search/tv`) in English, with genre names from `/genre/*/list`; opening a saved entry fills in the director or creators and genres from `/movie/{id}` or `/tv/{id}` with credits. A show's guide is every season from `/tv/{id}/season/{n}`. Shelf ids are `tmdb:<id>`; a bare number on a film or show is a TheTVDB id from before the move, which `tmdb-move.ts` resolves (`/find/{tvdb id}?external_source=tvdb_id` for shows, a single title-and-year match for films). About carries the attribution TMDB's terms require.
 
 **Google Books** requires no auth for basic use; an API key raises the daily quota. **Open Library** is keyless and used as a fallback and for ISBN lookups.
 
@@ -141,7 +137,7 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
   back-handler stack, Keystore routing, sync encryption and merge (plus an
   end-to-end sync between two simulated devices), the widget summary, half-star
   ratings, series detection, queue ranking and picks, episode progress,
-  share-card text layout, bulk tag edits, and the TheTVDB proxy Worker.
+  share-card text layout, bulk tag edits, and the move from TheTVDB to TMDB.
 - **E2E (Playwright)** — the built app at phone size, in a
   simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
   (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding

@@ -69,10 +69,10 @@ test('Android Back closes an open menu first, then gives Back back', async ({ pa
 test('secrets typed in Settings go to the Keystore, not localStorage', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('dialog[open] summary', { hasText: 'Movies and TV' }).click();
-  await page.getByLabel('API key', { exact: true }).fill('tvdb-secret');
-  await expect.poll(() => page.evaluate(() => window.__keystore.tvdb_api_key)).toBe('tvdb-secret');
-  expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('tvdb-secret');
+  await page.locator('dialog[open] summary', { hasText: 'Films and TV' }).click();
+  await page.getByLabel('API key or read access token').fill('tmdb-secret');
+  await expect.poll(() => page.evaluate(() => window.__keystore.tmdb_api_key)).toBe('tmdb-secret');
+  expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('tmdb-secret');
 
   await page.getByRole('radio', { name: 'Dawn' }).click();
   expect(await lastOf(page, 'theme')).toEqual({ type: 'theme', mode: 'light' });

@@ -74,7 +74,7 @@
   <SeasonsSection {entry} {update} />
 {:else if entry.type === 'tv' && entry.sourceId && !entry.episodeGuide}
   <p class="field-hint episodes-pending">
-    Seasons appear here once the episode list loads (needs TheTVDB access in Settings).
+    Seasons appear here once the episode list loads (needs your TMDB key in Settings).
   </p>
 {/if}
 

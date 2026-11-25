@@ -29,11 +29,6 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.serviceworker } }
   },
   {
-    // Cloudflare Worker (proxy/): service-worker style globals (fetch, caches, Request…).
-    files: ['proxy/src/**/*.js'],
-    languageOptions: { globals: { ...globals.serviceworker } }
-  },
-  {
     files: ['scripts/**', '*.config.{js,ts}'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' }
@@ -50,7 +45,7 @@ export default tseslint.config(
     rules: { 'no-console': 'off' }
   },
   {
-    files: ['test/**/*.js', 'proxy/test/**/*.js'],
+    files: ['test/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.vitest } }
   }
 );

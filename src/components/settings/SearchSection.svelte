@@ -1,48 +1,63 @@
 <script lang="ts">
-  import { removeSetting } from '../../util/settings';
+  import { untrack } from 'svelte';
+  import { isLegacy, moveToTmdb } from '../../api/tmdb-move';
+  import { plural } from '../../util/labels';
+  import { shelf } from '../../state/shelf.svelte';
   import SettingField from './SettingField.svelte';
-  import { GOOGLE, TVDB } from './search-keys';
+  import { GOOGLE, TMDB } from './search-keys';
 
   // Search providers, each folded behind a summary that says whether it is set up.
-  let { values, tokenIssued = $bindable() }: { values: Record<string, string>; tokenIssued: number } =
-    $props();
+  let { values }: { values: Record<string, string> } = $props();
 
-  const tvdbReady = $derived(Boolean(values.tvdb_api_key || values.tvdb_proxy_url));
+  let tmdbReady = $state(untrack(() => Boolean(values[TMDB.key])));
   const googleReady = $derived(Boolean(values.google_books_api_key));
-  const issuedText = $derived(
-    tokenIssued
-      ? new Date(tokenIssued).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
-      : 'not yet cached'
-  );
 
-  async function clearToken() {
-    await removeSetting('tvdb_token');
-    await removeSetting('tvdb_token_issued');
-    tokenIssued = 0;
+  // Films and shows still on TheTVDB move over once a key is saved.
+  const waiting = $derived(shelf.entries.filter(isLegacy).length);
+  const unmatched = $derived(shelf.entries.filter((e) => e.needsMatch).length);
+  let moving = $state<{ done: number; total: number } | null>(null);
+  let moved = $state<string>('');
+
+  async function keySaved(value: string) {
+    tmdbReady = Boolean(value);
+    if (!value || !waiting) return;
+    moving = { done: 0, total: waiting };
+    const report = await moveToTmdb((done, total) => (moving = { done, total }));
+    moving = null;
+    await shelf.refresh();
+    moved = report.moved ? `Moved ${plural(report.moved, 'film or show', 'films and shows')} to TMDB.` : '';
   }
 </script>
 
 <h3 class="settings-section-heading" id="set-search">Search</h3>
 <p class="field-hint settings-lead">
-  Book search works as it is. Movies and shows come from TheTVDB, which needs a key of your own or a BookShelf
-  proxy.
+  Book search works as it is. Films and shows come from TMDB, which needs a free key of your own.
 </p>
 
-<details class="settings-fold">
+<details class="settings-fold" open={!tmdbReady && waiting > 0}>
   <summary>
-    <span class="settings-fold-name">Movies and TV <span class="settings-fold-via">TheTVDB</span></span>
-    <span class="settings-fold-state" class:is-ready={tvdbReady}>{tvdbReady ? 'Set up' : 'Not set up'}</span>
+    <span class="settings-fold-name">Films and TV <span class="settings-fold-via">TMDB</span></span>
+    <span class="settings-fold-state" class:is-ready={tmdbReady}>{tmdbReady ? 'Set up' : 'Not set up'}</span>
   </summary>
   <div class="settings-fold-body">
-    {#each TVDB as d (d.key)}
-      <SettingField {...d} initial={values[d.key] ?? ''} />
-    {/each}
-    {#if tokenIssued}
-      <div class="token-info-row">
-        <p class="token-info-text">Signed in to TheTVDB {issuedText}.</p>
-        <button type="button" class="btn btn-muted btn-sm" onclick={clearToken}>Sign in again</button>
-      </div>
-    {/if}
+    <SettingField {...TMDB} initial={values[TMDB.key] ?? ''} onsaved={keySaved} />
+    <div class="tmdb-status" role="status">
+      {#if moving}
+        <p class="field-hint">Moving films and shows to TMDB: {moving.done} of {moving.total}…</p>
+      {:else}
+        {#if moved}<p class="field-hint">{moved}</p>{/if}
+        {#if waiting}
+          <p class="field-hint">
+            {plural(waiting, 'film or show', 'films and shows')} from TheTVDB will move to TMDB once a key is saved.
+          </p>
+        {/if}
+        {#if unmatched}
+          <p class="field-hint">
+            {plural(unmatched, 'film or show', 'films and shows')} need a match: open one and use Find a match.
+          </p>
+        {/if}
+      {/if}
+    </div>
   </div>
 </details>
 

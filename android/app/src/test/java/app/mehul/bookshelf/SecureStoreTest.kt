@@ -8,7 +8,7 @@ class SecureStoreTest {
 
     @Test
     fun `accepts the app's setting names`() {
-        listOf("tvdb_api_key", "tvdb_pin", "tvdb_token", "google_books_api_key", "sync_passphrase").forEach {
+        listOf("tmdb_api_key", "google_books_api_key", "sync_passphrase").forEach {
             assertEquals(it, SecureStore.checkName(it))
         }
     }

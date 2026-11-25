@@ -75,7 +75,7 @@ export function derivedTvState(
   today: string = localDate()
 ): { progress: { current: number; total: number }; status: 'finished' | 'in-progress' | null } {
   const p = episodeProgress(entry, today);
-  const ended = /ended/i.test(entry.episodeGuide?.status || '');
+  const ended = hasEnded(entry.episodeGuide?.status);
   let status: 'finished' | 'in-progress' | null = null;
   if (p.caughtUp && ended && !p.upcoming) status = 'finished';
   else if (p.watched > 0) status = 'in-progress';
@@ -111,6 +111,11 @@ export function reminderItems(entries: CatalogEntry[], today: string = localDate
   return items.sort((a, b) => a.aired.localeCompare(b.aired));
 }
 
+/** A show that won't air again: "Ended" or "Canceled" on TMDB. */
+export function hasEnded(status: string | undefined): boolean {
+  return /ended|cancel/i.test(status || '');
+}
+
 /**
  * Whether a guide should be re-fetched: never fetched, or older than
  * `maxAgeDays` for a show that is still airing.
@@ -118,7 +123,7 @@ export function reminderItems(entries: CatalogEntry[], today: string = localDate
 export function guideIsStale(entry: CatalogEntry, now: Date = new Date(), maxAgeDays: number = 3) {
   const guide = entry.episodeGuide;
   if (!guide) return true;
-  if (/ended/i.test(guide.status || '')) return false;
+  if (hasEnded(guide.status)) return false;
   return now.getTime() - Date.parse(guide.fetchedAt) > maxAgeDays * 86_400_000;
 }
 

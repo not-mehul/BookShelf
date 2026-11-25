@@ -1,7 +1,7 @@
 // Tiny settings layer.
 //
-// Ordinary preferences live in localStorage (namespaced). Secrets — API keys,
-// the TheTVDB token, the sync passphrase — go to the Android Keystore through
+// Ordinary preferences live in localStorage (namespaced). Secrets — API keys
+// and the sync passphrase — go to the Android Keystore through
 // the native shell when running in the app, and are migrated out of
 // localStorage the first time. In a plain browser there is no Keystore, so
 // secrets fall back to localStorage.
@@ -11,14 +11,11 @@ import { isNativeShell, callNative } from '../platform/native';
 const PREFIX = 'bookshelf:';
 
 /** Setting keys whose values are secrets. */
-export const SECRET_KEYS = new Set([
-  'tvdb_api_key',
-  'tvdb_pin',
-  'tvdb_token',
-  'tvdb_proxy_token',
-  'google_books_api_key',
-  'sync_passphrase'
-]);
+export const SECRET_KEYS = new Set(['tmdb_api_key', 'google_books_api_key', 'sync_passphrase']);
+
+/** TheTVDB's settings, from before films and shows moved to TMDB: removed once. */
+const RETIRED_SECRETS = ['tvdb_api_key', 'tvdb_pin', 'tvdb_token', 'tvdb_proxy_token'];
+const RETIRED_PLAIN = ['tvdb_token_issued', 'tvdb_proxy_url'];
 
 /** In-memory cache of Keystore reads for this session. */
 const secretCache: Map<string, string | null> = new Map();
@@ -66,4 +63,24 @@ export async function removeSetting(key: string) {
     return;
   }
   localStorage.removeItem(PREFIX + key);
+}
+
+/**
+ * Forget TheTVDB's key, PIN, token and proxy settings, from before films and
+ * shows moved to TMDB. Runs once; a later start skips it.
+ */
+export async function dropTvdbSettings() {
+  const done = PREFIX + 'tvdb_retired';
+  if (localStorage.getItem(done)) return;
+  for (const key of [...RETIRED_SECRETS, ...RETIRED_PLAIN]) localStorage.removeItem(PREFIX + key);
+  if (isNativeShell()) {
+    for (const key of RETIRED_SECRETS) {
+      try {
+        await callNative('secureRemove', { key });
+      } catch {
+        /* nothing stored */
+      }
+    }
+  }
+  localStorage.setItem(done, '1');
 }

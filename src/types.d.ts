@@ -8,7 +8,7 @@ export type EntryStatus = 'want' | 'in-progress' | 'finished' | 'abandoned';
 export interface CatalogEntry {
   id: string;
   type: EntryType;
-  /** External id (Google Books / Open Library / TheTVDB); null for manual entries. */
+  /** External id: Google Books, `ol:` Open Library, `tmdb:` TMDB; null for manual entries. A bare number on a film or show is a TheTVDB id from before the move to TMDB. */
   sourceId: string | null;
   title: string;
   /** The title in its own language, when `title` is the English one. */
@@ -36,13 +36,17 @@ export interface CatalogEntry {
   updatedAt?: string;
   // Optional / type-specific fields (older records may lack them).
   pageCount?: number | null;
+  /** Films: running time in minutes, from TMDB. */
+  runtime?: number | null;
   isbn?: string | null;
   detailUrl?: string | null;
   tags?: string[];
   progress?: { current: number; total: number } | null;
   quoteText?: string;
   source?: string;
-  /** Set once TheTVDB extended details have been merged in. */
+  /** A film or show from TheTVDB that TMDB couldn't match on its own: Find a match links it. */
+  needsMatch?: boolean;
+  /** Set once the catalog's full details (TMDB credits and genres) have been merged in. */
   enriched?: boolean;
   /** Optional per-aspect scores (e.g. story, writing), same scale as rating. */
   aspectRatings?: Record<string, number>;
@@ -54,7 +58,7 @@ export interface CatalogEntry {
   linkedEntryId?: string | null;
   /** Quotes: page number or timestamp, free text ("p. 112", "1:04:20"). */
   location?: string;
-  /** TV: episode guide from TheTVDB. */
+  /** TV: episode guide from TMDB. */
   episodeGuide?: EpisodeGuide | null;
   /** TV: ids of watched episodes. */
   watchedEpisodes?: number[];
@@ -76,7 +80,7 @@ export interface Episode {
 
 export interface EpisodeGuide {
   fetchedAt: string;
-  /** TheTVDB series status, e.g. "Continuing", "Ended". */
+  /** The show's status on TMDB, e.g. "Returning Series", "Ended", "Canceled". */
   status?: string;
   episodes: Episode[];
 }

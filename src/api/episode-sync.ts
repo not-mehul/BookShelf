@@ -1,7 +1,7 @@
 // Keeping TV episode guides fresh, and handing reminders to the Android app.
 
 import { listEntries, patchEntry } from '../db/database';
-import { getEpisodeGuide, isTvdbConfigured } from './tvdb';
+import { getEpisodeGuide, isTmdbConfigured, tmdbNumber } from './tmdb';
 import { guideIsStale, derivedTvState, reminderItems } from '../util/episodes';
 import { isNativeShell, callNative } from '../platform/native';
 import type { CatalogEntry } from '../types';
@@ -15,8 +15,8 @@ import type { CatalogEntry } from '../types';
  * @returns The entry as now stored (or as given, if it has left the shelf).
  */
 export async function loadEpisodeGuide(entry: CatalogEntry): Promise<CatalogEntry> {
-  if (entry.type !== 'tv' || !entry.sourceId) return entry;
-  const guide = await getEpisodeGuide(entry.sourceId);
+  if (entry.type !== 'tv' || !tmdbNumber(entry.sourceId)) return entry;
+  const guide = await getEpisodeGuide(entry.sourceId!);
   const saved = await patchEntry(
     entry.id,
     (d) => {
@@ -30,15 +30,15 @@ export async function loadEpisodeGuide(entry: CatalogEntry): Promise<CatalogEntr
 
 /**
  * Refresh stale guides for shows being followed (in progress or with
- * reminders on). Quietly skips when TheTVDB isn't set up or a fetch fails.
+ * reminders on). Quietly skips when TMDB isn't set up or a fetch fails.
  * @param [onUpdated] Called once if anything changed.
  */
 export async function refreshFollowedGuides(onUpdated?: () => void) {
-  if (!(await isTvdbConfigured())) return;
+  if (!(await isTmdbConfigured())) return;
   let changed = false;
   for (const entry of await listEntries()) {
     const followed = entry.status === 'in-progress' || entry.remindNewEpisodes;
-    if (entry.type !== 'tv' || !entry.sourceId || !followed || !guideIsStale(entry)) continue;
+    if (entry.type !== 'tv' || !tmdbNumber(entry.sourceId) || !followed || !guideIsStale(entry)) continue;
     try {
       await loadEpisodeGuide(entry);
       changed = true;
