@@ -2,6 +2,7 @@
 
 import { getSetting } from '../util/settings';
 import { normalizeBook, type GoogleVolume } from './normalize';
+import { looksLikeIsbn, searchOpenLibrary } from './openlibrary';
 import type { SearchHit } from '../types';
 
 const BASE = 'https://www.googleapis.com/books/v1';
@@ -30,4 +31,25 @@ export async function searchBooks(query: string, { maxResults = 20 } = {}): Prom
   const data = await res.json();
   const items: GoogleVolume[] = data.items || [];
   return items.map(normalizeBook);
+}
+
+/**
+ * Book search as the add flow does it: an ISBN goes to Open Library first;
+ * anything else to Google Books, falling back to Open Library when Google has
+ * nothing or turns the request away.
+ */
+export async function searchAllBooks(q: string): Promise<SearchHit[]> {
+  if (looksLikeIsbn(q)) {
+    const ol = await searchOpenLibrary(q);
+    return ol.length ? ol : searchBooks(q);
+  }
+  try {
+    const g = await searchBooks(q);
+    if (g.length) return g;
+  } catch (err) {
+    const ol = await searchOpenLibrary(q);
+    if (ol.length) return ol;
+    throw err;
+  }
+  return searchOpenLibrary(q);
 }

@@ -52,6 +52,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Backup and restore** as lossless JSON (re-importing never duplicates), plus a readable Markdown export.
 - **Weekly backups**: once a week a dated copy goes to Documents/BookShelf/Backups, keeping the last five, with nothing to set up. Settings shows when it last ran.
 - **Bring your shelf over** from Goodreads or StoryGraph (their CSV export) or Letterboxd (the export zip, as it is). Ratings, shelves, read dates, reviews and tags come with it, all on the device. Anything already on your shelf only gains what it was missing, so importing twice adds nothing.
+- **Find a match** links an imported or hand-added entry to the catalog for its cover and details, one at a time from its menu or all the sure ones at once from Settings. Nothing you wrote changes. Settings also finds copies of the same thing and merges them.
 - **Encrypted sync**: end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
 - **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
