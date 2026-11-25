@@ -38,12 +38,21 @@
   }
 
   // Books: one calendar for the span, from the day started to the day finished.
-  // Picking a finish day finishes the book.
+  // Picking a finish day finishes the book. A finished book's finish only goes
+  // with Clear (both days empty), never because the start alone was changed.
   function setSpan(startDay: string, endDay: string) {
     void update(async (d) => {
       d.dateStarted = fromDay(startDay);
       if (endDay && d.status !== 'finished') await applyStatus(d, 'finished');
-      if (endDay || d.status === 'finished') setFinishDay(d, fromDay(endDay));
+      if (endDay) setFinishDay(d, fromDay(endDay));
+      else if (!startDay && d.status === 'finished') setFinishDay(d, null);
+    });
+  }
+
+  // Put down: the day it stopped, apart from any start.
+  function setStopped(day: string) {
+    void update((d) => {
+      d.dateStopped = fromDay(day);
     });
   }
 
@@ -56,15 +65,24 @@
   }
 </script>
 
-{#if entry.status === 'in-progress' || entry.status === 'finished' || entry.dateStarted || finishes.length}
+{#if entry.status === 'in-progress' || entry.status === 'finished' || entry.status === 'abandoned' || entry.dateStarted || finishes.length}
   <!-- Inside the entry's "your take" section: the date field names itself. -->
   <div class="journal">
     <div class="journal-dates">
-      {#if entry.type === 'book'}
+      {#if entry.status === 'abandoned'}
+        <DateField
+          label="Stopped"
+          id="journal-stopped"
+          max={today}
+          value={toDay(entry.dateStopped)}
+          onchange={setStopped}
+        />
+      {:else if entry.type === 'book'}
         <DateField
           label="Read"
           id="journal-span"
           range
+          requireEnd={entry.status === 'finished'}
           max={today}
           value={toDay(entry.dateStarted)}
           end={entry.status === 'finished' ? toDay(finished) : ''}

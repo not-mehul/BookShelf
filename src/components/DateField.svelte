@@ -3,8 +3,11 @@
   // that opens a month calendar in its own modal, over the entry. Monday first,
   // today ringed, the chosen days lit. Nothing changes until Choose.
   //
-  // With `range`, the first tap picks the start and a second, optional tap the
-  // end; a tap before the start begins again from there.
+  // With `range`, the first tap picks the start and a second tap the end; a
+  // tap before the start begins again from there. An end with no start (an
+  // imported finish) stays when the start is tapped in before it. With
+  // `requireEnd`, Choose waits for the end: a finished book always has one.
+  import { Select } from 'dusk-dawn';
   import { tick } from 'svelte';
   import { pushBackHandler } from '../platform/native';
   import Icon from './Icon.svelte';
@@ -17,13 +20,15 @@
     /** The end of a range, "YYYY-MM-DD" or empty. */
     end?: string;
     range?: boolean;
+    /** A range must have an end before it can be chosen. */
+    requireEnd?: boolean;
     /** Days after this are shown but cannot be chosen. */
     max?: string;
     /** Called with the chosen day, and the end of a range ('' when open-ended). */
     onchange: (day: string, end: string) => void;
   }
 
-  let { label, id, value, end = '', range = false, max, onchange }: Props = $props();
+  let { label, id, value, end = '', range = false, requireEnd = false, max, onchange }: Props = $props();
 
   const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -38,6 +43,7 @@
     asDate(day).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   /** "10 Feb – 2 Mar 2026", dropping the first year when both share it. */
   function span(a: string, b: string) {
+    if (!a) return b ? `– ${short(b)}` : '';
     if (!b) return `${short(a)} –`;
     if (a === b) return short(a);
     const first =
@@ -61,21 +67,40 @@
     for (let d = 1; d <= count; d++) days.push(key(year, month, d));
     return days;
   });
-  const shownMonth = $derived(
-    new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-  );
+  // Month and year jump straight to a date years back: an imported read from
+  // 2019 is two choices away, not eighty taps on "Previous month".
+  const MONTHS = Array.from({ length: 12 }, (_, m) => ({
+    value: m,
+    label: new Date(2000, m, 1).toLocaleDateString(undefined, { month: 'long' })
+  }));
+  const YEARS = $derived.by(() => {
+    const last = Math.max(now.getFullYear(), Number((max ?? '').slice(0, 4)) || 0);
+    return Array.from({ length: last - 1919 }, (_, i) => ({ value: last - i, label: String(last - i) }));
+  });
+  const shown = $derived(!draft && draftEnd ? span('', draftEnd) : span(draft, draftEnd));
   const title = $derived(
-    !draft ? (range ? 'Tap the day you started' : 'No day') : range ? span(draft, draftEnd) : long(draft)
+    !draft
+      ? range
+        ? draftEnd
+          ? `Finished ${short(draftEnd)}`
+          : 'Tap the day you started'
+        : 'No day'
+      : range
+        ? shown
+        : long(draft)
   );
-  const hint = $derived(
-    range ? (draft && !draftEnd ? 'Tap the day you finished, or Choose to leave it open.' : '') : ''
-  );
+  const hint = $derived.by(() => {
+    if (!range) return '';
+    if (!draft) return draftEnd ? 'Tap the day you started.' : '';
+    if (draftEnd) return '';
+    return requireEnd ? 'Tap the day you finished.' : 'Tap the day you finished, or Choose to leave it open.';
+  });
 
   function start() {
     // A new entry's calendar opens on today, chosen.
     draft = value || (range ? '' : today);
     draftEnd = end;
-    const from = asDate(value || today);
+    const from = asDate(value || end || today);
     year = from.getFullYear();
     month = from.getMonth();
     open = true;
@@ -84,6 +109,13 @@
   function pick(day: string) {
     if (!range) {
       draft = day;
+      return;
+    }
+    // An end with no start yet: a day before it is the start, a later one a
+    // new start on its own.
+    if (!draft && draftEnd) {
+      draft = day;
+      if (day > draftEnd) draftEnd = '';
       return;
     }
     // First tap (or a tap before the start, or after a full span): a new start.
@@ -135,7 +167,7 @@
     onclick={start}
   >
     <Icon name="calendar" />
-    {#if value}
+    {#if value || (range && end)}
       <span class="picker-value" id="{id}-value">{range ? span(value, end) : short(value)}</span>
     {:else}
       <span class="picker-placeholder" id="{id}-value">Pick a day</span>
@@ -174,7 +206,10 @@
           <button type="button" class="btn-icon" aria-label="Previous month" onclick={() => step(-1)}
             ><Icon name="chevronLeft" /></button
           >
-          <span class="calendar-month" aria-live="polite">{shownMonth}</span>
+          <div class="calendar-month">
+            <Select class="select-sm" label="Month" bind:value={month} options={MONTHS} />
+            <Select class="select-sm" label="Year" bind:value={year} options={YEARS} />
+          </div>
           <button type="button" class="btn-icon" aria-label="Next month" onclick={() => step(1)}
             ><Icon name="chevronRight" /></button
           >
@@ -202,13 +237,13 @@
         </div>
       </div>
       <div class="picker-actions">
-        <button type="button" class="btn btn-muted" disabled={!value} onclick={() => finish('', '')}
+        <button type="button" class="btn btn-muted" disabled={!value && !end} onclick={() => finish('', '')}
           >Clear</button
         >
         <button
           type="button"
           class="btn btn-primary"
-          disabled={!draft}
+          disabled={!draft || (range && requireEnd && !draftEnd)}
           onclick={() => finish(draft, draftEnd)}>Choose</button
         >
       </div>

@@ -81,7 +81,8 @@ export async function exportMarkdown() {
         md += `**Series:** ${escapeMd(e.series.name)}${e.series.position != null ? ` #${e.series.position}` : ''}\n\n`;
       const journal = [
         e.dateStarted ? `started ${formatDate(e.dateStarted)}` : '',
-        e.finishes?.length ? `finished ${e.finishes.map(formatDate).join(', ')}` : ''
+        e.finishes?.length ? `finished ${e.finishes.map(formatDate).join(', ')}` : '',
+        e.dateStopped ? `stopped ${formatDate(e.dateStopped)}` : ''
       ].filter(Boolean);
       if (journal.length) md += `**Journal:** ${journal.join(' · ')}\n\n`;
       if (e.summary?.trim()) md += `${escapeBlock(escapeMd(e.summary).trim())}\n\n`;

@@ -40,6 +40,21 @@ async function roundTrip(entries) {
 }
 
 describe('Markdown round trip', () => {
+  it('keeps the day something was put down', async () => {
+    const [book] = await roundTrip([
+      {
+        id: 'dnf',
+        type: 'book',
+        title: 'Infinite Jest',
+        status: 'abandoned',
+        dateStarted: '2026-01-04T12:00:00.000Z',
+        dateStopped: '2026-02-10T12:00:00.000Z'
+      }
+    ]);
+    expect(book.status).toBe('abandoned');
+    expect(book.dateStopped?.slice(0, 10)).toBe('2026-02-10');
+  });
+
   it('keeps a title with a dash, its year and rating', async () => {
     const [film] = await roundTrip([
       { id: 'sw', type: 'movie', title: 'Star Wars — A New Hope', year: 1977, rating: 4.5 }

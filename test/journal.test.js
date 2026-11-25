@@ -14,6 +14,15 @@ const at = (s) => new Date(s);
 const book = (fields = {}) => newEntry('book', { title: 'Middlemarch', ...fields });
 
 describe('reading journal', () => {
+  it('dates putting something down, and forgets it when picked up again', () => {
+    const e = book({ status: 'in-progress', dateStarted: '2026-03-03T09:00:00.000Z' });
+    stampStatusDates(e, 'in-progress', 'abandoned', at('2026-03-20T09:00:00Z'));
+    expect(e.dateStopped).toBe('2026-03-20T09:00:00.000Z');
+    stampStatusDates(e, 'abandoned', 'in-progress', at('2026-05-01T09:00:00Z'));
+    expect(e.dateStopped).toBeNull();
+    expect(e.dateStarted).toBe('2026-05-01T09:00:00.000Z');
+  });
+
   it('stamps a start and a finish', () => {
     const e = book();
     stampStatusDates(e, null, 'in-progress', at('2026-03-03T09:00:00Z'));
