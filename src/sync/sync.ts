@@ -27,7 +27,8 @@ export interface SyncReport {
   pushed: boolean;
 }
 
-export const SNAPSHOT_VERSION = 1;
+// 2: entries carry fieldTimes and are merged field by field.
+export const SNAPSHOT_VERSION = 2;
 let inFlight: Promise<SyncReport> | null = null;
 
 export function syncSupported() {
@@ -73,14 +74,16 @@ async function runSync({ iterations }: { iterations?: number }): Promise<SyncRep
     // 2. Merge + apply locally.
     const local = { entries: (await listEntries()).map(toSyncEntry), tombstones: await listTombstones() };
     const result = mergeSnapshots(local, remote);
+    // What each entry was when the merge read it, to spot an edit made since.
+    const readAt = new Map(local.entries.map((e) => [e.id, entryTime(e)]));
     const needCovers: import('../types').CatalogEntry[] = [];
     let pulled = 0;
     for (const incoming of result.toPut) {
       const saved = await withEntryLock(incoming.id, async () => {
         const existing = await db.entries.get(incoming.id);
-        // Edited here since the merge read the shelf: the local edit is newer, keep it
-        // (the next sync pushes it).
-        if (existing && entryTime(existing) >= entryTime(incoming)) return null;
+        // Edited (or deleted) here since the merge read the shelf: keep that; the
+        // next sync merges it.
+        if (existing ? entryTime(existing) !== readAt.get(incoming.id) : readAt.has(incoming.id)) return null;
         // Keep our cached cover if the cover URL is unchanged; otherwise refetch later.
         const keepBlob =
           existing && existing.thumbnailUrl === incoming.thumbnailUrl ? existing.thumbnailBlob : null;

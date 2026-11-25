@@ -106,10 +106,11 @@ src/
   platform/
     native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
     theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
-    widget.ts        Builds the home-screen widget's summary
+    widget.ts        Builds the home-screen widget's summary; applies episodes ticked on it
   sync/
     crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
-    merge.ts         Last-writer-wins merge with deletion tombstones (pure)
+    fields.ts        Field-level change times (fieldTimes) and the per-group merge of two copies
+    merge.ts         Snapshot merge: entries field by field, deletion tombstones (pure)
     sync.ts          Pull → merge → push orchestration, auto-sync
   util/              Pure helpers: settings, share intake, barcode, stars, series, duplicates,
                      queue ranks, episodes, bulk edits, entry matching, icons, covers

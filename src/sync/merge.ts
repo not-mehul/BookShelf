@@ -1,13 +1,15 @@
 // Pure merge of two catalog snapshots (this device vs. the sync file).
 //
-// Every entry carries `updatedAt`; every deletion leaves a tombstone with
-// `deletedAt`. For each id the most recent event wins:
-//   • two versions of an entry → the later `updatedAt` (ties keep local)
+// Every entry carries `updatedAt` (and `fieldTimes`, when each group of its
+// fields last changed); every deletion leaves a tombstone with `deletedAt`.
+//   • two versions of an entry → merged field by field, each group from the
+//     copy that changed it last (ties keep local; see fields.ts)
 //   • an entry vs. a tombstone  → whichever happened later, so a delete
 //     propagates, but an edit made after the delete brings the entry back.
 // Tombstones older than the retention window are dropped.
 
 import type { CatalogEntry, Tombstone } from '../types';
+import { mergeEntry } from './fields';
 
 /** An entry as it travels in the sync file (no cover blob). */
 export type SyncEntry = Omit<CatalogEntry, 'thumbnailBlob'>;
@@ -31,6 +33,22 @@ const EPOCH = new Date(0).toISOString();
 /** When an entry last changed, as the merge compares it. */
 export const entryTime = (e: Pick<SyncEntry, 'updatedAt' | 'dateAdded'>) =>
   e.updatedAt || e.dateAdded || EPOCH;
+
+/** JSON with object keys in order, so key order never makes two copies differ. */
+function canonical(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
+  if (v && typeof v === 'object')
+    return `{${Object.keys(v)
+      .filter((k) => (v as Record<string, unknown>)[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  return JSON.stringify(v ?? null);
+}
+
+/** The same content, key order aside. */
+const sameEntry = (a: SyncEntry, b: SyncEntry) => canonical(a) === canonical(b);
+
 export function mergeSnapshots(
   local: Snapshot,
   remote: Snapshot,
@@ -55,18 +73,17 @@ export function mergeSnapshots(
     const localTomb = lt.get(id) as Tombstone | undefined;
     const remoteTomb = rt.get(id) as Tombstone | undefined;
 
-    // Latest version of the entry, if either side has it.
-    let entry = localEntry;
-    if (remoteEntry && (!entry || entryTime(remoteEntry) > entryTime(entry))) entry = remoteEntry;
+    // The entry as both sides' edits make it, if either side has it.
+    const entry =
+      localEntry && remoteEntry ? mergeEntry(localEntry, remoteEntry) : (localEntry ?? remoteEntry);
     // Latest deletion, if either side has one.
     let tomb = localTomb;
     if (remoteTomb && (!tomb || remoteTomb.deletedAt > tomb.deletedAt)) tomb = remoteTomb;
 
     if (entry && (!tomb || entryTime(entry) >= tomb.deletedAt)) {
       result.merged.entries.push(entry);
-      if (entry !== localEntry && (!localEntry || entryTime(entry) > entryTime(localEntry)))
-        result.toPut.push(entry);
-      if (!remoteEntry || entryTime(remoteEntry) < entryTime(entry)) result.pushNeeded = true;
+      if (!localEntry || !sameEntry(entry, localEntry)) result.toPut.push(entry);
+      if (!remoteEntry || !sameEntry(entry, remoteEntry)) result.pushNeeded = true;
       continue;
     }
 

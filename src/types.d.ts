@@ -28,6 +28,8 @@ export interface CatalogEntry {
   dateRated: string | null;
   /** When it was last started (status became in-progress). */
   dateStarted?: string | null;
+  /** Sync: when each group of fields last changed (see sync/fields.ts). */
+  fieldTimes?: Record<string, string>;
   /** When it was put down (status became abandoned); cleared when picked up again. */
   dateStopped?: string | null;
   /** Every time it was finished, oldest first (re-reads and rewatches add one). */

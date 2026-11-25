@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { CatalogEntry, Tombstone } from '../types';
 import { dropRetired } from '../util/retired';
+import { stampFields } from '../sync/fields';
 
 export const db = new Dexie('bookshelf') as Dexie & {
   entries: EntityTable<CatalogEntry, 'id'>;
@@ -84,6 +85,11 @@ export function withEntryLock<T>(id: string, work: () => Promise<T>): Promise<T>
 async function put(entry: CatalogEntry, touch: boolean) {
   if (touch || !entry.updatedAt) entry.updatedAt = new Date().toISOString();
   await db.transaction('rw', db.entries, db.tombstones, async () => {
+    // A local edit records which fields it changed, for sync's field-level merge.
+    if (touch) {
+      const before = await db.entries.get(entry.id);
+      if (before) stampFields(before, entry, entry.updatedAt!);
+    }
     await db.entries.put(entry);
     await db.tombstones.delete(entry.id);
   });

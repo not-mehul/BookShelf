@@ -104,6 +104,28 @@ describe('folder sync between two devices', () => {
     expect(await tablet.titles()).toEqual(['Dune Messiah', 'Ubik']);
   });
 
+  it('keeps edits to different fields of one entry made on two devices', async () => {
+    const folder = { chosen: true, file: null, writes: 0 };
+    const phone = await device(folder);
+    await phone.add('a', 'Dune');
+    await phone.sync();
+    const tablet = await device(folder);
+    await tablet.sync();
+
+    // Both edit the same book before either syncs: a rating here, a tag there.
+    await new Promise((r) => setTimeout(r, 5));
+    await phone.db.patchEntry('a', (d) => void (d.rating = 4.5));
+    await new Promise((r) => setTimeout(r, 5));
+    await tablet.db.patchEntry('a', (d) => void (d.tags = ['sci-fi']));
+
+    await phone.sync();
+    await tablet.sync();
+    await phone.sync();
+    for (const device of [phone, tablet]) {
+      expect(await device.db.getEntry('a')).toMatchObject({ rating: 4.5, tags: ['sci-fi'] });
+    }
+  });
+
   it('does not rewrite the file when nothing changed', async () => {
     const folder = { chosen: true, file: null, writes: 0 };
     const phone = await device(folder);
