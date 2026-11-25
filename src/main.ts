@@ -10,6 +10,8 @@ import { mount } from 'svelte';
 import { dismissOverlay } from 'dusk-dawn';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
+import { moveToTmdb } from './api/tmdb-move';
+import { dropTvdbSettings } from './util/settings';
 import { claimBackForMenus, installNativeBridge, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
@@ -60,8 +62,15 @@ async function boot(): Promise<void> {
   shelf.startSync();
   // The weekly backup to Documents/BookShelf/Backups (Android app).
   startAutoBackup();
-  // Refresh episode guides of shows being followed (quietly; needs TheTVDB).
-  void refreshFollowedGuides(() => void shelf.refresh());
+  // Films and shows still on TheTVDB ids move to TMDB once there is a key,
+  // then guides of shows being followed refresh (quietly; both need TMDB).
+  void dropTvdbSettings()
+    .then(() => moveToTmdb())
+    .then(async (r) => {
+      if (r.moved + r.needMatch) await shelf.refresh();
+    })
+    .then(() => refreshFollowedGuides(() => void shelf.refresh()))
+    .catch((err) => console.warn('TMDB catch-up failed:', err));
 }
 
 /** Shown when the page is opened outside the Android app. */

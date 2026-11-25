@@ -6,7 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * HTTP for the page's API calls (TheTVDB and friends don't send CORS headers a
+ * HTTP for the page's API calls (Google Books and friends don't all send CORS headers a
  * WebView would accept). Only exists to bypass CORS for the app's own APIs, so
  * it is scoped to those hosts and their cover CDNs, never an open proxy.
  *
@@ -19,7 +19,10 @@ object NativeHttp {
     private const val TIMEOUT_MS = 30_000
 
     // Keep in sync with NATIVE_HOST_SUFFIXES in src/platform/native.ts.
+    // thetvdb.com stays only for covers of entries added before TMDB.
     private val ALLOWED_HOST_SUFFIXES = listOf(
+        "themoviedb.org",
+        "tmdb.org",
         "thetvdb.com",
         "googleapis.com",
         "google.com",

@@ -4,7 +4,7 @@
   import { fetchThumbBlob } from '../../util/thumbs';
   import { splitList } from '../../util/text';
   import { TYPE_LABEL } from '../../util/labels';
-  import { getEnglishTitle, isTvdbConfigured } from '../../api/tvdb';
+  import { getEnglishTitle, isTmdbConfigured, tmdbNumber } from '../../api/tmdb';
   import type { CatalogEntry } from '../../types';
   import EntryPicker from '../EntryPicker.svelte';
   import Field from '../Field.svelte';
@@ -33,8 +33,8 @@
   const series = e.series === undefined ? parseSeriesFromTitle(e.title) : e.series;
   let title = $state(e.title);
   let originalTitle = $state(e.originalTitle || '');
-  // Films and shows from TheTVDB can fetch their English name.
-  const canLookUp = (e.type === 'movie' || e.type === 'tv') && Boolean(e.sourceId);
+  // Films and shows from TMDB can fetch their English name.
+  const canLookUp = (e.type === 'movie' || e.type === 'tv') && Boolean(tmdbNumber(e.sourceId));
   let lookingUp = $state(false);
   let lookupNote = $state('');
 
@@ -42,13 +42,13 @@
     lookingUp = true;
     lookupNote = '';
     try {
-      if (!(await isTvdbConfigured())) {
-        lookupNote = 'Set up TheTVDB in Settings first.';
+      if (!(await isTmdbConfigured())) {
+        lookupNote = 'Add your TMDB key in Settings first.';
         return;
       }
-      const english = await getEnglishTitle(e.type as 'movie' | 'tv', e.sourceId!);
+      const english = await getEnglishTitle(e);
       if (!english) {
-        lookupNote = 'TheTVDB has no English title for this one.';
+        lookupNote = 'TMDB has no English title for this one.';
       } else if (english === title.trim()) {
         lookupNote = 'This is already the English title.';
       } else {
@@ -152,7 +152,7 @@
       />
       {#if canLookUp}
         <button type="button" class="edit-text-link" disabled={lookingUp} onclick={useEnglishTitle}
-          >{lookingUp ? 'Looking it up…' : 'Use the English title from TheTVDB'}</button
+          >{lookingUp ? 'Looking it up…' : 'Use the English title from TMDB'}</button
         >
       {/if}
       {#if lookupNote}<p class="t-hint edit-note" role="status">{lookupNote}</p>{/if}

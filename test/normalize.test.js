@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   normalizeBook,
   normalizeOpenLibraryDoc,
-  normalizeTvdbSearchHit,
-  enrichFromTvdbDetail
+  normalizeTmdbHit,
+  normalizeTmdbEpisode,
+  enrichFromTmdbDetail
 } from '../src/api/normalize';
 
 describe('normalizeBook', () => {
@@ -59,97 +60,109 @@ describe('normalizeOpenLibraryDoc', () => {
   });
 });
 
-describe('normalizeTvdbSearchHit', () => {
-  it('maps a series hit to type tv', () => {
-    const out = normalizeTvdbSearchHit({ type: 'series', tvdb_id: 42, name: 'Firefly', year: '2002' });
-    expect(out.type).toBe('tv');
-    expect(out.sourceId).toBe('42');
-    expect(out.year).toBe(2002);
-  });
-  it('maps a movie hit to type movie', () => {
-    const out = normalizeTvdbSearchHit({ type: 'movie', id: 7, title: 'Blade Runner' });
-    expect(out.type).toBe('movie');
-    expect(out.title).toBe('Blade Runner');
-  });
-});
+const GENRES = new Map([
+  [18, 'Drama'],
+  [16, 'Animation']
+]);
 
-describe('normalizeTvdbSearchHit translations', () => {
-  it('prefers the English name and keeps the original', () => {
-    const out = normalizeTvdbSearchHit({
+describe('normalizeTmdbHit', () => {
+  it('maps a film with its English title, original title, year, genres and poster', () => {
+    const out = normalizeTmdbHit(
+      {
+        id: 129,
+        title: 'Spirited Away',
+        original_title: '千と千尋の神隠し',
+        release_date: '2001-07-20',
+        overview: 'A girl in a spirit world.',
+        poster_path: '/abc.jpg',
+        genre_ids: [16, 99]
+      },
+      'movie',
+      GENRES
+    );
+    expect(out).toMatchObject({
       type: 'movie',
-      id: 1,
-      name: '千と千尋の神隠し',
-      translations: { eng: 'Spirited Away', jpn: '千と千尋の神隠し' },
-      overview: '日本語',
-      overviews: { eng: 'A girl in a spirit world.' }
+      sourceId: 'tmdb:129',
+      title: 'Spirited Away',
+      originalTitle: '千と千尋の神隠し',
+      year: 2001,
+      genres: ['Animation'],
+      thumbnailUrl: 'https://image.tmdb.org/t/p/w500/abc.jpg',
+      detailUrl: 'https://www.themoviedb.org/movie/129'
     });
-    expect(out.title).toBe('Spirited Away');
-    expect(out.originalTitle).toBe('千と千尋の神隠し');
-    expect(out.summary).toBe('A girl in a spirit world.');
   });
-  it('has no original title when the name is already English', () => {
-    const out = normalizeTvdbSearchHit({
-      type: 'series',
-      id: 2,
-      name: 'Firefly',
-      translations: { eng: 'Firefly' }
+
+  it('maps a show, with no original title when it is already English', () => {
+    const out = normalizeTmdbHit(
+      {
+        id: 1437,
+        name: 'Firefly',
+        original_name: 'Firefly',
+        first_air_date: '2002-09-20',
+        poster_path: null
+      },
+      'tv',
+      GENRES
+    );
+    expect(out).toMatchObject({
+      type: 'tv',
+      sourceId: 'tmdb:1437',
+      year: 2002,
+      originalTitle: null,
+      thumbnailUrl: null
     });
-    expect(out.title).toBe('Firefly');
-    expect(out.originalTitle).toBeNull();
   });
 });
 
-describe('enrichFromTvdbDetail', () => {
-  it('fills genres and directors and sets the enriched flag', () => {
+describe('enrichFromTmdbDetail', () => {
+  it('fills genres, the director and the runtime of a film', () => {
     const base = { type: 'movie', title: 'X', creators: [], genres: [] };
-    const out = enrichFromTvdbDetail(base, {
-      genres: [{ name: 'Sci-Fi' }, { name: 'Noir' }],
-      characters: [
-        { peopleType: 'Director', personName: 'Ridley Scott' },
-        { peopleType: 'Actor', personName: 'Harrison Ford' }
-      ]
+    const out = enrichFromTmdbDetail(base, {
+      id: 1,
+      runtime: 117,
+      genres: [{ id: 1, name: 'Science Fiction' }],
+      credits: {
+        crew: [
+          { job: 'Director', name: 'Ridley Scott' },
+          { job: 'Writer', name: 'Hampton Fancher' }
+        ]
+      }
     });
-    expect(out.genres).toEqual(['Sci-Fi', 'Noir']);
+    expect(out.genres).toEqual(['Science Fiction']);
     expect(out.creators).toEqual(['Ridley Scott']);
+    expect(out.runtime).toBe(117);
     expect(out.enriched).toBe(true);
   });
+
+  it("names a show's creators", () => {
+    const out = enrichFromTmdbDetail(
+      { type: 'tv', title: 'Severance' },
+      { id: 2, created_by: [{ name: 'Dan Erickson' }] }
+    );
+    expect(out.creators).toEqual(['Dan Erickson']);
+  });
+
   it('returns the entry untouched when there is no detail', () => {
     const base = { type: 'movie', title: 'X' };
-    expect(enrichFromTvdbDetail(base, null)).toBe(base);
+    expect(enrichFromTmdbDetail(base, null)).toBe(base);
   });
 });
 
-import { normalizeEpisode } from '../src/api/normalize';
-import { collectEpisodePages } from '../src/api/tvdb';
-
-describe('episodes from TheTVDB', () => {
+describe('episodes from TMDB', () => {
   it('normalizes episode records and drops unusable ones', () => {
     expect(
-      normalizeEpisode({ id: 7, seasonNumber: 2, number: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 })
+      normalizeTmdbEpisode({
+        id: 7,
+        season_number: 2,
+        episode_number: 3,
+        name: 'Hello',
+        air_date: '2026-10-20',
+        runtime: 52
+      })
     ).toEqual({ id: 7, s: 2, e: 3, name: 'Hello', aired: '2026-10-20', runtime: 52 });
-    expect(normalizeEpisode({ id: 8, seasonNumber: 1, number: 1, aired: null }).aired).toBeNull();
-    expect(normalizeEpisode({ id: 9, number: 1 })).toBeNull();
-  });
-
-  it('follows links.next across pages', async () => {
-    const pages = [
-      { data: { series: { status: { name: 'Continuing' } }, episodes: [{ id: 1 }] }, links: { next: 'x' } },
-      { data: { episodes: [{ id: 2 }] }, links: { next: null } }
-    ];
-    const r = await collectEpisodePages(async (p) => pages[p]);
-    expect(r.episodes.map((e) => e.id)).toEqual([1, 2]);
-    expect(r.series.status.name).toBe('Continuing');
-  });
-
-  it('without links, keeps going only while pages are full', async () => {
-    let calls = 0;
-    const r = await collectEpisodePages(async (p) => {
-      calls++;
-      return {
-        data: { episodes: p === 0 ? Array.from({ length: 500 }, (_, i) => ({ id: i })) : [{ id: 999 }] }
-      };
-    });
-    expect(calls).toBe(2);
-    expect(r.episodes).toHaveLength(501);
+    expect(
+      normalizeTmdbEpisode({ id: 8, season_number: 1, episode_number: 1, air_date: null }).aired
+    ).toBeNull();
+    expect(normalizeTmdbEpisode({ id: 9, episode_number: 1 })).toBeNull();
   });
 });

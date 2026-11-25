@@ -24,10 +24,12 @@ export function installFakeShell({
   pendingEvents = [],
   // Native HTTP: 'empty' answers every API with no results; 'fetch' makes the
   // request from the page, so a test's page.route() stubs answer it.
-  http = 'empty'
+  http = 'empty',
+  // Secrets already saved in the Keystore when the page loads (a TMDB key, say).
+  secrets = {}
 } = {}) {
   const pageFetch = window.fetch.bind(window);
-  const keystore = {};
+  const keystore = { ...secrets };
   let folder = syncFolder;
   window.__sent = [];
   window.__keystore = keystore;
@@ -88,11 +90,11 @@ export function installFakeShell({
                 })
                 .catch((err) => resolve({ status: 0, error: String(err) }));
             }
-            // Empty search results for any API (Google Books, Open Library, TheTVDB).
+            // Empty search results for any API (Google Books, Open Library, TMDB).
             return resolve({
               status: 200,
               headers: { 'content-type': 'application/json' },
-              body: btoa('{"items":[],"docs":[],"data":[]}')
+              body: btoa('{"items":[],"docs":[],"results":[]}')
             });
           }
           if (method === 'setBackHandler') {

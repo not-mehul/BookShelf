@@ -2,8 +2,8 @@
   import { cheer } from '../../util/delight';
   import { untrack } from 'svelte';
   import { loadEpisodeGuide } from '../../api/episode-sync';
-  import { enrichFromTvdbDetail } from '../../api/normalize';
-  import { fetchDetail, isTvdbConfigured } from '../../api/tvdb';
+  import { enrichFromTmdbDetail } from '../../api/normalize';
+  import { fetchDetail, isTmdbConfigured, tmdbNumber } from '../../api/tmdb';
   import { getEntry, patchEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
@@ -73,22 +73,26 @@
     settleFocus();
 
     // Lazily enrich movies/TV saved from a thin search hit (no director/cast
-    // yet), and load or refresh a show's episode guide. Only what TheTVDB
+    // yet), and load or refresh a show's episode guide. Only what TMDB
     // supplies is written, onto the stored copy, so a rating or status given
     // while it loads is kept.
     let current = loaded;
-    if ((current.type === 'movie' || current.type === 'tv') && current.sourceId && !current.enriched) {
+    if (
+      (current.type === 'movie' || current.type === 'tv') &&
+      tmdbNumber(current.sourceId) &&
+      !current.enriched
+    ) {
       try {
         const detail = await fetchDetail(current);
         if (detail) {
-          const preview = enrichFromTvdbDetail(current, detail);
+          const preview = enrichFromTmdbDetail(current, detail);
           const cover =
             !current.thumbnailBlob && preview.thumbnailUrl && preview.thumbnailUrl !== current.thumbnailUrl
               ? { url: preview.thumbnailUrl, blob: await fetchThumbBlob(preview.thumbnailUrl) }
               : null;
           const saved = await patchEntry(current.id, (d) => {
             const hadUrl = d.thumbnailUrl;
-            Object.assign(d, enrichFromTvdbDetail(d, detail));
+            Object.assign(d, enrichFromTmdbDetail(d, detail));
             if (cover?.blob && !hadUrl && d.thumbnailUrl === cover.url && !d.thumbnailBlob) {
               d.thumbnailBlob = cover.blob;
             }
@@ -102,7 +106,12 @@
         /* a database error: keep the thin entry */
       }
     }
-    if (current.type === 'tv' && current.sourceId && guideIsStale(current) && (await isTvdbConfigured())) {
+    if (
+      current.type === 'tv' &&
+      tmdbNumber(current.sourceId) &&
+      guideIsStale(current) &&
+      (await isTmdbConfigured())
+    ) {
       try {
         show(await loadEpisodeGuide(current));
       } catch {

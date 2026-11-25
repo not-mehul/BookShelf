@@ -24,7 +24,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 ### Add anything
 
 - **Books** from Google Books, with Open Library as a fallback, by title, ISBN or a **scanned barcode**.
-- **Films and TV** from TheTVDB, directly or through your own hosted proxy ([`proxy/`](proxy)), with cast and genres filled in when you open an entry.
+- **Films and TV** from [TMDB](https://www.themoviedb.org), called straight from your phone with your own free key, with the director, creators and genres filled in when you open an entry.
 - **Quotes** with author, source and page or time, linked to the book, film or show they come from. Each entry lists its quotes.
 - **By hand**, when search comes up empty. Every entry can be edited afterwards.
 - **Share into BookShelf** a highlight, title or link from any app, through the Android share sheet, to get a prefilled quote or search.
@@ -67,7 +67,7 @@ Your catalog never leaves the device. BookShelf talks to a catalog only when you
 
 Download the signed APK from the [latest release](https://github.com/not-mehul/BookShelf/releases/latest) and open it on your phone. BookShelf needs Android 10 or later.
 
-Then open **Settings** and add a **TheTVDB API key** (and subscriber PIN, if your key needs one) for films and TV, or the URL of your [TheTVDB proxy](proxy). A **Google Books API key** is optional and raises the daily quota.
+Then open **Settings → Search** and paste a free **TMDB API key** (or read access token) for films and TV: make a TMDB account, then find it under Settings → API on themoviedb.org. Films and shows added before BookShelf moved to TMDB move over on their own once the key is saved. A **Google Books API key** is optional and raises the daily quota.
 
 ## The Dusk & Dawn apps
 
@@ -99,7 +99,7 @@ npm run android:apk  # a debug APK, in android/app/build/outputs/apk/debug/
 
 BookShelf is designed and built by **Mehul Sen** ([@not-mehul](https://github.com/not-mehul)).
 
-- Catalog data: [Google Books](https://books.google.com), [Open Library](https://openlibrary.org) and [TheTVDB](https://thetvdb.com).
+- Catalog data: [Google Books](https://books.google.com), [Open Library](https://openlibrary.org) and [TMDB](https://www.themoviedb.org). This product uses the TMDB API but is not endorsed or certified by TMDB.
 - Icons: [Lucide](https://lucide.dev), ISC.
 - Fonts and design: Fraunces (SIL Open Font License) through [dusk-dawn](https://github.com/not-mehul/dusk-dawn).
 

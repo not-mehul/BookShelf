@@ -40,9 +40,9 @@ beforeEach(async () => {
 
 describe('settings in a plain browser', () => {
   it('stores everything, secrets included, in localStorage', async () => {
-    await settings.setSetting('tvdb_api_key', 'k1');
+    await settings.setSetting('tmdb_api_key', 'k1');
     await settings.setSetting('theme', 'light');
-    expect(localStorage.getItem('bookshelf:tvdb_api_key')).toBe('k1');
+    expect(localStorage.getItem('bookshelf:tmdb_api_key')).toBe('k1');
     expect(await settings.getSetting('theme')).toBe('light');
     expect(await settings.getSetting('missing', 'fb')).toBe('fb');
   });
@@ -53,16 +53,16 @@ describe('settings inside the Android shell', () => {
     const shell = fakeShellWithKeystore();
     native.installNativeBridge(shell.win, shell.shell);
 
-    await settings.setSetting('tvdb_api_key', 'secret');
+    await settings.setSetting('tmdb_api_key', 'secret');
     await settings.setSetting('theme', 'dark');
-    expect(shell.keystore.get('tvdb_api_key')).toBe('secret');
-    expect(localStorage.getItem('bookshelf:tvdb_api_key')).toBeNull();
+    expect(shell.keystore.get('tmdb_api_key')).toBe('secret');
+    expect(localStorage.getItem('bookshelf:tmdb_api_key')).toBeNull();
     expect(localStorage.getItem('bookshelf:theme')).toBe('dark');
-    expect(await settings.getSetting('tvdb_api_key')).toBe('secret');
+    expect(await settings.getSetting('tmdb_api_key')).toBe('secret');
 
-    await settings.removeSetting('tvdb_api_key');
-    expect(shell.keystore.has('tvdb_api_key')).toBe(false);
-    expect(await settings.getSetting('tvdb_api_key', 'none')).toBe('none');
+    await settings.removeSetting('tmdb_api_key');
+    expect(shell.keystore.has('tmdb_api_key')).toBe(false);
+    expect(await settings.getSetting('tmdb_api_key', 'none')).toBe('none');
   });
 
   it('migrates plaintext secrets out of localStorage exactly once', async () => {
@@ -77,16 +77,35 @@ describe('settings inside the Android shell', () => {
     expect(localStorage.getItem('bookshelf:theme')).toBe('light'); // not a secret
 
     const setsBefore = shell.calls.filter((c) => c === 'secureSet').length;
-    await settings.getSetting('tvdb_pin');
+    await settings.getSetting('sync_passphrase');
     expect(shell.calls.filter((c) => c === 'secureSet').length).toBe(setsBefore);
   });
 
   it('caches Keystore reads for the session', async () => {
     const shell = fakeShellWithKeystore();
     native.installNativeBridge(shell.win, shell.shell);
-    shell.keystore.set('tvdb_token', 't');
-    await settings.getSetting('tvdb_token');
-    await settings.getSetting('tvdb_token');
+    shell.keystore.set('sync_passphrase', 't');
+    await settings.getSetting('sync_passphrase');
+    await settings.getSetting('sync_passphrase');
     expect(shell.calls.filter((c) => c === 'secureGet')).toHaveLength(1);
+  });
+});
+
+describe('settings from before TMDB', () => {
+  it("forgets TheTVDB's key, PIN, token and proxy once", async () => {
+    const shell = fakeShellWithKeystore();
+    native.installNativeBridge(shell.win, shell.shell);
+    shell.keystore.set('tvdb_api_key', 'old');
+    shell.keystore.set('tvdb_pin', '1234');
+    localStorage.setItem('bookshelf:tvdb_proxy_url', 'https://proxy.example');
+    localStorage.setItem('bookshelf:tvdb_token_issued', '1');
+    await settings.dropTvdbSettings();
+    expect(shell.keystore.has('tvdb_api_key')).toBe(false);
+    expect(shell.keystore.has('tvdb_pin')).toBe(false);
+    expect(localStorage.getItem('bookshelf:tvdb_proxy_url')).toBeNull();
+    expect(localStorage.getItem('bookshelf:tvdb_token_issued')).toBeNull();
+    const removes = shell.calls.filter((c) => c === 'secureRemove').length;
+    await settings.dropTvdbSettings();
+    expect(shell.calls.filter((c) => c === 'secureRemove').length).toBe(removes);
   });
 });

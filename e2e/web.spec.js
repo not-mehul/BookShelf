@@ -66,10 +66,13 @@ test('phone layout: filter gets its own row; settings has sync and no browser op
   expect(await dialogName(page)).toBe('Preferences');
   await expect(page.locator('.sync-section')).toHaveCount(1);
   // Search keys start folded away; the summary opens them.
-  await expect(page.getByLabel('Proxy URL (optional)')).toBeHidden();
-  await page.locator('dialog[open] summary', { hasText: 'Movies and TV' }).click();
-  await expect(page.getByLabel('Proxy URL (optional)')).toBeVisible();
-  await expect(page.getByLabel('CORS proxy')).toHaveCount(0);
+  await expect(page.getByLabel('API key or read access token')).toBeHidden();
+  await page.locator('dialog[open] summary', { hasText: 'Films and TV' }).click();
+  await expect(page.getByLabel('API key or read access token')).toBeVisible();
+  await expect(page.getByLabel(/proxy/i)).toHaveCount(0);
+  await expect(
+    page.getByText('This product uses the TMDB API but is not endorsed or certified by TMDB.')
+  ).toBeVisible();
   await expect(page.locator('#weeklyBackup')).toBeVisible();
 });
 

@@ -7,7 +7,7 @@
   import DataSection from './DataSection.svelte';
   import SearchSection from './SearchSection.svelte';
   import SyncSection from './SyncSection.svelte';
-  import { GOOGLE, TVDB } from './search-keys';
+  import { GOOGLE, TMDB } from './search-keys';
   import { setTheme, theme, type ThemeChoice } from '../../platform/theme.svelte';
   import { chooseRatingScale, ratingView } from '../../state/rating-scale.svelte';
   import type { RatingScale } from '../../util/stars';
@@ -15,14 +15,12 @@
   // Appearance, Sync, Your data, Search, About. The saved keys load first, so
   // focus settles once the sheet is whole.
   let values = $state<Record<string, string> | null>(null);
-  let tokenIssued = $state(0);
   const settleFocus = useModalFocus();
 
   $effect(() => {
     void (async () => {
-      const keys = [...TVDB, GOOGLE].map((d) => d.key);
+      const keys = [TMDB, GOOGLE].map((d) => d.key);
       const loaded = await Promise.all(keys.map((k) => getSetting(k, '')));
-      tokenIssued = parseInt(await getSetting('tvdb_token_issued', '0'), 10) || 0;
       values = Object.fromEntries(keys.map((k, i) => [k, loaded[i] ?? '']));
       settleFocus();
     })();
@@ -81,12 +79,19 @@
     </section>
 
     <section class="settings-group" aria-labelledby="set-search">
-      <SearchSection {values} bind:tokenIssued />
+      <SearchSection {values} />
     </section>
 
     <section class="settings-group" aria-labelledby="set-about">
       <h3 class="settings-section-heading" id="set-about">About</h3>
       <p class="field-hint">BookShelf {__APP_VERSION__}</p>
+      <p class="field-hint settings-credit">
+        Film and TV data and posters come from <a
+          href="https://www.themoviedb.org"
+          target="_blank"
+          rel="noopener">TMDB</a
+        >. This product uses the TMDB API but is not endorsed or certified by TMDB.
+      </p>
       <p class="field-hint" id="eggCount">Easter eggs: {eggsFound()} of {EGGS.length} found</p>
       <p class="field-hint settings-footnote">
         <em>Private.</em> Your shelf lives on this device. Searches go to the services above, and nothing else leaves

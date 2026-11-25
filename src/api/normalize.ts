@@ -33,36 +33,36 @@ export interface OpenLibraryDoc {
   number_of_pages_median?: number;
   isbn?: string[];
 }
-export interface TvdbSearchHit {
-  type?: string;
-  tvdb_id?: string | number;
-  id?: string | number;
-  name?: string;
+export interface TmdbHit {
+  id: number;
+  /** Films. */
   title?: string;
-  year?: string;
-  overview?: string;
-  genres?: string[];
-  image_url?: string;
-  thumbnail?: string;
-  url?: string;
-  /** Names by language code, e.g. { eng: 'Spirited Away', jpn: '千と千尋の神隠し' }. */
-  translations?: Record<string, string>;
-  /** Overviews by language code. */
-  overviews?: Record<string, string>;
-}
-export interface TvdbDetail {
-  image?: string;
-  overview?: string;
-  genres?: { name?: string }[];
-  characters?: { peopleType?: string; personName?: string }[];
-}
-export interface TvdbEpisode {
-  id?: number | string;
-  seasonNumber?: number | string;
-  number?: number | string;
+  original_title?: string;
+  release_date?: string;
+  /** Shows. */
   name?: string;
-  aired?: unknown;
-  runtime?: number;
+  original_name?: string;
+  first_air_date?: string;
+  overview?: string;
+  poster_path?: string | null;
+  genre_ids?: number[];
+}
+export interface TmdbDetail extends TmdbHit {
+  genres?: { id: number; name: string }[];
+  runtime?: number | null;
+  status?: string;
+  created_by?: { name?: string }[];
+  seasons?: { season_number?: number; episode_count?: number }[];
+  belongs_to_collection?: { id: number; name?: string } | null;
+  credits?: { crew?: { job?: string; name?: string }[] };
+}
+export interface TmdbEpisode {
+  id?: number;
+  season_number?: number;
+  episode_number?: number;
+  name?: string;
+  air_date?: string | null;
+  runtime?: number | null;
 }
 
 export function normalizeBook(volume: GoogleVolume): SearchHit {
@@ -110,56 +110,66 @@ export function normalizeOpenLibraryDoc(doc: OpenLibraryDoc): SearchHit {
   };
 }
 
-// TheTVDB /search returns a heterogeneous list with `type`: 'movie' | 'series' | etc.
-export function normalizeTvdbSearchHit(hit: TvdbSearchHit): SearchHit {
-  const isSeries = hit.type === 'series';
-  const type = isSeries ? 'tv' : 'movie';
-  const year = hit.year ? parseInt(hit.year, 10) : NaN;
-  // TheTVDB names a film or show in its own language; prefer the English name
-  // and keep the original alongside it.
-  const original = (hit.name || hit.title || '').trim();
-  const english = hit.translations?.eng?.trim() || '';
+/** A TMDB poster at a size that suits a cover. */
+export const tmdbPoster = (path: string | null | undefined) =>
+  path ? `https://image.tmdb.org/t/p/w500${path}` : null;
+
+const yearOf = (date: string | undefined) => {
+  const n = parseInt((date || '').slice(0, 4), 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+// TMDB /search/movie or /search/tv result → unified shape. Titles come in
+// English (the client asks for en-US); the original stays alongside.
+export function normalizeTmdbHit(hit: TmdbHit, type: 'movie' | 'tv', genres: Map<number, string>): SearchHit {
+  const title = (type === 'movie' ? hit.title : hit.name)?.trim() || '';
+  const original = (type === 'movie' ? hit.original_title : hit.original_name)?.trim() || '';
   return {
     type,
-    sourceId: String(hit.tvdb_id || hit.id),
-    title: english || original || 'Untitled',
-    originalTitle: english && original && english !== original ? original : null,
+    sourceId: `tmdb:${hit.id}`,
+    title: title || original || 'Untitled',
+    originalTitle: original && title && original !== title ? original : null,
     creators: [],
-    year: Number.isFinite(year) ? year : null,
-    summary: hit.overviews?.eng || hit.overview || '',
-    genres: hit.genres || [],
-    thumbnailUrl: hit.image_url || hit.thumbnail || null,
-    detailUrl: hit.url || null,
-    raw: { type: hit.type }
+    year: yearOf(type === 'movie' ? hit.release_date : hit.first_air_date),
+    summary: hit.overview || '',
+    genres: (hit.genre_ids || []).map((id) => genres.get(id)).filter((n): n is string => Boolean(n)),
+    thumbnailUrl: tmdbPoster(hit.poster_path),
+    detailUrl: `https://www.themoviedb.org/${type}/${hit.id}`
   };
 }
 
-// Full /movies/{id}/extended or /series/{id}/extended detail enrichment.
-export function enrichFromTvdbDetail(entry: CatalogEntry, detail: TvdbDetail | null): CatalogEntry {
+// /movie/{id} or /tv/{id} with credits: genres, the director (films) or the
+// creators (shows), and anything the search result lacked.
+export function enrichFromTmdbDetail(entry: CatalogEntry, detail: TmdbDetail | null): CatalogEntry {
   if (!detail) return entry;
   const next = { ...entry };
-  if (detail.image) next.thumbnailUrl = next.thumbnailUrl || detail.image;
+  next.thumbnailUrl = next.thumbnailUrl || tmdbPoster(detail.poster_path);
   if (detail.overview) next.summary = next.summary || detail.overview;
-  const genres = (detail.genres || []).map((g) => g.name).filter((n): n is string => Boolean(n));
+  const genres = (detail.genres || []).map((g) => g.name).filter(Boolean);
   if (genres.length) next.genres = genres;
-  const directors = (detail.characters || [])
-    .filter((c) => /director/i.test(c.peopleType || ''))
-    .map((c) => c.personName)
-    .filter((n): n is string => Boolean(n));
-  if (directors.length) next.creators = directors;
+  const people =
+    entry.type === 'movie'
+      ? (detail.credits?.crew || []).filter((c) => c.job === 'Director').map((c) => c.name)
+      : (detail.created_by || []).map((c) => c.name);
+  const creators = [...new Set(people.filter((n): n is string => Boolean(n)))];
+  if (creators.length) next.creators = creators;
+  if (entry.type === 'movie' && detail.runtime) next.runtime = detail.runtime;
   next.enriched = true;
   return next;
 }
 
-// TheTVDB EpisodeBaseRecord → compact Episode (see types.d.ts).
-export function normalizeEpisode(ep: TvdbEpisode | null | undefined): Episode | null {
-  if (!ep || ep.id == null || ep.seasonNumber == null || ep.number == null) return null;
+// TMDB season episode → compact Episode (see types.d.ts).
+export function normalizeTmdbEpisode(ep: TmdbEpisode | null | undefined): Episode | null {
+  if (!ep || ep.id == null || ep.season_number == null || ep.episode_number == null) return null;
   return {
     id: Number(ep.id),
-    s: Number(ep.seasonNumber),
-    e: Number(ep.number),
+    s: Number(ep.season_number),
+    e: Number(ep.episode_number),
     name: ep.name || '',
-    aired: typeof ep.aired === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ep.aired) ? ep.aired.slice(0, 10) : null,
+    aired:
+      typeof ep.air_date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ep.air_date)
+        ? ep.air_date.slice(0, 10)
+        : null,
     runtime: ep.runtime != null && Number.isFinite(ep.runtime) ? ep.runtime : null
   };
 }

@@ -1,5 +1,5 @@
 // Changes to an open entry are never undone by a save that started from an
-// older copy: TheTVDB details arriving late, a sync landing while it is open,
+// older copy: TMDB details arriving late, a sync landing while it is open,
 // or quick repeated input.
 import { test, expect } from './app-test.js';
 import { readFileSync } from 'node:fs';
@@ -37,43 +37,45 @@ const stored = (page, id) =>
     id
   );
 
-test('a rating given while TheTVDB details load is kept', async ({ page }) => {
-  let release;
-  const held = new Promise((r) => (release = r));
-  await page.route('https://proxy.test/movies/**', async (route) => {
-    await held;
-    await route.fulfill({
-      json: {
-        data: {
-          overview: 'From TheTVDB',
-          genres: [{ name: 'Science Fiction' }],
-          characters: [{ peopleType: 'Director', personName: 'Denis Villeneuve' }]
+test.describe('with a TMDB key', () => {
+  test.use({ shell: { http: 'fetch', secrets: { tmdb_api_key: 'test-key' } } });
+
+  test('a rating given while TMDB details load is kept', async ({ page }) => {
+    let release;
+    const held = new Promise((r) => (release = r));
+    await page.route('https://api.themoviedb.org/3/movie/**', async (route) => {
+      await held;
+      await route.fulfill({
+        json: {
+          id: 329865,
+          overview: 'From TMDB',
+          genres: [{ id: 878, name: 'Science Fiction' }],
+          credits: { crew: [{ job: 'Director', name: 'Denis Villeneuve' }] }
         }
-      }
+      });
     });
-  });
-  await importShelf(
-    page,
-    shelf((es) =>
-      Object.assign(
-        es.find((e) => e.id === 'arrival'),
-        { sourceId: '999', enriched: false }
+    await importShelf(
+      page,
+      shelf((es) =>
+        Object.assign(
+          es.find((e) => e.id === 'arrival'),
+          { sourceId: 'tmdb:329865', enriched: false }
+        )
       )
-    ),
-    { tvdb_proxy_url: 'https://proxy.test' }
-  );
-  await page.locator('.entry-card', { hasText: 'Arrival' }).click();
-  const slider = page.getByRole('slider', { name: 'Rating' });
-  await slider.focus();
-  await page.keyboard.press('4');
-  await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');
-  release();
-  await expect(page.locator('dialog[open]')).toContainText('Denis Villeneuve');
-  await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');
-  expect(await stored(page, 'arrival')).toMatchObject({
-    rating: 4,
-    enriched: true,
-    creators: ['Denis Villeneuve']
+    );
+    await page.locator('.entry-card', { hasText: 'Arrival' }).click();
+    const slider = page.getByRole('slider', { name: 'Rating' });
+    await slider.focus();
+    await page.keyboard.press('4');
+    await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');
+    release();
+    await expect(page.locator('dialog[open]')).toContainText('Denis Villeneuve');
+    await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');
+    expect(await stored(page, 'arrival')).toMatchObject({
+      rating: 4,
+      enriched: true,
+      creators: ['Denis Villeneuve']
+    });
   });
 });
 

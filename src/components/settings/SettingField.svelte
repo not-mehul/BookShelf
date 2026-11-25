@@ -12,9 +12,11 @@
     type?: 'text' | 'password' | 'url';
     /** The stored value, loaded by the parent. */
     initial: string;
+    /** Called once the value is saved (or removed, with ''). */
+    onsaved?: (value: string) => void;
   }
 
-  let { key, label, hint, type = 'text', initial }: Props = $props();
+  let { key, label, hint, type = 'text', initial, onsaved }: Props = $props();
   let value = $state(untrack(() => initial));
   let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -23,6 +25,7 @@
     timer = setTimeout(async () => {
       if (value) await setSetting(key, value);
       else await removeSetting(key);
+      onsaved?.(value);
     }, 280);
   }
 </script>

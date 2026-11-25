@@ -4,7 +4,7 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { searchBooks } from '../../api/books';
   import { looksLikeIsbn, searchOpenLibrary } from '../../api/openlibrary';
-  import { isTvdbConfigured, searchTvdb } from '../../api/tvdb';
+  import { isTmdbConfigured, searchTmdb } from '../../api/tmdb';
   import { findBySource, saveEntry } from '../../db/database';
   import { shelf } from '../../state/shelf.svelte';
   import { ui, type AddSeed } from '../../state/ui.svelte';
@@ -36,7 +36,7 @@
   type Results =
     | { state: 'idle' }
     | { state: 'loading' }
-    | { state: 'no-tvdb' }
+    | { state: 'no-tmdb' }
     | { state: 'error'; message: string }
     | { state: 'done'; hits: { hit: SearchHit; existingId: string | null }[] };
 
@@ -83,14 +83,14 @@
       input.focus();
       return;
     }
-    // Movies and TV need TheTVDB access: an API key or a BookShelf proxy.
-    if (type !== 'book' && !(await isTvdbConfigured())) {
-      if (!stale()) results = { state: 'no-tvdb' };
+    // Movies and TV need the user's own free TMDB key.
+    if (type !== 'book' && !(await isTmdbConfigured())) {
+      if (!stale()) results = { state: 'no-tmdb' };
       return;
     }
     results = { state: 'loading' };
     try {
-      const hits = type === 'book' ? await searchBooksMerged(q) : await searchTvdb(q, type);
+      const hits = type === 'book' ? await searchBooksMerged(q) : await searchTmdb(q, type);
       const existing = await Promise.all(hits.map((h) => findBySource(h.type, h.sourceId)));
       if (stale()) return;
       results = { state: 'done', hits: hits.map((hit, i) => ({ hit, existingId: existing[i]?.id ?? null })) };
@@ -247,13 +247,13 @@
 <div class="add-results-zone">
   {#if results.state === 'loading'}
     <div class="loading-row"><LoadingIndicator label="Searching" size={32} />Searching</div>
-  {:else if results.state === 'no-tvdb'}
+  {:else if results.state === 'no-tmdb'}
     <div class="notice">
       <Icon name="settings" />
       <div class="notice-text">
-        <span class="notice-title">TheTVDB isn’t set up.</span>
+        <span class="notice-title">TMDB isn’t set up.</span>
         <span class="notice-detail">
-          Add an API key or a proxy URL in
+          Add your free TMDB key in
           <a
             href="#settings"
             onclick={(ev) => {
