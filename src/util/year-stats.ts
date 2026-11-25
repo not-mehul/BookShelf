@@ -55,59 +55,9 @@ export function monthly(finishes: Finish[]): Record<FinishedType, number>[] {
   return months;
 }
 
-/** Pages in a finished book: its page count, or the total its progress ran to. */
+/** Pages in a finished book: its page count, if known. */
 export function bookPages(e: CatalogEntry): number {
-  return e.pageCount || e.progress?.total || 0;
-}
-
-export interface Pace {
-  /** Books finished so far. */
-  done: number;
-  goal: number;
-  /** Where an even pace would be by now. */
-  expected: number;
-  /** done − expected, rounded: positive is ahead. */
-  delta: number;
-  /** The year is over (or not this year): the pace no longer moves. */
-  closed: boolean;
-}
-
-/**
- * Progress towards a yearly goal. For the current year the expected count is
- * the goal spread evenly over the days so far; for any other year it is the goal.
- */
-export function goalPace(done: number, goal: number, year: number, now: Date = new Date()): Pace {
-  const closed = year !== now.getFullYear();
-  let expected = goal;
-  if (!closed) {
-    const start = new Date(year, 0, 1).getTime();
-    const end = new Date(year + 1, 0, 1).getTime();
-    expected = (goal * (now.getTime() - start)) / (end - start);
-  }
-  return { done, goal, expected, delta: Math.round(done - expected), closed };
-}
-
-/** One plain sentence about a goal's pace, in the house voice. */
-export function paceSentence(p: Pace, now: Date = new Date()): string {
-  if (p.goal <= 0) return '';
-  if (p.done >= p.goal) {
-    const over = p.done - p.goal;
-    return over ? `Goal met, and ${over} past it.` : 'Goal met.';
-  }
-  const left = p.goal - p.done;
-  if (p.closed) return `${left} short of the goal.`;
-  const daysLeft = Math.max(
-    1,
-    Math.ceil((new Date(now.getFullYear() + 1, 0, 1).getTime() - now.getTime()) / 86_400_000)
-  );
-  // More left than days: say how many a day, not "one a day".
-  const perDay = Math.ceil(left / daysLeft);
-  const every = Math.max(1, Math.floor(daysLeft / left));
-  const cadence =
-    perDay > 1 ? `about ${perDay} a day` : every === 1 ? 'about one a day' : `about one every ${every} days`;
-  if (p.delta > 0) return `${p.delta} ahead of pace. ${left} to go.`;
-  if (p.delta < 0) return `${-p.delta} behind pace; ${cadence} would catch up.`;
-  return `On pace; ${cadence} keeps it there.`;
+  return e.pageCount || 0;
 }
 
 export interface Highlight {

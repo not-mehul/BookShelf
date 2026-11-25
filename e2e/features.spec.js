@@ -61,10 +61,8 @@ test.describe('on the shelf', () => {
     await expect(dialog.locator('.stats-undated')).toContainText(
       '2 entries were finished before BookShelf kept dates'
     );
-    await dialog.getByRole('button', { name: 'Set a goal' }).click();
-    await expect(dialog.locator('.stats-goal-figure')).toHaveText(/1\s*of 12 books/);
-    await dialog.getByRole('button', { name: 'Raise the goal by one' }).click();
-    await expect(dialog.locator('.stats-goal-figure')).toHaveText(/1\s*of 13 books/);
+    // No reading goal: Statistics only reports what was logged.
+    await expect(dialog.getByRole('button', { name: 'Set a goal' })).toHaveCount(0);
     await expect(dialog.locator('.stats-highlight')).toContainText(['Longest book']);
   });
 

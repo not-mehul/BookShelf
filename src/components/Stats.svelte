@@ -18,11 +18,10 @@
   } from '../util/year-stats';
   import ModalHead from './ModalHead.svelte';
   import BarList from './stats/BarList.svelte';
-  import GoalCard from './stats/GoalCard.svelte';
   import MonthChart from './stats/MonthChart.svelte';
 
   // A read-only summary of the catalog: the year in review first (what was
-  // finished, against a goal), then the shelf as a whole.
+  // finished, and when), then the shelf as a whole.
 
   const TYPES = [
     ['book', 'Books'],
@@ -114,8 +113,6 @@
           <span class="t-data-small">{year}</span>
         {/if}
       </div>
-
-      <GoalCard {year} books={byType.book} {now} />
 
       {#if finishes.length}
         <div class="hairline-grid stats-grid">

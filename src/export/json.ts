@@ -1,7 +1,7 @@
 // Lossless JSON backup / restore.
 //
 // Unlike the Markdown export (human-readable, lossy), this preserves every
-// field — including sourceId, progress, tags, timestamps, and cover images
+// field — including sourceId, tags, timestamps, episode ticks and cover images
 // (serialized inline as data URLs) — so a restore is a faithful round-trip.
 // Import is idempotent: entries are keyed by `id`, so re-importing the same
 // backup replaces rather than duplicates.
@@ -9,6 +9,7 @@
 import { listEntries, saveEntry, getEntry, db } from '../db/database';
 import { nativeExport } from '../platform/native';
 import type { CatalogEntry, EntryStatus, EntryType } from '../types';
+import { dropRetired } from '../util/retired';
 
 /** A CatalogEntry as written to JSON: the cover blob becomes a data URL. */
 export type SerializedEntry = Omit<CatalogEntry, 'thumbnailBlob'> & { thumbnailData?: string | null };
@@ -39,7 +40,7 @@ export async function serializeEntry(entry: CatalogEntry): Promise<SerializedEnt
 }
 export async function deserializeEntry(raw: SerializedEntry): Promise<CatalogEntry> {
   const { thumbnailData, ...rest } = raw;
-  return { ...rest, thumbnailBlob: thumbnailData ? await dataUrlToBlob(thumbnailData) : null };
+  return dropRetired({ ...rest, thumbnailBlob: thumbnailData ? await dataUrlToBlob(thumbnailData) : null });
 }
 
 const TYPES: readonly EntryType[] = ['book', 'movie', 'tv', 'quote'];

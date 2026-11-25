@@ -29,7 +29,7 @@ export function readBookShelfLink(url: string): LinkIntake {
   const status: AddSeed | undefined = finishedAt
     ? { status: 'finished', finishedAt }
     : progress !== null && progress > 0
-      ? { status: 'in-progress', progress }
+      ? { status: 'in-progress' }
       : undefined;
   return {
     kind: 'add',
