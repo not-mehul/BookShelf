@@ -33,7 +33,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 - **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Finished, and Did not finish for the ones you put down on purpose.
 - **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Optional aspect scores (story, writing, acting and so on), notes, tags and collections.
-- **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day.
+- **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day. Putting something down is dated too.
 - **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**.
 - **Series**, detected from titles or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
 - **A ranked queue.** Your wishlist in order (drag, keyboard or buttons), plus _pick something for me_ by type, length or genre.
@@ -41,7 +41,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 ### Look back
 
-- **A year in review**: finished per month, pages in the books you finished, a yearly reading goal with its pace, the longest book and the highest rated.
+- **A year in review**: finished per month, pages in the books you finished, the longest book and the highest rated.
 - **All-time statistics**: totals, rating distribution, most-shelved authors and directors, decades and top genres.
 - **Share cards.** Any book, film, show or quote as an image in the Dusk or Dawn style (post, square or story), or as text.
 - **Little things.** A different kept quote at the top of the library each day, beside _Up next_, the library remembers its tab and sort, and `/` jumps to the filter. Finishing something earns a little confetti, there is an idle cat to play with, and four easter eggs are counted in Settings.

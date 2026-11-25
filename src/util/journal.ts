@@ -25,8 +25,7 @@ export function stampStatusDates(
   const iso = now.toISOString();
   const finishes = [...(entry.finishes || [])];
 
-  // Un-finishing straight after finishing undoes that finish (a mis-tap, or a
-  // progress number typed past the end and corrected).
+  // Un-finishing straight after finishing undoes that finish (a mis-tap).
   if (from === 'finished') {
     const last = finishes.at(-1);
     if (last && now.getTime() - Date.parse(last) < CORRECTION_MS) finishes.pop();
@@ -89,33 +88,9 @@ export function formatDay(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** "Read again", "Watch again". */
-export function againLabel(type: EntryType): string {
-  return type === 'book' ? 'Read again' : 'Watch again';
-}
-
 /** "Read twice", "Watched 3 times". Empty for one finish or none. */
 export function timesLabel(type: EntryType, n: number): string {
   if (n < 2) return '';
   const verb = type === 'book' ? 'Read' : 'Watched';
   return n === 2 ? `${verb} twice` : `${verb} ${n} times`;
-}
-
-/**
- * Reading pace from the latest start: pages (or episodes) a day, and the day
- * it would end at that pace. Null until there is a day and a page to go on.
- */
-export function pace(
-  entry: CatalogEntry,
-  now: Date = new Date()
-): { perDay: number; eta: Date; daysLeft: number } | null {
-  const p = entry.progress;
-  if (!entry.dateStarted || entry.status !== 'in-progress' || !p || p.current <= 0 || p.total <= p.current)
-    return null;
-  const days = daysBetween(entry.dateStarted, now.toISOString());
-  if (days < 1) return null;
-  const perDay = p.current / days;
-  const daysLeft = Math.ceil((p.total - p.current) / perDay);
-  const eta = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysLeft, 12);
-  return { perDay, eta, daysLeft };
 }

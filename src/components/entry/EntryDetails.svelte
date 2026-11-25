@@ -1,6 +1,6 @@
 <script lang="ts">
   // A book, film or show. First what it is (Hero), then what you make of it, all
-  // in one place: status, rating, progress and dates. Then episodes, notes,
+  // in one place: status, rating and dates. Then episodes, notes,
   // quotes and tags; the synopsis and series last. Edit, Share and Delete are in
   // the bar's menu.
   import { applyStatus } from '../../util/apply-status';
@@ -13,7 +13,6 @@
   import JournalSection from './JournalSection.svelte';
   import LinkedQuotes from './LinkedQuotes.svelte';
   import NotesField from './NotesField.svelte';
-  import ProgressField from './ProgressField.svelte';
   import SeasonsSection from './SeasonsSection.svelte';
   import SeriesSection from './SeriesSection.svelte';
   import StatusPicker from './StatusPicker.svelte';
@@ -29,10 +28,6 @@
   let { entry, update, onedit }: Props = $props();
 
   const hasGuide = $derived(entry.type === 'tv' && Boolean(entry.episodeGuide?.episodes.length));
-  // Pages for a book under way, or one that already has a page count noted.
-  const showPages = $derived(
-    entry.type === 'book' && (entry.status === 'in-progress' || Boolean(entry.progress?.current))
-  );
 
   const bar = useSheetBar();
   $effect(() => {
@@ -70,12 +65,6 @@
     />
     <AspectRatings {entry} onchange={(aspects) => update((d) => void (d.aspectRatings = aspects))} />
   </div>
-
-  {#if showPages}
-    <div class="take-group">
-      <ProgressField {entry} onchange={(progress) => update((d) => void (d.progress = progress))} />
-    </div>
-  {/if}
 
   <JournalSection {entry} {update} />
 </section>

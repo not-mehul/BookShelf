@@ -8,8 +8,6 @@ export interface AddSeed {
   status?: EntryStatus;
   /** When it was finished (ISO, local noon), if the sender said. */
   finishedAt?: string;
-  /** 0–1 through the book; becomes pages read once the edition's page count is known. */
-  progress?: number;
   /** The sender's note on the book, for the entry's notes. */
   notes?: string;
 }
@@ -24,7 +22,7 @@ export interface AddOptions {
   linkedEntryId?: string;
   /** A quote from another app: where in the work it is ("Chapter 3", "p. 112"), and the reader's note on it. */
   quote?: { location?: string; notes?: string };
-  /** Status (and progress) for the entry the search adds. */
+  /** Status for the entry the search adds. */
   seed?: AddSeed;
 }
 

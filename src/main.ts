@@ -17,6 +17,7 @@ import { startAutoBackup } from './sync/auto-backup';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
 import { readBookShelfLink } from './util/link-intake';
+import { dropRetiredSettings } from './util/retired';
 import { parseSharedText, type SharedInput } from './util/share-intake';
 
 // Must run before anything fetches: routes cross-origin calls through the
@@ -36,6 +37,7 @@ function openLink(url: string) {
 }
 
 async function boot(): Promise<void> {
+  dropRetiredSettings();
   // The home-screen widget follows the theme, so it re-skins on a change.
   await initTheme(() => void shelf.refresh());
   await shelf.refresh();

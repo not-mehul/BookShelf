@@ -1,13 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  stampStatusDates,
-  daysToFinish,
-  daysBetween,
-  fromDay,
-  toDay,
-  pace,
-  timesLabel
-} from '../src/util/journal';
+import { stampStatusDates, daysToFinish, daysBetween, fromDay, toDay, timesLabel } from '../src/util/journal';
 import { newEntry } from '../src/util/new-entry';
 
 const at = (s) => new Date(s);
@@ -66,18 +58,5 @@ describe('reading journal', () => {
     expect(toDay(iso)).toBe('2026-03-18');
     expect(new Date(iso).getHours()).toBe(12);
     expect(fromDay('nope')).toBeNull();
-  });
-
-  it('forecasts an end date from the pace so far', () => {
-    const e = book({
-      status: 'in-progress',
-      dateStarted: fromDay('2026-03-01'),
-      progress: { current: 100, total: 300 }
-    });
-    const p = pace(e, new Date(2026, 2, 11, 12));
-    expect(p.perDay).toBe(10);
-    expect(p.daysLeft).toBe(20);
-    expect(toDay(p.eta.toISOString())).toBe('2026-03-31');
-    expect(pace({ ...e, progress: { current: 0, total: 300 } })).toBeNull();
   });
 });

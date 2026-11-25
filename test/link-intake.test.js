@@ -24,9 +24,9 @@ describe('readBookShelfLink', () => {
     });
   });
 
-  it('marks a book in progress when only progress is given', () => {
+  it('marks a book in progress when only progress is given, without keeping the fraction', () => {
     const intake = readBookShelfLink('bookshelf://log?title=Dune&progress=0.42');
-    expect(intake.options.seed).toEqual({ status: 'in-progress', progress: 0.42 });
+    expect(intake.options.seed).toEqual({ status: 'in-progress' });
   });
 
   it('adds no status for a book not started, or a bad date', () => {

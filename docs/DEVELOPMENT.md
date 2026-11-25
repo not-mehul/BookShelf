@@ -83,7 +83,7 @@ src/
     entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
     add/             Add flow: medium → search / manual / quote
     settings/        Preferences: appearance (theme, rating scale), sync, your data, search keys
-    stats/           Statistics parts: the goal card, the month chart, bar lists
+    stats/           Statistics parts: the month chart, bar lists
     Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte
   state/
     shelf.svelte.ts  Every entry, reloaded after each change; pushes widget + alerts

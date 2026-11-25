@@ -43,9 +43,10 @@
   }
 
   const src = $derived(entry.type === 'quote' ? null : thumbnailUrl(entry) || entry.thumbnailUrl);
-  // A thin meter for a book or a show under way, and a count for things returned to.
+  // A thin meter for a show under way (from its ticked episodes), and a count
+  // for things returned to.
   const progressPct = $derived(
-    (entry.type === 'tv' || entry.type === 'book') && entry.status === 'in-progress' && entry.progress?.total
+    entry.type === 'tv' && entry.status === 'in-progress' && entry.progress?.total
       ? Math.min(100, Math.round((entry.progress.current / entry.progress.total) * 100))
       : null
   );

@@ -8,6 +8,7 @@
 //   3. writes the merged snapshot back — only if the file is out of date.
 // Cover images are not synced; each device re-fetches them from their URL.
 
+import { dropRetired } from '../util/retired';
 import { callNative, isNativeShell } from '../platform/native';
 import { getSetting, setSetting } from '../util/settings';
 import { listEntries, listTombstones, db, patchEntry, withEntryLock } from '../db/database';
@@ -83,7 +84,8 @@ async function runSync({ iterations }: { iterations?: number }): Promise<SyncRep
         // Keep our cached cover if the cover URL is unchanged; otherwise refetch later.
         const keepBlob =
           existing && existing.thumbnailUrl === incoming.thumbnailUrl ? existing.thumbnailBlob : null;
-        const entry = { ...incoming, thumbnailBlob: keepBlob };
+        // An older install may still send a book's page progress: not kept.
+        const entry = dropRetired({ ...incoming, thumbnailBlob: keepBlob });
         await db.transaction('rw', db.entries, db.tombstones, async () => {
           await db.entries.put(entry);
           await db.tombstones.delete(entry.id);

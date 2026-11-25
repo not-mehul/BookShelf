@@ -3,8 +3,6 @@ import {
   finishesIn,
   journalYears,
   monthly,
-  goalPace,
-  paceSentence,
   highlights,
   medianDays,
   topCreators,
@@ -62,16 +60,6 @@ describe('year in review', () => {
     expect(medianDays(finishesIn(shelf, 2026))).toBe(11);
   });
 
-  it('measures a goal against an even pace', () => {
-    const mid = new Date(2026, 6, 2, 12); // about halfway
-    const behind = goalPace(3, 24, 2026, mid);
-    expect(behind.delta).toBe(-9);
-    expect(paceSentence(behind, mid)).toMatch(/^9 behind pace; about one every \d+ days would catch up\.$/);
-    expect(paceSentence(goalPace(14, 24, 2026, mid), mid)).toBe('2 ahead of pace. 10 to go.');
-    expect(paceSentence(goalPace(25, 24, 2026, mid), mid)).toBe('Goal met, and 1 past it.');
-    expect(paceSentence(goalPace(20, 24, 2025, mid), mid)).toBe('4 short of the goal.');
-  });
-
   it('lists creators seen more than once and decades', () => {
     expect(topCreators(shelf)).toEqual([['A', 2]]);
     expect(decades(shelf)).toEqual([
@@ -97,12 +85,5 @@ describe('year in review wording', () => {
     expect(detail()).toBe('7.5/10');
     setRatingScale(5);
     expect(detail()).toBe('3.75/5');
-  });
-
-  it('says how many a day when more are left than days', () => {
-    const now = new Date(2025, 11, 25);
-    expect(paceSentence(goalPace(10, 50, 2025, now), now)).toBe(
-      '39 behind pace; about 6 a day would catch up.'
-    );
   });
 });

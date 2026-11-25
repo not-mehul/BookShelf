@@ -24,7 +24,7 @@
     type: Exclude<EntryType, 'quote'>;
     /** Search for this straight away. */
     query: string;
-    /** Status and progress from another app's link, for the entry this adds. */
+    /** Status from another app's link, for the entry this adds. */
     seed?: AddSeed;
     onback: () => void;
     onmanual: () => void;
@@ -119,16 +119,12 @@
     }
   }
 
-  function seeded(hit: SearchHit): Partial<CatalogEntry> {
+  function seeded(): Partial<CatalogEntry> {
     if (!seed) return {};
-    const total = hit.pageCount || 0;
-    const progress =
-      seed.progress !== undefined && total ? { current: Math.round(seed.progress * total), total } : null;
     return {
       ...(seed.status ? { status: seed.status } : {}),
       // The day the sender says it was finished, not today.
       ...(seed.status === 'finished' && seed.finishedAt ? { finishes: [seed.finishedAt] } : {}),
-      ...(progress ? { progress } : {}),
       ...(seed.notes ? { notes: seed.notes } : {})
     };
   }
@@ -162,7 +158,7 @@
       series: parseSeriesFromTitle(hit.title),
       thumbnailUrl: hit.thumbnailUrl || null,
       thumbnailBlob: await fetchThumbBlob(hit.thumbnailUrl),
-      ...(withSeed ? seeded(hit) : {})
+      ...(withSeed ? seeded() : {})
     });
     await saveEntry(entry);
     return { id: entry.id, created: true };
