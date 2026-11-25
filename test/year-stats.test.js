@@ -87,3 +87,23 @@ describe('year in review wording', () => {
     expect(detail()).toBe('3.75/5');
   });
 });
+
+describe('hours watched', () => {
+  it('adds finished films once per finish and ticked episodes', async () => {
+    const { hoursWatched } = await import('../src/util/year-stats');
+    const film = { type: 'movie', status: 'finished', runtime: 120, finishes: ['2025-01-01', '2026-01-01'] };
+    const unwatched = { type: 'movie', status: 'want', runtime: 600 };
+    const show = {
+      type: 'tv',
+      watchedEpisodes: [1, 2],
+      episodeGuide: {
+        episodes: [
+          { id: 1, runtime: 60 },
+          { id: 2, runtime: 60 },
+          { id: 3, runtime: 60 }
+        ]
+      }
+    };
+    expect(hoursWatched([film, unwatched, show])).toBe(6);
+  });
+});

@@ -1484,6 +1484,39 @@ label.add-result-row {
 .lib-tags-row .chip {
   flex: none;
 }
+.lib-shelves-row {
+  display: flex;
+  gap: var(--space-4);
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--shell-pad-x));
+  padding: 0 var(--shell-pad-x);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.lib-shelves-row::-webkit-scrollbar {
+  display: none;
+}
+.shelf-tab {
+  flex: none;
+  min-height: 44px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+}
+.shelf-tab:hover {
+  color: var(--text-heading);
+}
+.shelf-tab[aria-pressed='true'] {
+  color: var(--accent-amber);
+  border-bottom-color: var(--accent-amber);
+}
+.shelf-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 
 /* ─── Tag editor (detail modal) ───────────────────────────────── */
 

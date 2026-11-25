@@ -14,11 +14,15 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -49,8 +53,9 @@ import app.mehul.bookshelf.R
  *  - small:  shelf count
  *  - medium: what you're reading/watching now (with progress) + counts
  *  - large:  up to three in-progress items + the latest quote
- * Tapping opens the app; "+" opens the add flow. Colours follow the app's
- * Dusk / Dawn theme.
+ * Tapping opens the app; "+" opens the add flow; a show's "Watched S2 E4"
+ * marks that episode without opening the app (applied when it next runs).
+ * Colours follow the app's Dusk / Dawn theme.
  */
 // Responsive size buckets (the launcher picks the best fit as the user resizes).
 private val SMALL = DpSize(110.dp, 48.dp)
@@ -70,6 +75,19 @@ class BookShelfWidget : GlanceAppWidget() {
 
 class BookShelfWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = BookShelfWidget()
+}
+
+private val EntryKey = ActionParameters.Key<String>("entry")
+private val EpisodeKey = ActionParameters.Key<Long>("episode")
+
+/** "Watched S2 E4": recorded for the app, and the widget moves on to the next episode. */
+class MarkEpisodeWatched : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val entry = parameters[EntryKey] ?: return
+        val episode = parameters[EpisodeKey] ?: return
+        WidgetData.markWatched(context, entry, episode)
+        BookShelfWidget().update(context, glanceId)
+    }
 }
 
 // ── Palette (from dusk-dawn tokens.json) ────────────────────────────
@@ -188,7 +206,10 @@ private fun ProgressItem(item: WidgetData.Item, p: Palette) {
             item.creator.takeIf { it.isNotBlank() },
             item.progress?.let { "${(it * 100).toInt()}%" },
         ).joinToString(" · ")
-        if (sub.isNotEmpty()) Text(sub, maxLines = 1, style = TextStyle(color = p.muted, fontSize = 11.sp))
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(sub, maxLines = 1, modifier = GlanceModifier.defaultWeight(), style = TextStyle(color = p.muted, fontSize = 11.sp))
+            item.next.firstOrNull()?.let { WatchedButton(item, it, p) }
+        }
         item.progress?.let {
             Spacer(GlanceModifier.height(4.dp))
             LinearProgressIndicator(
@@ -198,6 +219,18 @@ private fun ProgressItem(item: WidgetData.Item, p: Palette) {
                 backgroundColor = p.track,
             )
         }
+    }
+}
+
+@Composable
+private fun WatchedButton(item: WidgetData.Item, episode: WidgetData.Episode, p: Palette) {
+    val context = LocalContext.current
+    Box(
+        modifier = GlanceModifier.background(p.panel).cornerRadius(12.dp).padding(horizontal = 10.dp, vertical = 4.dp)
+            .clickable(actionRunCallback<MarkEpisodeWatched>(actionParametersOf(EntryKey to item.id, EpisodeKey to episode.id)))
+            .semantics { contentDescription = context.getString(R.string.widget_watched, episode.label, item.title) },
+    ) {
+        Text("✓ ${episode.label}", maxLines = 1, style = TextStyle(color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium))
     }
 }
 

@@ -54,6 +54,8 @@ export interface TmdbDetail extends TmdbHit {
   created_by?: { name?: string }[];
   seasons?: { season_number?: number; episode_count?: number }[];
   belongs_to_collection?: { id: number; name?: string } | null;
+  /** Added by the client: this film's place in its collection, by release date. */
+  collection_position?: number | null;
   credits?: { crew?: { job?: string; name?: string }[] };
 }
 export interface TmdbEpisode {
@@ -154,6 +156,11 @@ export function enrichFromTmdbDetail(entry: CatalogEntry, detail: TmdbDetail | n
   const creators = [...new Set(people.filter((n): n is string => Boolean(n)))];
   if (creators.length) next.creators = creators;
   if (entry.type === 'movie' && detail.runtime) next.runtime = detail.runtime;
+  // A film in a collection ("The Lord of the Rings Collection") is in a series.
+  const collection = detail.belongs_to_collection?.name?.replace(/\s+Collection$/i, '').trim();
+  if (entry.type === 'movie' && collection && !next.series) {
+    next.series = { name: collection, position: detail.collection_position ?? null };
+  }
   next.enriched = true;
   return next;
 }

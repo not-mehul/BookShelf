@@ -55,7 +55,12 @@ export async function refreshFollowedGuides(onUpdated?: () => void) {
 export async function pushEpisodeReminders(entries: CatalogEntry[]) {
   if (!isNativeShell()) return;
   try {
-    await callNative('episodeReminders', { items: reminderItems(entries) });
+    // The shows themselves too, so the Android job can ask TMDB about new
+    // episodes while the app is closed.
+    const follow = entries
+      .filter((e) => e.type === 'tv' && e.remindNewEpisodes && tmdbNumber(e.sourceId))
+      .map((e) => ({ entryId: e.id, show: e.title, tmdbId: tmdbNumber(e.sourceId) }));
+    await callNative('episodeReminders', { items: reminderItems(entries), follow });
   } catch (err) {
     console.warn('Episode reminders update failed:', err);
   }

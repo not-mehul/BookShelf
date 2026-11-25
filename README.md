@@ -10,7 +10,7 @@
 
 ---
 
-BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, track where you are, and see your year in review. It is an Android app, for Android 10 and later, and the library lives on your device.
+BookShelf is a personal catalog for the books you read, the films and shows you watch, and the quotes you want to keep. Search for something, rate it, note when you started and finished, and see your year in review. It is an Android app, for Android 10 and later, and the library lives on your device.
 
 <p align="center">
   <img src="docs/screenshots/library.webp" width="200" alt="The library: shelf count, type tabs, Up next for a TV season and a quote from the shelf">
@@ -34,14 +34,14 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Finished, and Did not finish for the ones you put down on purpose.
 - **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Optional aspect scores (story, writing, acting and so on), notes, tags and collections.
 - **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day. Putting something down is dated too.
-- **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**.
-- **Series**, detected from titles or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
+- **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**, which keep checking TMDB for new episodes while the app is closed.
+- **Series**, detected from titles, from TMDB collections for films, or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
 - **A ranked queue.** Your wishlist in order (drag, keyboard or buttons), plus _pick something for me_ by type, length or genre.
 - **Bulk edit.** Select several entries to change status, add or remove tags, or delete them.
 
 ### Look back
 
-- **A year in review**: finished per month, pages in the books you finished, the longest book and the highest rated.
+- **A year in review**: finished per month, pages in the books you finished, the longest book and the highest rated, and hours spent watching across the shelf.
 - **All-time statistics**: totals, rating distribution, most-shelved authors and directors, decades and top genres.
 - **Share cards.** Any book, film, show or quote as an image in the Dusk or Dawn style (post, square or story), or as text.
 - **Little things.** A different kept quote at the top of the library each day, beside _Up next_, the library remembers its tab and sort, and `/` jumps to the filter. Finishing something earns a little confetti, there is an idle cat to play with, and four easter eggs are counted in Settings.
@@ -54,7 +54,8 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 - **Bring your shelf over** from Goodreads or StoryGraph (their CSV export) or Letterboxd (the export zip, as it is). Ratings, shelves, read dates, reviews and tags come with it, all on the device. Anything already on your shelf only gains what it was missing, so importing twice adds nothing.
 - **Find a match** links an imported or hand-added entry to the catalog for its cover and details, one at a time from its menu or all the sure ones at once from Settings. Nothing you wrote changes. Settings also finds copies of the same thing and merges them.
 - **Encrypted sync**: end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing.
-- **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote.
+- **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote. Tap **✓ S2 E4** on a show to mark that episode watched without opening the app.
+- **Shelves** by where things stand: reading or watching now, wishlist, finished, finished this year, did not finish, unrated, and anything that needs a match. Sort by the day you finished, too.
 - **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
 - **Links from the other apps.** Rosetta and the other apps open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
 - **Themes.** System, Dusk (dark) or Dawn (light), in Settings → Appearance.
@@ -62,7 +63,7 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 
 ## Private by design
 
-Your catalog never leaves the device. BookShelf talks to a catalog only when you search, and if you turn on sync, it writes one end-to-end encrypted file to the folder you chose. There are no accounts and no BookShelf server.
+Your catalog never leaves the device. BookShelf talks to a catalog when you search or open an entry, and, for shows with alerts on, the Android app asks TMDB about new episodes now and then. If you turn on sync, it writes one end-to-end encrypted file to the folder you chose. There are no accounts and no BookShelf server.
 
 ## Install
 
