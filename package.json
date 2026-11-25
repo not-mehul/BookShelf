@@ -1,6 +1,6 @@
 {
   "name": "bookshelf",
-  "version": "2.1.3",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "description": "Personal catalog for books, movies, TV, and quotes \u2014 Editorial Dusk & Dawn",

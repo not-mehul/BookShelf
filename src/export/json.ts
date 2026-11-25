@@ -14,7 +14,8 @@ import { dropRetired } from '../util/retired';
 /** A CatalogEntry as written to JSON: the cover blob becomes a data URL. */
 export type SerializedEntry = Omit<CatalogEntry, 'thumbnailBlob'> & { thumbnailData?: string | null };
 
-export const BACKUP_VERSION = 1;
+// 2: entries may carry fieldTimes, dateStopped, runtime and tmdb: ids.
+export const BACKUP_VERSION = 2;
 function blobToDataUrl(blob: Blob): Promise<string | null> {
   return new Promise((resolve) => {
     const reader = new FileReader();
