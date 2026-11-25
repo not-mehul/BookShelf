@@ -1,21 +1,22 @@
 // Finding shelf entries by title, for linking a quote to its book, film or show.
 
 import type { CatalogEntry } from '../types';
+import { foldText } from './fold';
 
 export const MAX_OPTIONS = 6;
 
 /**
- * Entries whose title or creators contain the query (case-insensitive),
+ * Entries whose title or creators contain the query (ignoring case and accents),
  * title-prefix matches first. Quotes are never candidates.
  */
 export function matchEntries(entries: CatalogEntry[], query: string, limit = MAX_OPTIONS): CatalogEntry[] {
-  const q = query.trim().toLowerCase();
+  const q = foldText(query.trim());
   if (!q) return [];
   return entries
     .filter((e) => e.type !== 'quote')
     .map((e) => {
-      const title = e.title.toLowerCase();
-      const inCreators = (e.creators || []).some((c) => c.toLowerCase().includes(q));
+      const title = foldText(e.title);
+      const inCreators = (e.creators || []).some((c) => foldText(c).includes(q));
       const score = title.startsWith(q) ? 0 : title.includes(q) ? 1 : inCreators ? 2 : -1;
       return { e, score };
     })

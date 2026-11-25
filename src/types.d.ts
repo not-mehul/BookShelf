@@ -28,6 +28,8 @@ export interface CatalogEntry {
   dateRated: string | null;
   /** When it was last started (status became in-progress). */
   dateStarted?: string | null;
+  /** When it was put down (status became abandoned); cleared when picked up again. */
+  dateStopped?: string | null;
   /** Every time it was finished, oldest first (re-reads and rewatches add one). */
   finishes?: string[];
   /** Last local modification (ISO); drives sync conflict resolution. */

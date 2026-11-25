@@ -33,6 +33,8 @@ export function stampStatusDates(
   }
   if (to === 'in-progress') entry.dateStarted = iso;
   if (to === 'finished') finishes.push(iso);
+  if (to === 'abandoned') entry.dateStopped = iso;
+  else if (from === 'abandoned') entry.dateStopped = null;
   entry.finishes = finishes;
 }
 

@@ -18,6 +18,7 @@
   import FloatingBar from './FloatingBar.svelte';
   import HomeStrip from './HomeStrip.svelte';
   import LibraryEmpty from './LibraryEmpty.svelte';
+  import { foldText } from '../util/fold';
   import OverflowMenu from './OverflowMenu.svelte';
   import { loadView, saveView } from '../util/view-prefs';
   import { compareTitles } from '../util/text';
@@ -71,25 +72,25 @@
     let list = shelf.entries;
     if (type !== 'all') list = list.filter((e) => e.type === type);
     if (tag) list = list.filter((e) => hasTag(e.tags, tag!));
-    const q = query.trim().toLowerCase();
+    const q = foldText(query.trim());
     if (q) {
       list = list.filter((e) =>
-        [
-          e.title,
-          e.originalTitle,
-          e.quoteText,
-          e.summary,
-          e.notes,
-          e.source,
-          e.series?.name,
-          ...(e.creators || []),
-          ...(e.genres || []),
-          ...(e.tags || [])
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(q)
+        foldText(
+          [
+            e.title,
+            e.originalTitle,
+            e.quoteText,
+            e.summary,
+            e.notes,
+            e.source,
+            e.series?.name,
+            ...(e.creators || []),
+            ...(e.genres || []),
+            ...(e.tags || [])
+          ]
+            .filter(Boolean)
+            .join(' ')
+        ).includes(q)
       );
     }
     return [...list].sort(SORTERS[sort]);

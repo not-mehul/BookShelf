@@ -2184,9 +2184,12 @@ img.cover-img.is-loaded {
   justify-content: space-between;
 }
 .calendar-month {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  color: var(--accent-amber);
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.calendar-month .dd-select {
+  min-width: 0;
 }
 .calendar-grid {
   display: grid;

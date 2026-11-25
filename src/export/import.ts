@@ -185,6 +185,8 @@ async function parseEntry(text: string, type: EntryType): Promise<CatalogEntry |
         const text = line.replace('**Journal:**', '');
         const started = text.match(/started (\d{4}-\d{2}-\d{2})/);
         if (started) entry.dateStarted = fromDay(started[1]!);
+        const stopped = text.match(/stopped (\d{4}-\d{2}-\d{2})/);
+        if (stopped) entry.dateStopped = fromDay(stopped[1]!);
         const finished = text.match(/finished ([\d\-, ]+)/);
         if (finished)
           entry.finishes = (finished[1]!.match(/\d{4}-\d{2}-\d{2}/g) || [])
