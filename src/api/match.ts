@@ -3,13 +3,13 @@
 // cover and details. Only catalog fields are filled in, and only where empty;
 // the user's title, status, rating, dates, notes and tags are never touched.
 
-import { listEntries, patchEntry } from '../db/database';
+import { patchEntry } from '../db/database';
 import { foldText } from '../util/fold';
 import { fetchThumbBlob } from '../util/thumbs';
 import type { CatalogEntry, SearchHit } from '../types';
 import { searchAllBooks } from './books';
 import { carryWatched, pickFilm } from './tmdb-move';
-import { getEpisodeGuide, isTmdbConfigured, searchTmdb } from './tmdb';
+import { getEpisodeGuide, searchTmdb } from './tmdb';
 
 /** An entry with no catalog record behind it: no id, or a TheTVDB one TMDB couldn't place. */
 export const lacksMatch = (e: CatalogEntry) => e.type !== 'quote' && (!e.sourceId || Boolean(e.needsMatch));
@@ -119,45 +119,4 @@ export async function matchEntry(id: string, hit: SearchHit): Promise<CatalogEnt
       d.episodeGuide = guide;
     }
   });
-}
-
-export interface AutoMatchReport {
-  matched: number;
-  /** Entries no confident match was found for, marked needsMatch. */
-  left: CatalogEntry[];
-  /** Set when a catalog stopped answering (a rate limit, offline). */
-  stopped?: string;
-}
-
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * Match every entry that lacks one, where the catalog has a confident hit.
- * Films and shows are skipped without a TMDB key. Requests are spaced so a
- * long import doesn't run into the catalogs' limits; a refusal stops the run.
- */
-export async function autoMatchAll(
-  onProgress?: (done: number, total: number) => void
-): Promise<AutoMatchReport> {
-  const tmdb = await isTmdbConfigured();
-  const todo = (await listEntries()).filter((e) => lacksMatch(e) && (e.type === 'book' || tmdb));
-  const report: AutoMatchReport = { matched: 0, left: [] };
-  for (const [i, e] of todo.entries()) {
-    try {
-      const hit = confidentPick(e, await findCandidates(e));
-      if (hit) {
-        await matchEntry(e.id, hit);
-        report.matched++;
-      } else {
-        await patchEntry(e.id, (d) => void (d.needsMatch = true), { touch: false });
-        report.left.push(e);
-      }
-    } catch (err) {
-      report.stopped = err instanceof Error ? err.message : String(err);
-      break;
-    }
-    onProgress?.(i + 1, todo.length);
-    await pause(200);
-  }
-  return report;
 }

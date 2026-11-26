@@ -32,11 +32,11 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 ### Keep track
 
 - **Status at a tap.** Four toggles, Wishlist, Reading or Watching, Finished, and Did not finish for the ones you put down on purpose.
-- **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Optional aspect scores (story, writing, acting and so on), notes, tags and collections.
+- **Ratings in stars or out of 10.** Half stars by default; switch Settings → Ratings to _Out of 10_ for half points (7.5/10). Both views read the same ratings, and you can switch back and forth. Aspect scores (story, writing, acting and so on) right under the rating, plus notes, tags and collections.
 - **A reading journal.** Starting and finishing are dated as they happen. A book's span is picked on one calendar (start, then finish), and a film or show takes one day. Putting something down is dated too.
 - **TV by season.** One toggle per season, _Up next_ names the next one or says when an unaired season airs, and on Android you get **new-episode alerts**, which keep checking TMDB for new episodes while the app is closed.
 - **Series**, detected from titles, from TMDB collections for films, or set by hand, with reading or watching order, what is next, any gaps, and a check for new installments.
-- **A ranked queue.** Your wishlist in order (drag, keyboard or buttons), plus _pick something for me_ by type, length or genre.
+- **A ranked queue.** Your wishlist in order (drag, keyboard or buttons), plus _pick for me_ by type or genre.
 - **Bulk edit.** Select several entries to change status, add or remove tags, or delete them.
 
 ### Look back
@@ -49,21 +49,21 @@ BookShelf is a personal catalog for the books you read, the films and shows you 
 ### Your data
 
 - **On your device.** Everything lives in local storage with cached cover thumbnails.
-- **Backup and restore** as lossless JSON (re-importing never duplicates), plus a readable Markdown export.
-- **Weekly backups**: once a week a dated copy goes to Documents/BookShelf/Backups, keeping the last five, with nothing to set up. Settings shows when it last ran.
+- **Encrypted backup** to a folder you choose, such as Google Drive, Nextcloud or Syncthing: daily, weekly or monthly (checked when the app opens or comes back), or only when you tap _Back up now_. Every device that backs up to the same folder stays in step, and edits to different parts of one entry on two devices both survive. Every device needs BookShelf 3.0 or later.
+- **Restore** a BookShelf backup file; restoring it again never duplicates entries.
 - **Bring your shelf over** from Goodreads or StoryGraph (their CSV export) or Letterboxd (the export zip, as it is). Ratings, shelves, read dates, reviews and tags come with it, all on the device. Anything already on your shelf only gains what it was missing, so importing twice adds nothing.
-- **Find a match** links an imported or hand-added entry to the catalog for its cover and details, one at a time from its menu or all the sure ones at once from Settings. Nothing you wrote changes. Settings also finds copies of the same thing and merges them.
-- **Encrypted sync**: end-to-end encrypted sync through a folder you choose, such as Google Drive, Nextcloud or Syncthing. Edits to different parts of one entry on two devices both survive. Every device needs BookShelf 3.0 or later to sync.
+- **Library refresh** checks every entry missing a cover, synopsis or details (or a catalog match at all), shows its progress, and lists what it found: sure matches ready to tick, the rest to pick from or search for, or to leave as they are. Only what was missing is filled in; nothing you wrote changes. **Find a match** does the same for one entry, from its menu.
+- **Duplicate check** finds copies of the same thing and merges them.
 - **A home-screen widget**: shelf count, what you are reading or watching, and your latest quote. Tap **✓ S2 E4** on a show to mark that episode watched without opening the app.
-- **Shelves** by where things stand: reading or watching now, wishlist, finished, finished this year, did not finish, unrated, and anything that needs a match. Sort by the day you finished, too.
-- **Secrets in the Android Keystore.** API keys, tokens and the sync passphrase are encrypted with a hardware-backed key.
+- **Sort** by when you added, finished or rated things, by title, year or series.
+- **Secrets in the Android Keystore.** API keys, tokens and the backup passphrase are encrypted with a hardware-backed key.
 - **Links from the other apps.** Rosetta and the other apps open `bookshelf://log?title=…&author=…` to log a book: BookShelf searches for it and adds the one you pick, with the sender's note if it has one. `bookshelf://quote?text=…&title=…&author=…&where=…&note=…` opens the quote form filled in, for you to save. `bookshelf://open` just opens it.
 - **Themes.** System, Dusk (dark) or Dawn (light), in Settings → Appearance.
 - **Grid or list.** The shelf as covers or as compact rows, from the library's ⋮ menu; it remembers which.
 
 ## Private by design
 
-Your catalog never leaves the device. BookShelf talks to a catalog when you search or open an entry, and, for shows with alerts on, the Android app asks TMDB about new episodes now and then. If you turn on sync, it writes one end-to-end encrypted file to the folder you chose. There are no accounts and no BookShelf server.
+Your catalog never leaves the device. BookShelf talks to a catalog when you search or open an entry, and, for shows with alerts on, the Android app asks TMDB about new episodes now and then. If you turn on the backup, it writes one end-to-end encrypted file to the folder you chose. There are no accounts and no BookShelf server.
 
 ## Install
 

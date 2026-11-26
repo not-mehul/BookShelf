@@ -64,7 +64,7 @@ test.describe('with a TMDB key', () => {
       )
     );
     await page.locator('.entry-card', { hasText: 'Arrival' }).click();
-    const slider = page.getByRole('slider', { name: 'Rating' });
+    const slider = page.getByRole('slider', { name: 'Rating', exact: true });
     await slider.focus();
     await page.keyboard.press('4');
     await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');
@@ -101,7 +101,7 @@ test('a change saved while the entry is open shows, and survives the next tap', 
         };
       })
   );
-  const slider = page.getByRole('slider', { name: 'Rating' });
+  const slider = page.getByRole('slider', { name: 'Rating', exact: true });
   await slider.focus();
   await page.keyboard.press('ArrowRight');
   await expect(slider).toHaveAttribute('aria-valuetext', '3.5 of 5 stars');
@@ -113,7 +113,7 @@ test('a change saved while the entry is open shows, and survives the next tap', 
 test('quick key presses on the rating add up', async ({ page }) => {
   await importShelf(page, shelf());
   await page.locator('.entry-card', { hasText: 'The Hobbit' }).click();
-  const slider = page.getByRole('slider', { name: 'Rating' });
+  const slider = page.getByRole('slider', { name: 'Rating', exact: true });
   await slider.focus();
   for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
   await expect(slider).toHaveAttribute('aria-valuetext', '4 of 5 stars');

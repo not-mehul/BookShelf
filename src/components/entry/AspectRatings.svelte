@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { ratingView } from '../../state/rating-scale.svelte';
-  import { ratingBrief } from '../../util/stars';
   import type { CatalogEntry } from '../../types';
   import RatingControl from '../RatingControl.svelte';
 
-  // Optional finer-grained scores, by media type.
+  // Optional finer-grained scores, by media type, always shown under the rating.
   const ASPECTS: Record<'book' | 'movie' | 'tv', [string, string][]> = {
     book: [
       ['story', 'Story'],
@@ -34,12 +32,6 @@
   let { entry, onchange }: Props = $props();
   const aspects = $derived(entry.type === 'quote' ? [] : ASPECTS[entry.type]);
   const scores = $derived(entry.aspectRatings || {});
-  const summary = $derived(
-    aspects
-      .filter(([k]) => scores[k] != null)
-      .map(([k, l]) => `${l} ${ratingBrief(scores[k], ratingView.scale)}`)
-      .join(' · ')
-  );
 
   function set(key: string, v: number | null) {
     const next = { ...scores };
@@ -49,12 +41,12 @@
   }
 </script>
 
-<details class="aspect-ratings">
-  <summary>Rate aspects<span class="aspect-summary">{summary ? ` · ${summary}` : ''}</span></summary>
+<div class="aspect-ratings" role="group" aria-labelledby="aspectsLabel">
+  <div class="aspect-heading" id="aspectsLabel">Aspects</div>
   {#each aspects as [key, label] (key)}
     <div class="aspect-row">
       <span class="aspect-label">{label}</span>
       <RatingControl value={scores[key]} onchange={(v) => set(key, v)} label="{label} rating" compact />
     </div>
   {/each}
-</details>
+</div>

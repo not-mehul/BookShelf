@@ -2,7 +2,7 @@
   import { Select } from 'dusk-dawn';
   import { hatch } from '../util/delight';
   import { SvelteSet } from 'svelte/reactivity';
-  import { saveAndShareMarkdown } from '../export/markdown';
+  import { tick } from 'svelte';
   import { pushBackHandler } from '../platform/native';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
@@ -23,14 +23,6 @@
   import { loadView, saveView } from '../util/view-prefs';
   import { compareTitles } from '../util/text';
   import { hasTag } from '../util/tags';
-  import {
-    byLastFinish,
-    onShelf,
-    SHELF_IDS,
-    shelfDescription,
-    shelfLabel,
-    type ShelfId
-  } from '../util/shelves';
 
   type TypeFilter = 'all' | EntryType;
   type SortKey = 'dateAdded' | 'finished' | 'rating' | 'title' | 'year' | 'series';
@@ -52,9 +44,11 @@
     { value: 'year', label: 'Year' },
     { value: 'series', label: 'Series' }
   ];
+  /** Last finished first; things never finished (or undated) after. */
+  const lastFinish = (e: CatalogEntry) => e.finishes?.at(-1) ?? '';
   const SORTERS: Record<SortKey, (a: CatalogEntry, b: CatalogEntry) => number> = {
     dateAdded: (a, b) => (b.dateAdded || '').localeCompare(a.dateAdded || ''),
-    finished: (a, b) => byLastFinish(a, b) || compareTitles(a, b),
+    finished: (a, b) => lastFinish(b).localeCompare(lastFinish(a)) || compareTitles(a, b),
     rating: (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || compareTitles(a, b),
     title: (a, b) => compareTitles(a, b),
     year: (a, b) => (b.year ?? 0) - (a.year ?? 0) || compareTitles(a, b),
@@ -72,19 +66,7 @@
   );
   // Covers in a grid, or a denser list of rows (style.md §7.2).
   let layout = $state<Layout>(saved.layout === 'list' ? 'list' : 'grid');
-  // Where things stand: Reading or watching, Wishlist, Finished in a year…
-  let shelfId = $state<ShelfId>(
-    SHELF_IDS.includes(saved.shelf as ShelfId) ? (saved.shelf as ShelfId) : 'all'
-  );
-  $effect(() => saveView({ type, sort, layout, shelf: shelfId }));
-  const thisYear = new Date().getFullYear();
-  // The shelves this tab has anything on (and the chosen one, even if empty).
-  const shelves = $derived.by(() => {
-    const inTab = shelf.entries.filter((e) => e.type !== 'quote' && (type === 'all' || e.type === type));
-    return SHELF_IDS.filter(
-      (id) => id === 'all' || id === shelfId || inTab.some((e) => onShelf(e, id, thisYear))
-    ).map((id) => ({ id, label: shelfLabel(id, type), description: shelfDescription(id, thisYear) }));
-  });
+  $effect(() => saveView({ type, sort, layout }));
   let filterInput = $state<HTMLInputElement>();
   let typesRow = $state<HTMLElement>();
   let query = $state('');
@@ -94,7 +76,6 @@
     let list = shelf.entries;
     if (type !== 'all') list = list.filter((e) => e.type === type);
     if (tag) list = list.filter((e) => hasTag(e.tags, tag!));
-    if (shelfId !== 'all' && type !== 'quote') list = list.filter((e) => onShelf(e, shelfId, thisYear));
     const q = foldText(query.trim());
     if (q) {
       list = list.filter((e) =>
@@ -129,6 +110,40 @@
     const total = plural(typeTotal, one, many);
     return visible.length === typeTotal ? total : `${visible.length} of ${total}`;
   });
+
+  // ── Drawing the shelf in batches ──────────────────────────────
+  // A tab change draws the first screenful at once and the rest a batch a
+  // frame after, so the tab answers the tap straight away, however big the
+  // shelf is. Edits and syncs keep everything drawn.
+  const FIRST_BATCH = 12;
+  const BATCH = 24;
+  let limit = $state(FIRST_BATCH);
+  const drawn = $derived(limit >= visible.length ? visible : visible.slice(0, limit));
+  $effect(() => {
+    if (limit >= visible.length) return;
+    const frame = requestAnimationFrame(() => (limit += BATCH));
+    return () => cancelAnimationFrame(frame);
+  });
+
+  let grid = $state<HTMLElement>();
+  const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** Show another tab: its first entries at once, easing in, the rest after. */
+  function chooseType(id: TypeFilter) {
+    if (id === type) return;
+    limit = FIRST_BATCH;
+    type = id;
+    if (calm()) return;
+    void tick().then(() =>
+      grid?.animate(
+        [
+          { opacity: 0, transform: 'translateY(10px)' },
+          { opacity: 1, transform: 'none' }
+        ],
+        { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      )
+    );
+  }
 
   // ── Selection mode ────────────────────────────────────────────
   let selecting = $state(false);
@@ -180,17 +195,7 @@
     document.body.classList.toggle('is-selecting', selecting);
   });
 
-  let exporting = $state(false);
-  async function exportMarkdown() {
-    exporting = true;
-    try {
-      await saveAndShareMarkdown();
-    } finally {
-      exporting = false;
-    }
-  }
-
-  const filtering = $derived(Boolean(query || tag) || (shelfId !== 'all' && type !== 'quote'));
+  const filtering = $derived(Boolean(query || tag));
   const showUpNext = $derived(!filtering && !selecting && (type === 'all' || type === 'tv'));
   const showQuote = $derived(!filtering && !selecting && type === 'all');
 
@@ -228,11 +233,11 @@
 {#snippet tvIcon()}<Icon name={TYPE_ICON.tv} />{/snippet}
 {#snippet quoteIcon()}<Icon name={TYPE_ICON.quote} />{/snippet}
 
-<FloatingBar tabs={TYPE_TABS} value={type} onselect={(id) => (type = id)} anchor={typesRow} />
+<FloatingBar tabs={TYPE_TABS} value={type} onselect={chooseType} anchor={typesRow} />
 
 <div class="lib-header">
   <div class="lib-types-row" bind:this={typesRow}>
-    <IconTabs tabs={TYPE_TABS} value={type} label="Show" labels="selected" onselect={(id) => (type = id)} />
+    <IconTabs tabs={TYPE_TABS} value={type} label="Show" labels="selected" onselect={chooseType} />
     <!-- What the tab shows, and what a filter or tag leaves of it. -->
     <div class="lib-count">{countLine}</div>
   </div>
@@ -257,12 +262,6 @@
     <div class="select-wrap select-wrap-sm">
       <Select class="select-sm" label="Sort by" bind:value={sort} options={SORT_OPTS} />
     </div>
-    <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'stats' })}>
-      <Icon name="chart" /> <span class="btn-label">Stats</span>
-    </button>
-    <button type="button" class="btn btn-muted" onclick={() => ui.open({ kind: 'queue' })}>
-      <Icon name="queue" /> <span class="btn-label">Queue</span>
-    </button>
     <OverflowMenu
       label="More library actions"
       items={[
@@ -271,26 +270,10 @@
           icon: layout === 'list' ? 'grid' : 'list',
           onselect: () => (layout = layout === 'list' ? 'grid' : 'list')
         },
-        { label: 'Select entries', icon: 'select', onselect: () => enterSelection() },
-        { label: 'Export as Markdown', icon: 'download', disabled: exporting, onselect: exportMarkdown }
+        { label: 'Select entries', icon: 'select', onselect: () => enterSelection() }
       ]}
     />
   </div>
-
-  {#if type !== 'quote' && shelves.length > 1}
-    <!-- Quiet text tabs, so the shelves don't read as more tags. -->
-    <div class="lib-shelves-row" role="group" aria-label="Shelf">
-      {#each shelves as s (s.id)}
-        <button
-          type="button"
-          class="shelf-tab"
-          aria-pressed={shelfId === s.id}
-          title={s.description !== s.label ? s.description : undefined}
-          onclick={() => (shelfId = s.id)}>{s.label}</button
-        >
-      {/each}
-    </div>
-  {/if}
 
   {#if shelf.tags.length}
     <!-- One row that scrolls sideways, however many tags there are. -->
@@ -308,11 +291,12 @@
 <HomeStrip upNext={showUpNext} quote={showQuote} />
 
 <div
+  bind:this={grid}
   class="entry-grid"
   class:quote-grid={type === 'quote' && layout === 'grid'}
   class:is-list={layout === 'list'}
 >
-  {#each visible as entry (entry.id)}
+  {#each drawn as entry (entry.id)}
     <EntryCard
       {entry}
       {layout}
@@ -325,11 +309,10 @@
   {:else}
     <LibraryEmpty
       {type}
-      filtered={Boolean(query || tag) || (shelfId !== 'all' && type !== 'quote')}
+      filtered={filtering}
       onclear={() => {
         query = '';
         tag = null;
-        shelfId = 'all';
       }}
     />
   {/each}

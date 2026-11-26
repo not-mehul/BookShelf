@@ -4,7 +4,7 @@ import { uniqueTags } from '../util/tags';
 import { listEntries } from '../db/database';
 import { pushWidgetSummary } from '../platform/widget';
 import { pushEpisodeReminders } from '../api/episode-sync';
-import { startAutoSync } from '../sync/sync';
+import { startAutoBackup } from '../sync/sync';
 import type { CatalogEntry } from '../types';
 
 class Shelf {
@@ -13,8 +13,6 @@ class Shelf {
   /** Every distinct tag, sorted, for the filter chips. */
   // One chip per tag, however its case varies between entries.
   tags = $derived(uniqueTags(this.entries.flatMap((e) => e.tags || [])).sort((a, b) => a.localeCompare(b)));
-
-  private scheduleSync: () => void = () => {};
 
   /** Re-read the catalog, and keep the home-screen widget and episode alerts current. */
   async refresh(): Promise<void> {
@@ -25,15 +23,14 @@ class Shelf {
     void pushEpisodeReminders(entries);
   }
 
-  /** After a local edit: refresh, then schedule a (debounced) sync push. */
+  /** After a local edit: show it. */
   changed(): void {
     void this.refresh();
-    this.scheduleSync();
   }
 
-  /** Encrypted folder sync (Android, once set up). Incoming changes only refresh. */
-  startSync(): void {
-    this.scheduleSync = startAutoSync(() => void this.refresh());
+  /** The encrypted backup (Android, once set up), on its schedule. Incoming changes only refresh. */
+  startBackup(): void {
+    startAutoBackup(() => void this.refresh());
   }
 }
 

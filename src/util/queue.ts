@@ -74,11 +74,8 @@ export function rankAtEnd(entries: CatalogEntry[]) {
 
 export interface PickFilters {
   type?: 'all' | 'book' | 'movie' | 'tv';
-  /** Books of at most SHORT_BOOK_PAGES pages. */
-  short?: boolean;
   genre?: string;
 }
-export const SHORT_BOOK_PAGES = 300;
 
 /**
  * Pick something from the queue matching the filters, weighted toward the top
@@ -92,12 +89,9 @@ export function pickFromQueue(
   random: () => number = Math.random,
   excludeId?: string
 ) {
-  const { type = 'all', short = false, genre = '' } = filters;
+  const { type = 'all', genre = '' } = filters;
   let pool = ordered.filter(
-    (e) =>
-      (type === 'all' || e.type === type) &&
-      (!short || (e.type === 'book' && e.pageCount != null && e.pageCount <= SHORT_BOOK_PAGES)) &&
-      (!genre || (e.genres || []).includes(genre))
+    (e) => (type === 'all' || e.type === type) && (!genre || (e.genres || []).includes(genre))
   );
   if (pool.length > 1 && excludeId) pool = pool.filter((e) => e.id !== excludeId);
   if (!pool.length) return null;

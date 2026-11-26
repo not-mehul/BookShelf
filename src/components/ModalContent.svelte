@@ -4,6 +4,7 @@
   import BulkEdit from './BulkEdit.svelte';
   import EntryModal from './entry/EntryModal.svelte';
   import Queue from './Queue.svelte';
+  import LibraryRefresh from './settings/LibraryRefresh.svelte';
   import Settings from './settings/Settings.svelte';
   import ShareCard from './ShareCard.svelte';
   import Stats from './Stats.svelte';
@@ -17,6 +18,8 @@
   <AddFlow options={modal.options} />
 {:else if modal.kind === 'settings'}
   <Settings />
+{:else if modal.kind === 'refresh'}
+  <LibraryRefresh />
 {:else if modal.kind === 'stats'}
   <Stats />
 {:else if modal.kind === 'queue'}

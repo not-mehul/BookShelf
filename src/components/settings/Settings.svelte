@@ -6,20 +6,21 @@
   import Segmented from '../Segmented.svelte';
   import DataSection from './DataSection.svelte';
   import SearchSection from './SearchSection.svelte';
-  import SyncSection from './SyncSection.svelte';
+  import BackupSection from './BackupSection.svelte';
   import { GOOGLE, TMDB } from './search-keys';
   import { setTheme, theme, type ThemeChoice } from '../../platform/theme.svelte';
   import { chooseRatingScale, ratingView } from '../../state/rating-scale.svelte';
   import type { RatingScale } from '../../util/stars';
 
-  // Appearance, Sync, Your data, Search, About. The saved keys load first, so
+  // Appearance, Backup, Your data, Search, About. The saved keys and passphrase
+  // load first (from the Keystore, read once at start-up, so at once), and
   // focus settles once the sheet is whole.
   let values = $state<Record<string, string> | null>(null);
   const settleFocus = useModalFocus();
 
   $effect(() => {
     void (async () => {
-      const keys = [TMDB, GOOGLE].map((d) => d.key);
+      const keys = [TMDB.key, GOOGLE.key, 'sync_passphrase'];
       const loaded = await Promise.all(keys.map((k) => getSetting(k, '')));
       values = Object.fromEntries(keys.map((k, i) => [k, loaded[i] ?? '']));
       settleFocus();
@@ -53,6 +54,7 @@
         value={theme.choice}
         label="Theme"
         onchange={(choice) => void setTheme(choice)}
+        full
       />
     </div>
     <div class="theme-setting-row">
@@ -65,13 +67,14 @@
         value={String(ratingView.scale) as '5' | '10'}
         label="Rating scale"
         onchange={(scale) => chooseRatingScale(Number(scale) as RatingScale)}
+        full
       />
     </div>
   </section>
 
   {#if values}
-    <section class="settings-group">
-      <SyncSection />
+    <section class="settings-group" aria-labelledby="set-backup">
+      <BackupSection passphrase={values.sync_passphrase ?? ''} />
     </section>
 
     <section class="settings-group" aria-labelledby="set-data">

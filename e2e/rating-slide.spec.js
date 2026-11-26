@@ -10,7 +10,7 @@ async function openArrival(page) {
   await expect(page.getByText('Imported 7 entries')).toBeVisible();
   await page.keyboard.press('Escape');
   await page.locator('.entry-card', { hasText: 'Arrival' }).click();
-  const slider = page.locator('dialog[open]').getByRole('slider', { name: 'Rating' });
+  const slider = page.locator('dialog[open]').getByRole('slider', { name: 'Rating', exact: true });
   await expect(slider).toHaveAttribute('aria-valuenow', '0');
   // Measure the stars only once the sheet has finished sliding up.
   await page

@@ -44,7 +44,7 @@ describe('sync encryption', () => {
 
   it('refuses files that are not BookShelf sync files or are from a newer version', async () => {
     await expect(decryptPayload('{"hello":1}', 'pw')).rejects.toThrow(/Not a BookShelf/);
-    await expect(decryptPayload('not json', 'pw')).rejects.toThrow(/not readable/);
+    await expect(decryptPayload('not json', 'pw')).rejects.toThrow(/can’t be read/);
     const env = JSON.parse(await encryptPayload('x', 'pw', FAST));
     await expect(decryptPayload(JSON.stringify({ ...env, v: 99 }), 'pw')).rejects.toThrow(/newer/);
   });
@@ -65,7 +65,7 @@ describe('damaged sync files', () => {
       { ...head, kdf: { alg: 'PBKDF2-SHA256', salt: '!!', iterations: 1000 } }
     ]) {
       await expect(decryptPayload(JSON.stringify(env), 'pw')).rejects.toThrow(
-        'The sync file is not readable (corrupted?).'
+        'The backup file can’t be read (is it damaged?).'
       );
     }
   });
