@@ -22,11 +22,11 @@ In the app, open **Settings** (gear, top-right) and paste:
 - A **TMDB API key** or read access token (free with a TMDB account, under Settings → API on themoviedb.org)
 - Optionally a **Google Books API key** (raises the daily quota)
 
-> **Privacy:** catalog data lives locally in IndexedDB. API keys and the backup
-> passphrase are encrypted with an Android Keystore key
+> **Privacy:** catalog data lives locally in IndexedDB. API keys are encrypted
+> with an Android Keystore key
 > (under `npm run dev`, outside the app, they sit in localStorage). Nothing is sent
 > anywhere except to the respective API when you search — and, if you turn on
-> the backup, an end-to-end encrypted file to the folder you chose.
+> the backup, one plain JSON file to the folder you chose.
 
 ## Scripts
 
@@ -111,7 +111,7 @@ src/
     theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
     widget.ts        Builds the home-screen widget's summary; applies episodes ticked on it
   sync/
-    crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
+    legacy-crypto.ts Reading a pre-3.1 backup, encrypted with a passphrase, once (WebCrypto)
     fields.ts        Field-level change times (fieldTimes) and the per-group merge of two copies
     merge.ts         Snapshot merge: entries field by field, deletion tombstones (pure)
     sync.ts          Pull → merge → push orchestration; the backup schedule (daily, weekly, monthly, off)

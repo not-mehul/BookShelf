@@ -11,10 +11,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Storage for the encrypted sync file in a folder the user picks with the
- * system folder picker (Storage Access Framework) — e.g. a Google Drive,
- * Nextcloud or Syncthing folder. The page encrypts/decrypts; this class only
- * moves opaque text in and out of `bookshelf-sync.json`.
+ * Storage for the backup file in a folder the user picks with the system
+ * folder picker (Storage Access Framework) — e.g. a Google Drive, Nextcloud or
+ * Syncthing folder. The page reads, merges and writes it; this class only
+ * moves its text in and out of `bookshelf-sync.json`.
  *
  * The picker itself is launched by [BookShelfPlugin] (Capacitor owns the
  * activity-result plumbing), which hands the chosen tree to [onPicked].

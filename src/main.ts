@@ -75,7 +75,7 @@ async function boot(): Promise<void> {
 
   // Read the Keystore once now, so Settings opens whole rather than filling in.
   void Promise.all([...SECRET_KEYS].map((key) => getSetting(key))).catch(() => {});
-  // The encrypted backup (Android app, once set up): daily, weekly or monthly,
+  // The backup (Android app, once a folder is chosen): daily, weekly or monthly,
   // checked on start and whenever the app comes back.
   shelf.startBackup();
   // Films and shows still on TheTVDB ids move to TMDB once there is a key,

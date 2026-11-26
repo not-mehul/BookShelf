@@ -1,7 +1,8 @@
 // Tiny settings layer.
 //
-// Ordinary preferences live in localStorage (namespaced). Secrets — API keys
-// and the sync passphrase — go to the Android Keystore through
+// Ordinary preferences live in localStorage (namespaced). Secrets — API keys,
+// and an old backup's passphrase until that backup is rewritten — go to the
+// Android Keystore through
 // the native shell when running in the app, and are migrated out of
 // localStorage the first time. In a plain browser there is no Keystore, so
 // secrets fall back to localStorage.

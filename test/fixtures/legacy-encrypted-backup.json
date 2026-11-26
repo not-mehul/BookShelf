@@ -1,0 +1,8 @@
+{
+  "format": "bookshelf-sync",
+  "v": 1,
+  "kdf": { "alg": "PBKDF2-SHA256", "iterations": 1000, "salt": "2wDtsULwjfZxpYRm+FQbXQ==" },
+  "cipher": "AES-256-GCM",
+  "iv": "SwElttJbgiMduvPa",
+  "data": "ez6O2NkkN31E4BaKkB7ppZKy2U4N820xAJtYdgkEiR3fiwjT1dxtuNJDcf6igc6Jclr/PPtaZZO6Pm5AR0Cz0scxfRBE+0CM5iWIGTBdXd1ywFn+tP65DR2ZbY6rut5I7EOXZpFS0oQVjZkzd6LVf/vxJezWHmZbkWivpfPd6y2HljHKCQrochq3bhBQnUP6bgIp6hkW5KzYF4/o0HqEjgfGEIL8Dn8ypssmzqOK+1hCu8w46diGzbbF87NGe0qA6Wk9bIn8wdg/zdY5wCfIQ1dXXhA5CEuF3j7EDbyDUgNEIfCNQKC+MVT+YSV4JxgplIZ8n6JmswFodOs1H+u1Dq6Ke2gyXr/80DaH9sr1TXDYS9G/cg/HMww2"
+}
