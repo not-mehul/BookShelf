@@ -12,7 +12,7 @@ npm run dev
 ```
 
 BookShelf is an Android app (Android 10+); `npm run dev` runs its UI in a
-browser so you can work on it. Search, sync, sharing, backups and the barcode
+browser so you can work on it. Search, the backup, sharing and the barcode
 scanner go through the Android shell, so try those in the app (`npm run android:run`)
 or in the e2e suite's simulated shell. A production build opened in a browser
 only says that BookShelf is an Android app.
@@ -22,11 +22,11 @@ In the app, open **Settings** (gear, top-right) and paste:
 - A **TMDB API key** or read access token (free with a TMDB account, under Settings → API on themoviedb.org)
 - Optionally a **Google Books API key** (raises the daily quota)
 
-> **Privacy:** catalog data lives locally in IndexedDB. API keys and the sync
+> **Privacy:** catalog data lives locally in IndexedDB. API keys and the backup
 > passphrase are encrypted with an Android Keystore key
 > (under `npm run dev`, outside the app, they sit in localStorage). Nothing is sent
-> anywhere except to the respective API when you search — and, if you enable
-> sync, an end-to-end encrypted file to the folder you chose.
+> anywhere except to the respective API when you search — and, if you turn on
+> the backup, an end-to-end encrypted file to the folder you chose.
 
 ## Scripts
 
@@ -59,7 +59,7 @@ The Android app is a Capacitor 8 project in [`android/`](../android), set up lik
 Ledger's: Capacitor hosts the web build, and one Kotlin plugin
 (`BookShelfPlugin.kt` ↔ `src/platform/native.ts`) adds native HTTP to bypass
 WebView CORS (restricted to the app's API hosts), file export/share, predictive
-Back, and the Keystore, barcode scanner, folder sync, new-episode alerts and the
+Back, and the Keystore, barcode scanner, backup folder, new-episode alerts and the
 home-screen widget. The app supports Android 10 (API 29) and later. See [`android/README.md`](../android/README.md) for
 how to build and run it, and how your data carries over from the old WebView
 shell.
@@ -81,7 +81,7 @@ src/
     entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
     add/             Add flow: medium → search / manual / quote
     settings/        Preferences: appearance (theme, rating scale), backup, your data (restore, import,
-                     Library refresh, duplicate check), search keys
+                     Library refresh, duplicate check), search keys (checked as they are entered)
     stats/           Statistics parts: the month chart, bar lists
     Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte
   state/
@@ -89,6 +89,7 @@ src/
     ui.svelte.ts     Which dialog is open
   api/
     books.ts         Google Books client
+    key-check.ts     Trying a pasted API key against its service
     openlibrary.ts   Open Library client + ISBN detection
     tmdb.ts          TMDB v3 client (search, details with credits, seasons, find by TheTVDB id)
     tmdb-move.ts     One-time move of films and shows from TheTVDB ids to TMDB
@@ -103,7 +104,7 @@ src/
     layout.ts        Text wrapping / fit-to-box (pure)
     share-image.ts   Share cards to the Android share sheet
   export/
-    json.ts          Lossless JSON backup / restore
+    json.ts          Restoring a BookShelf backup file
     share.ts         Single-entry share
   platform/
     native.ts        Android shell (BookShelf Capacitor plugin): native HTTP, calls, events, export, theme, back
@@ -120,7 +121,8 @@ src/
     app.css          App styles; imports dusk-dawn/tokens.css and dusk-dawn/components.css first
   types.d.ts         Shared data types (CatalogEntry, …)
 public/
-  icon.svg           The app icon (README)
+  icon.svg           The app icon: three covers fanned out, the front one starred (README, favicon;
+                     the Android launcher icon is the same drawing in res/drawable)
 test/                Vitest unit tests
 e2e/                 Playwright smoke tests (+ a simulated Android shell)
 index.html

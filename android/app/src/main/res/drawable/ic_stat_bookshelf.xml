@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Status-bar icon for new-episode alerts: an open book, white on transparent. -->
+<!-- Status-bar icon for new-episode alerts: the app icon's front cover and
+     star, white on transparent. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M11.3,5.5C9.3,4.3 6.6,3.7 4,3.9L4,17.7C6.6,17.5 9.3,18.1 11.3,19.4Z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M12.7,5.5C14.7,4.3 17.4,3.7 20,3.9L20,17.7C17.4,17.5 14.7,18.1 12.7,19.4Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M7.44,2.56 H16.56 A2.16,2.16 0 0 1 18.72,4.72 V20.08 A2.16,2.16 0 0 1 16.56,22.24 H7.44 A2.16,2.16 0 0 1 5.28,20.08 V4.72 A2.16,2.16 0 0 1 7.44,2.56 Z M12.00,7.09 L13.02,9.82 L15.93,9.94 L13.64,11.75 L14.43,14.56 L12.00,12.95 L9.57,14.56 L10.36,11.75 L8.07,9.94 L10.98,9.82 Z" />
 </vector>

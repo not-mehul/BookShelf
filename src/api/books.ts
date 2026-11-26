@@ -4,6 +4,7 @@ import { getSetting } from '../util/settings';
 import { normalizeBook, type GoogleVolume } from './normalize';
 import { looksLikeIsbn, searchOpenLibrary } from './openlibrary';
 import type { SearchHit } from '../types';
+import { checkKey, type KeyCheck } from './key-check';
 
 const BASE = 'https://www.googleapis.com/books/v1';
 
@@ -31,6 +32,12 @@ export async function searchBooks(query: string, { maxResults = 20 } = {}): Prom
   const data = await res.json();
   const items: GoogleVolume[] = data.items || [];
   return items.map(normalizeBook);
+}
+
+/** Whether Google Books takes `key` (a one-result search with it). */
+export function checkGoogleBooksKey(key: string): Promise<KeyCheck> {
+  const params = new URLSearchParams({ q: 'isbn:9780441172719', maxResults: '1', key: key.trim() });
+  return checkKey(() => fetch(`${BASE}/volumes?${params}`));
 }
 
 /**

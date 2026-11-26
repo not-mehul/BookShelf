@@ -88,8 +88,3 @@ export function ratingDistribution(
   }
   return bins;
 }
-
-/** A rating as cards show it: stars out of 5, the number out of 10. */
-export function ratingBrief(rating: number | null | undefined, on: RatingScale = scale) {
-  return on === 10 ? ratingLabel(rating, 10) : starString(rating);
-}

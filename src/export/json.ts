@@ -1,29 +1,14 @@
-// Lossless JSON backup / restore.
-//
-// Unlike the Markdown export (human-readable, lossy), this preserves every
-// field — including sourceId, tags, timestamps, episode ticks and cover images
-// (serialized inline as data URLs) — so a restore is a faithful round-trip.
-// Import is idempotent: entries are keyed by `id`, so re-importing the same
-// backup replaces rather than duplicates.
+// Restoring a BookShelf backup file (the JSON the app used to write, with
+// every field and the covers inline as data URLs). Restoring is idempotent:
+// entries are keyed by `id`, so restoring the same file again replaces rather
+// than duplicates.
 
-import { listEntries, saveEntry, getEntry, db } from '../db/database';
-import { nativeExport } from '../platform/native';
+import { saveEntry, getEntry, db } from '../db/database';
 import type { CatalogEntry, EntryStatus, EntryType } from '../types';
 import { dropRetired } from '../util/retired';
 
 /** A CatalogEntry as written to JSON: the cover blob becomes a data URL. */
 export type SerializedEntry = Omit<CatalogEntry, 'thumbnailBlob'> & { thumbnailData?: string | null };
-
-// 2: entries may carry fieldTimes, dateStopped, runtime and tmdb: ids.
-export const BACKUP_VERSION = 2;
-function blobToDataUrl(blob: Blob): Promise<string | null> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
-  });
-}
 
 async function dataUrlToBlob(dataUrl: string) {
   try {
@@ -32,12 +17,6 @@ async function dataUrlToBlob(dataUrl: string) {
   } catch {
     return null;
   }
-}
-export async function serializeEntry(entry: CatalogEntry): Promise<SerializedEntry> {
-  const { thumbnailBlob, ...rest } = entry;
-  const copy: SerializedEntry = { ...rest };
-  if (thumbnailBlob instanceof Blob) copy.thumbnailData = await blobToDataUrl(thumbnailBlob);
-  return copy;
 }
 export async function deserializeEntry(raw: SerializedEntry): Promise<CatalogEntry> {
   const { thumbnailData, ...rest } = raw;
@@ -91,19 +70,8 @@ export function normalizeRecord(raw: unknown): SerializedEntry | null {
   } as SerializedEntry;
 }
 
-export async function exportJson() {
-  const entries = await listEntries();
-  const out = await Promise.all(entries.map(serializeEntry));
-  return JSON.stringify(
-    { app: 'bookshelf', version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries: out },
-    null,
-    2
-  );
-}
-
-// Returns { imported, skippedExisting, skippedInvalid, total }. `merge` keeps
-// existing entries (only adds new ids); otherwise existing ids are overwritten.
-export async function importJson(text: string, { merge = false }: { merge?: boolean } = {}) {
+/** Restore a backup file: entries with the same id are replaced. */
+export async function importJson(text: string) {
   let parsed;
   try {
     parsed = JSON.parse(text);
@@ -114,7 +82,6 @@ export async function importJson(text: string, { merge = false }: { merge?: bool
   if (!Array.isArray(entries)) throw new Error('Backup file has no entries array.');
 
   let imported = 0;
-  let skippedExisting = 0;
   let skippedInvalid = 0;
   for (const raw of entries) {
     const record = normalizeRecord(raw);
@@ -123,10 +90,6 @@ export async function importJson(text: string, { merge = false }: { merge?: bool
       continue;
     }
     const existing = await getEntry(record.id);
-    if (merge && existing) {
-      skippedExisting++;
-      continue;
-    }
     // Keep the backup's own timestamps, so a restore never looks "newer" than
     // edits made since. The exception is an entry that was deleted: restoring
     // it is the newest thing that happened to it, so it is stamped now, or
@@ -135,15 +98,5 @@ export async function importJson(text: string, { merge = false }: { merge?: bool
     await saveEntry(await deserializeEntry(record), { touch: deleted });
     imported++;
   }
-  return { imported, skippedExisting, skippedInvalid, total: entries.length };
-}
-
-export async function saveAndShareJson() {
-  const json = await exportJson();
-  const today = new Date().toISOString().slice(0, 10);
-  const filename = `bookshelf-backup-${today}.json`;
-
-  // To the Android share sheet: Drive, Files, email, and so on.
-  nativeExport(filename, json);
-  return { filename };
+  return { imported, skippedInvalid, total: entries.length };
 }

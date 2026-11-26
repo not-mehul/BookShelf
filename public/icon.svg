@@ -1,8 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="96" fill="#0f0d0b"/>
-  <g transform="translate(140 112)" fill="none" stroke="#e0a94e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M18 24 A24 24 0 0 1 42 0 H232 V288 H42 A24 24 0 0 0 18 312 Z"/>
-    <path d="M18 24 V312 A24 24 0 0 0 42 288"/>
-    <path d="M70 72 H180 M70 128 H180 M70 184 H140" stroke="#8a9a7b"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1A1612"/><stop offset="1" stop-color="#0C0A08"/></linearGradient></defs>
+<rect width="108" height="108" rx="20.25" fill="url(#g)"/>
+<path d="M14,27 V18 A4,4 0 0 1 18,14 H27 M94,81 V90 A4,4 0 0 1 90,94 H81" fill="none" stroke="#D4A574" stroke-opacity="0.7" stroke-width="2.4" stroke-linecap="round"/>
+<g transform="translate(54 54) scale(1.22) translate(-54 -54)">
+<path d="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" fill="#9FB3A0" transform="rotate(-13 54 84)"/>
+<path d="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" fill="#8E7AA6" transform="rotate(13 54 84)"/>
+<path d="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" fill="#D4A574" stroke="#14110E" stroke-width="2.2"/>
+<path d="M54.00,40.94 L56.12,46.63 L62.18,46.88 L57.42,50.65 L59.05,56.50 L54.00,53.14 L48.95,56.50 L50.58,50.65 L45.82,46.88 L51.88,46.63 Z" fill="#14110E" stroke="#14110E" stroke-width="1.2" stroke-linejoin="round"/>
+<path d="M48.20,61.84 H59.80 A1.2,1.2 0 0 1 61.00,63.04 V63.04 A1.2,1.2 0 0 1 59.80,64.24 H48.20 A1.2,1.2 0 0 1 47.00,63.04 V63.04 A1.2,1.2 0 0 1 48.20,61.84 Z" fill="#14110E" fill-opacity="0.55"/>
+</g></svg>

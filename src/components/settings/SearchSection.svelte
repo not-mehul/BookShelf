@@ -3,24 +3,37 @@
   import { isLegacy, moveToTmdb } from '../../api/tmdb-move';
   import { plural } from '../../util/labels';
   import { shelf } from '../../state/shelf.svelte';
+  import type { KeyCheck } from '../../api/key-check';
   import SettingField from './SettingField.svelte';
   import { GOOGLE, TMDB } from './search-keys';
 
   // Search providers, each folded behind a summary that says whether it is set up.
   let { values }: { values: Record<string, string> } = $props();
 
-  let tmdbReady = $state(untrack(() => Boolean(values[TMDB.key])));
-  const googleReady = $derived(Boolean(values.google_books_api_key));
+  // Each key: none, saved, or saved and turned away by its service.
+  type KeyState = 'none' | 'saved' | 'rejected';
+  const initialState = (key: string): KeyState => (values[key] ? 'saved' : 'none');
+  let tmdb = $state<KeyState>(untrack(() => initialState(TMDB.key)));
+  let google = $state<KeyState>(untrack(() => initialState(GOOGLE.key)));
+  const STATE_LABEL: Record<KeyState, string> = {
+    none: 'Not set up',
+    saved: 'Key saved',
+    rejected: 'Key not accepted'
+  };
 
   // Films and shows still on TheTVDB move over once a key is saved.
   const waiting = $derived(shelf.entries.filter(isLegacy).length);
   const unmatched = $derived(shelf.entries.filter((e) => e.needsMatch).length);
+  // Opened at first when films are waiting on a key; after that it stays as the user leaves it.
+  const startOpen = untrack(() => tmdb === 'none' && waiting > 0);
   let moving = $state<{ done: number; total: number } | null>(null);
   let moved = $state<string>('');
 
-  async function keySaved(value: string) {
-    tmdbReady = Boolean(value);
-    if (!value || !waiting) return;
+  // Once TMDB takes the key (or it can't be asked), films and shows still on
+  // TheTVDB move over.
+  async function tmdbChecked(result: KeyCheck) {
+    tmdb = result.kind === 'rejected' ? 'rejected' : 'saved';
+    if (result.kind === 'rejected' || !waiting) return;
     moving = { done: 0, total: waiting };
     const report = await moveToTmdb((done, total) => (moving = { done, total }));
     moving = null;
@@ -34,13 +47,25 @@
   Book search works as it is. Films and shows come from TMDB, which needs a free key of your own.
 </p>
 
-<details class="settings-fold" open={!tmdbReady && waiting > 0}>
+<details
+  class="settings-fold"
+  {@attach (el: HTMLDetailsElement) => {
+    el.open = startOpen;
+  }}
+>
   <summary>
     <span class="settings-fold-name">Films and TV <span class="settings-fold-via">TMDB</span></span>
-    <span class="settings-fold-state" class:is-ready={tmdbReady}>{tmdbReady ? 'Set up' : 'Not set up'}</span>
+    <span class="settings-fold-state" class:is-ready={tmdb === 'saved'} class:is-error={tmdb === 'rejected'}
+      >{STATE_LABEL[tmdb]}</span
+    >
   </summary>
   <div class="settings-fold-body">
-    <SettingField {...TMDB} initial={values[TMDB.key] ?? ''} onsaved={keySaved} />
+    <SettingField
+      {...TMDB}
+      initial={values[TMDB.key] ?? ''}
+      onsaved={(v) => (tmdb = v ? 'saved' : 'none')}
+      onchecked={tmdbChecked}
+    />
     <div class="tmdb-status" role="status">
       {#if moving}
         <p class="field-hint">Moving films and shows to TMDB: {moving.done} of {moving.total}…</p>
@@ -64,12 +89,19 @@
 <details class="settings-fold">
   <summary>
     <span class="settings-fold-name">Books <span class="settings-fold-via">Google Books</span></span>
-    <span class="settings-fold-state" class:is-ready={googleReady}
-      >{googleReady ? 'Key saved' : 'Optional'}</span
+    <span
+      class="settings-fold-state"
+      class:is-ready={google === 'saved'}
+      class:is-error={google === 'rejected'}>{google === 'none' ? 'Optional' : STATE_LABEL[google]}</span
     >
   </summary>
   <div class="settings-fold-body">
-    <SettingField {...GOOGLE} initial={values[GOOGLE.key] ?? ''} />
+    <SettingField
+      {...GOOGLE}
+      initial={values[GOOGLE.key] ?? ''}
+      onsaved={(v) => (google = v ? 'saved' : 'none')}
+      onchecked={(r) => (google = r.kind === 'rejected' ? 'rejected' : 'saved')}
+    />
   </div>
 </details>
 
@@ -128,11 +160,11 @@
   .settings-fold-state.is-ready {
     color: var(--accent-sage);
   }
+  .settings-fold-state.is-error {
+    color: var(--danger);
+  }
   .settings-fold-body {
     padding-bottom: var(--space-4);
-  }
-  .settings-lead {
-    margin: 0 0 var(--space-3);
   }
   .settings-lead {
     margin: 0 0 var(--space-3);

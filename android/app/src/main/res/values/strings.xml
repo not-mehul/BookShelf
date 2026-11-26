@@ -4,7 +4,7 @@
     <string name="title_activity_main">BookShelf</string>
     <string name="package_name">app.mehul.bookshelf</string>
     <string name="custom_url_scheme">app.mehul.bookshelf</string>
-    <string name="export_chooser_title">Export catalog</string>
+    <string name="export_chooser_title">Share</string>
     <string name="share_target_label">Add to BookShelf</string>
     <string name="widget_label">BookShelf</string>
     <string name="widget_description">What you\'re reading and watching, your shelf counts and latest quote.</string>
@@ -15,5 +15,5 @@
     <string name="new_episodes_channel">New episodes</string>
     <string name="new_episodes_channel_description">An alert when a new episode of a show you follow airs.</string>
     <string name="new_episode_title">New episode: %1$s</string>
-    <string name="export_failed">Export failed: %1$s</string>
+    <string name="export_failed">Couldn’t share it: %1$s</string>
 </resources>

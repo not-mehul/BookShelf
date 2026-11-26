@@ -6,7 +6,6 @@ import { ratingLabel } from './stars';
 import type { CatalogEntry } from '../types';
 
 export type FinishedType = 'book' | 'movie' | 'tv';
-export const FINISHED_TYPES: FinishedType[] = ['book', 'movie', 'tv'];
 
 export interface Finish {
   entry: CatalogEntry;
