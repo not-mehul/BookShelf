@@ -151,11 +151,18 @@ export async function findBySource(type: string, sourceId: string | number | nul
 }
 
 // Prefer the locally-stored cover blob (fully offline) over the remote URL.
-// Callers that render the returned blob: URL in an <img> should revoke it on
-// load (CoverImage.svelte does) so these URLs don't accumulate.
+// Each entry keeps one blob: URL for as long as its cover stays the same, so
+// a re-render (every save reloads the shelf) never reloads the image; a new
+// cover replaces, and revokes, the old URL.
+const coverUrls = new Map<string, { key: string; url: string }>();
 export function thumbnailUrl(entry: CatalogEntry) {
-  if (entry?.thumbnailBlob instanceof Blob) {
-    return URL.createObjectURL(entry.thumbnailBlob);
-  }
-  return null;
+  const blob = entry?.thumbnailBlob;
+  if (!(blob instanceof Blob)) return null;
+  const key = `${blob.size}:${blob.type}:${entry.thumbnailUrl ?? ''}`;
+  const cached = coverUrls.get(entry.id);
+  if (cached?.key === key) return cached.url;
+  if (cached) URL.revokeObjectURL(cached.url);
+  const url = URL.createObjectURL(blob);
+  coverUrls.set(entry.id, { key, url });
+  return url;
 }

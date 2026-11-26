@@ -30,6 +30,8 @@
     let queued = false;
     function update() {
       queued = false;
+      // A dialog pins the page (Modal.svelte): that is not the reader scrolling.
+      if (document.documentElement.classList.contains('is-locked')) return;
       const y = window.scrollY;
       const dy = y - lastY;
       lastY = y;

@@ -2,7 +2,7 @@
   import { Select } from 'dusk-dawn';
   import { hatch } from '../util/delight';
   import { SvelteSet } from 'svelte/reactivity';
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { pushBackHandler } from '../platform/native';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
@@ -119,29 +119,54 @@
   const BATCH = 24;
   let limit = $state(FIRST_BATCH);
   const drawn = $derived(limit >= visible.length ? visible : visible.slice(0, limit));
+  // While the chosen tab opens to its word, the rest of the shelf waits, so
+  // the word's animation has the frames to itself.
+  const TAB_SETTLE_MS = 420;
+  let quietUntil = 0;
   $effect(() => {
     if (limit >= visible.length) return;
-    const frame = requestAnimationFrame(() => (limit += BATCH));
-    return () => cancelAnimationFrame(frame);
+    const wait = quietUntil - performance.now();
+    let frame = 0;
+    const timer = setTimeout(
+      () => (frame = requestAnimationFrame(() => (limit += BATCH))),
+      Math.max(0, wait)
+    );
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
   });
 
   let grid = $state<HTMLElement>();
   const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /** Show another tab: its first entries at once, easing in, the rest after. */
+  // The tab that looks chosen: it answers the tap at once, and the shelf
+  // follows a frame later, once the tab has started to open.
+  let tab = $state<TypeFilter>(untrack(() => type));
+  let switching = 0;
+
+  /** Show another tab: the tab first, then its first entries easing in, then the rest. */
   function chooseType(id: TypeFilter) {
-    if (id === type) return;
-    limit = FIRST_BATCH;
-    type = id;
-    if (calm()) return;
-    void tick().then(() =>
-      grid?.animate(
-        [
-          { opacity: 0, transform: 'translateY(10px)' },
-          { opacity: 1, transform: 'none' }
-        ],
-        { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
-      )
+    if (id === tab) return;
+    tab = id;
+    const mine = ++switching;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (mine !== switching) return;
+        quietUntil = performance.now() + TAB_SETTLE_MS;
+        limit = FIRST_BATCH;
+        type = id;
+        if (calm()) return;
+        void tick().then(() =>
+          grid?.animate(
+            [
+              { opacity: 0, transform: 'translateY(10px)' },
+              { opacity: 1, transform: 'none' }
+            ],
+            { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+          )
+        );
+      })
     );
   }
 
@@ -233,11 +258,11 @@
 {#snippet tvIcon()}<Icon name={TYPE_ICON.tv} />{/snippet}
 {#snippet quoteIcon()}<Icon name={TYPE_ICON.quote} />{/snippet}
 
-<FloatingBar tabs={TYPE_TABS} value={type} onselect={chooseType} anchor={typesRow} />
+<FloatingBar tabs={TYPE_TABS} value={tab} onselect={chooseType} anchor={typesRow} />
 
 <div class="lib-header">
   <div class="lib-types-row" bind:this={typesRow}>
-    <IconTabs tabs={TYPE_TABS} value={type} label="Show" labels="selected" onselect={chooseType} />
+    <IconTabs tabs={TYPE_TABS} value={tab} label="Show" labels="selected" onselect={chooseType} />
     <!-- What the tab shows, and what a filter or tag leaves of it. -->
     <div class="lib-count">{countLine}</div>
   </div>

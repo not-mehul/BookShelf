@@ -11,6 +11,8 @@ export interface SharedInput {
   /** Android EXTRA_SUBJECT / share-target title. */
   subject?: string;
   url?: string;
+  /** "quote": sent through "Save as quote", straight to the quote form. */
+  as?: string;
 }
 export interface SharePrefill {
   /** Body with links and attribution removed. */

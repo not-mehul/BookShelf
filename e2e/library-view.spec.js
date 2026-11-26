@@ -45,14 +45,15 @@ test('no shelf tabs or Markdown export; a big tab draws its first entries, then 
 
   await page.locator('.lib-types-row').getByRole('tab', { name: 'Movies' }).click();
   await expect(page.locator('.entry-card')).toHaveCount(30);
-  // Back to Books: the first batch is on screen in the same frame as the tap.
-  const drawn = await page.evaluate(
-    () =>
-      new Promise((resolve) => {
-        document.querySelectorAll('.lib-types-row [role=tab]')[1].click();
-        requestAnimationFrame(() => resolve(document.querySelectorAll('.entry-card').length));
-      })
+  // Back to Books: the tab answers at once, the first batch follows, and the
+  // rest waits for the tab's word to open.
+  await page.locator('.lib-types-row').getByRole('tab', { name: 'Books' }).click();
+  await expect(page.locator('.lib-types-row').getByRole('tab', { name: 'Books' })).toHaveAttribute(
+    'aria-selected',
+    'true'
   );
+  await expect(page.locator('.lib-count')).toHaveText('150 books');
+  const drawn = await page.locator('.entry-card').count();
   expect(drawn).toBeGreaterThan(0);
   expect(drawn).toBeLessThan(150);
   await expect(page.locator('.entry-card')).toHaveCount(150);

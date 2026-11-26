@@ -111,14 +111,35 @@
   // whatever opened the first one, and Android Back closes it.
   $effect(() => {
     const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const unlock = lockPageScroll();
     dialog.showModal();
     const release = pushBackHandler(() => onclose());
     return () => {
       release();
       if (dialog.open) dialog.close();
-      if (returnTo?.isConnected) returnTo.focus();
+      unlock();
+      if (returnTo?.isConnected) returnTo.focus({ preventScroll: true });
     };
   });
+
+  /**
+   * Hold the page still behind the dialog. Hiding its overflow isn't enough
+   * on a phone (a finger still scrolls it), so the page is pinned where it
+   * was and put back on close. html.is-locked tells the floating bar to
+   * ignore the jump.
+   */
+  function lockPageScroll() {
+    const y = window.scrollY;
+    const body = document.body.style;
+    const was = { position: body.position, top: body.top, left: body.left, right: body.right };
+    document.documentElement.classList.add('is-locked');
+    Object.assign(body, { position: 'fixed', top: `-${y}px`, left: '0', right: '0' });
+    return () => {
+      Object.assign(body, was);
+      window.scrollTo({ top: y, behavior: 'instant' });
+      document.documentElement.classList.remove('is-locked');
+    };
+  }
 
   // Closing: the sheet slides back down (a centred modal sinks and fades) as
   // the backdrop clears. The dialog stays open until both have finished.

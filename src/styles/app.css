@@ -273,6 +273,35 @@ img {
   width: 8.5rem;
 }
 
+/* The chosen tab opens to its word on one soft ease-out, and the word fades
+   and slides in a beat after it starts to open, rather than snapping. */
+.lib-types-row .icon-tab-inner,
+.floating-bar .icon-tab-inner {
+  transition: grid-template-columns 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lib-types-row .icon-tab-word,
+.floating-bar .icon-tab-word {
+  /* Wiped open, not cut short: no ellipsis while the room grows. */
+  text-overflow: clip;
+  transform: translateX(-6px);
+  transition:
+    opacity 180ms ease-out,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lib-types-row [role='tab'][aria-selected='true'] .icon-tab-word,
+.floating-bar [role='tab'][aria-selected='true'] .icon-tab-word {
+  transform: none;
+  transition:
+    opacity 320ms ease-out 80ms,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lib-types-row .icon-tab-word,
+  .floating-bar .icon-tab-word {
+    transform: none;
+  }
+}
+
 /* ─── Entry card grid ─────────────────────────────────────────── */
 
 .entry-grid {
@@ -564,6 +593,8 @@ img {
   display: block;
   padding: 0;
   max-width: 680px;
+  /* Scrolling to the end of a sheet stops there, never handing on to the page. */
+  overscroll-behavior: contain;
 }
 
 /* Structured modal sections */

@@ -6,6 +6,7 @@
     <string name="custom_url_scheme">app.mehul.bookshelf</string>
     <string name="export_chooser_title">Share</string>
     <string name="share_target_label">Add to BookShelf</string>
+    <string name="share_quote_label">Save as quote</string>
     <string name="widget_label">BookShelf</string>
     <string name="widget_description">What you\'re reading and watching, your shelf counts and latest quote.</string>
     <string name="widget_add">Add to BookShelf</string>
