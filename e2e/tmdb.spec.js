@@ -1,6 +1,6 @@
 // Films and TV through TMDB, straight from the phone with the user's own key:
-// search and add, the notice without a key, and the one-time move of a film
-// still on a TheTVDB id once a key is saved.
+// search and add, the notice without a key, the one-time move of a film
+// still on a TheTVDB id once a key is saved, and checking a key as it's entered.
 import { test, expect } from './app-test.js';
 import { readFileSync } from 'node:fs';
 
@@ -111,5 +111,47 @@ test.describe('moving from TheTVDB', () => {
         )
       )
       .toBe('tmdb:329865');
+  });
+});
+
+test.describe('entering a key', () => {
+  test.use({ shell: { http: 'fetch' } });
+
+  test('is checked with TMDB, can be shown, and Settings says the key is saved', async ({ page }) => {
+    await page.route('https://api.themoviedb.org/3/configuration**', (route) => {
+      const good = new URL(route.request().url()).searchParams.get('api_key') === 'good-key';
+      return route.fulfill(good ? { json: { images: {} } } : { status: 401, json: { success: false } });
+    });
+    await page.goto('/index.html');
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+    const fold = page.locator('details', { hasText: 'Films and TV' });
+    await expect(fold.locator('.settings-fold-state')).toHaveText('Not set up');
+    await fold.locator('summary').click();
+    const box = page.getByLabel('API key or read access token');
+
+    await box.fill('bad-key');
+    await expect(fold.locator('.field-hint').first()).toHaveText(/wasn’t accepted/);
+    await expect(fold.locator('.settings-fold-state')).toHaveText('Key not accepted');
+
+    await box.fill('good-key');
+    await expect(fold.locator('.field-hint').first()).toHaveText(
+      'The key works: films and shows search TMDB.'
+    );
+    await expect(fold.locator('.settings-fold-state')).toHaveText('Key saved');
+    expect(await page.evaluate(() => window.__keystore.tmdb_api_key)).toBe('good-key');
+
+    // Hidden until the eye is tapped.
+    await expect(box).toHaveAttribute('type', 'password');
+    await fold.getByRole('button', { name: 'Show' }).click();
+    await expect(box).toHaveAttribute('type', 'text');
+    await expect(fold.getByRole('button', { name: 'Show' })).toHaveAttribute('aria-pressed', 'true');
+
+    // Opened again later, a saved key says so.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('dialog')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Settings' }).first().click();
+    await expect(
+      page.locator('details', { hasText: 'Films and TV' }).locator('.settings-fold-state')
+    ).toHaveText('Key saved');
   });
 });

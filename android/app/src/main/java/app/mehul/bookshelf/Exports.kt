@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Hands generated files (Markdown/JSON exports, share-card images) to the
+ * Hands what the page shares (an entry as text, a share-card image) to the
  * system share sheet, via cacheDir/exports and the app's FileProvider.
  */
 object Exports {
@@ -31,12 +31,8 @@ object Exports {
     // Keep the name inside cacheDir/exports: no separators, and no leading
     // dots (so "." / ".." can never resolve to a directory).
     internal fun sanitize(name: String): String =
-        name.replace(Regex("[^A-Za-z0-9._-]"), "_").trimStart('.').ifEmpty { "export.md" }
+        name.replace(Regex("[^A-Za-z0-9._-]"), "_").trimStart('.').ifEmpty { "shared.txt" }
 
-    internal fun mimeFor(name: String): String = when {
-        name.endsWith(".json", ignoreCase = true) -> "application/json"
-        name.endsWith(".md", ignoreCase = true) -> "text/markdown"
-        name.endsWith(".png", ignoreCase = true) -> "image/png"
-        else -> "text/plain"
-    }
+    internal fun mimeFor(name: String): String =
+        if (name.endsWith(".png", ignoreCase = true)) "image/png" else "text/plain"
 }

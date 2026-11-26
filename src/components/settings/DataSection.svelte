@@ -23,12 +23,9 @@
     if (!file) return;
     busy = 'json';
     try {
-      const { imported, skippedExisting, skippedInvalid } = await importJson(await file.text());
-      const skipped = [
-        skippedExisting ? `skipped ${skippedExisting} existing` : '',
-        skippedInvalid ? `left out ${skippedInvalid} that couldn’t be read` : ''
-      ].filter(Boolean);
-      say(`Imported ${imported} entries${skipped.length ? `, ${skipped.join(', ')}` : ''}.`);
+      const { imported, skippedInvalid } = await importJson(await file.text());
+      const skipped = skippedInvalid ? `, left out ${skippedInvalid} that couldn’t be read` : '';
+      say(`Imported ${imported} entries${skipped}.`);
       shelf.changed();
     } catch (err) {
       say('Import failed: ' + messageOf(err), 'err');

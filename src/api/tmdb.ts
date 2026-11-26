@@ -6,9 +6,9 @@
 // Ids on the shelf are `tmdb:<number>`, so a film or show added before the
 // move from TheTVDB (a bare number) is told apart until it is matched.
 
+import { checkKey, type KeyCheck } from './key-check';
 import { getSetting } from '../util/settings';
 import {
-  enrichFromTmdbDetail,
   normalizeTmdbEpisode,
   normalizeTmdbHit,
   type TmdbDetail,
@@ -39,6 +39,16 @@ export async function isTmdbConfigured() {
 
 /** A v4 read access token is a JWT; anything else is a v3 key. */
 const isToken = (key: string) => key.startsWith('eyJ');
+
+/** Whether TMDB takes `key` (its smallest request, the API configuration). */
+export function checkTmdbKey(key: string): Promise<KeyCheck> {
+  key = key.trim();
+  return checkKey(() =>
+    fetch(`${BASE}/configuration${isToken(key) ? '' : `?api_key=${encodeURIComponent(key)}`}`, {
+      headers: isToken(key) ? { authorization: `Bearer ${key}`, accept: 'application/json' } : {}
+    })
+  );
+}
 
 async function tmdbFetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
   const key = await apiKey();
@@ -116,10 +126,6 @@ async function collectionPosition(collectionId: number, filmId: number): Promise
   } catch {
     return null;
   }
-}
-
-export async function enrichEntry(entry: CatalogEntry): Promise<CatalogEntry> {
-  return enrichFromTmdbDetail(entry, await fetchDetail(entry));
 }
 
 /** A film's or show's English title on TMDB, or '' when it has none. */

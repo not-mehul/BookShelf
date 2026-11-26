@@ -1,38 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Open-book glyph, kept inside the adaptive-icon safe zone (center ~66%). -->
+<!-- Three covers fanned out (a book, a film, a show), the front one marked
+     with a star: the whole shelf, rated. Inside the adaptive-icon safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Left page -->
-    <path
-        android:fillColor="#D4A574"
-        android:pathData="M54,40 C46,35 36,33 28,34 L28,72 C36,71 46,73 54,77 Z" />
-
-    <!-- Right page -->
-    <path
-        android:fillColor="#E8C9A0"
-        android:pathData="M54,40 C62,35 72,33 80,34 L80,72 C72,71 62,73 54,77 Z" />
-
-    <!-- Spine -->
-    <path
-        android:fillColor="#0F0D0B"
-        android:pathData="M52.5,40 L55.5,40 L55.5,77 L52.5,77 Z" />
-
-    <!-- Page lines (left) -->
-    <path
-        android:strokeColor="#0F0D0B"
-        android:strokeWidth="1.4"
-        android:strokeLineCap="round"
-        android:pathData="M34,44 C40,44 45,45 49,47 M34,52 C40,52 45,53 49,55 M34,60 C40,60 45,61 49,63" />
-
-    <!-- Page lines (right) -->
-    <path
-        android:strokeColor="#0F0D0B"
-        android:strokeWidth="1.4"
-        android:strokeLineCap="round"
-        android:pathData="M74,44 C68,44 63,45 59,47 M74,52 C68,52 63,53 59,55 M74,60 C68,60 63,61 59,63" />
-
+    <group android:scaleX="1.05" android:scaleY="1.05" android:pivotX="54" android:pivotY="54">
+        <group android:rotation="-13" android:pivotX="54" android:pivotY="84">
+            <path android:fillColor="#9FB3A0"
+                android:pathData="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" />
+        </group>
+        <group android:rotation="13" android:pivotX="54" android:pivotY="84">
+            <path android:fillColor="#8E7AA6"
+                android:pathData="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" />
+        </group>
+        <path android:fillColor="#D4A574" android:strokeColor="#14110E" android:strokeWidth="2.2"
+            android:pathData="M44.50,31.50 H63.50 A4.5,4.5 0 0 1 68.00,36.00 V68.00 A4.5,4.5 0 0 1 63.50,72.50 H44.50 A4.5,4.5 0 0 1 40.00,68.00 V36.00 A4.5,4.5 0 0 1 44.50,31.50 Z" />
+        <path android:fillColor="#14110E" android:strokeColor="#14110E" android:strokeWidth="1.2" android:strokeLineJoin="round"
+            android:pathData="M54.00,40.94 L56.12,46.63 L62.18,46.88 L57.42,50.65 L59.05,56.50 L54.00,53.14 L48.95,56.50 L50.58,50.65 L45.82,46.88 L51.88,46.63 Z" />
+        <path android:fillColor="#14110E" android:fillAlpha="0.55"
+            android:pathData="M48.20,61.84 H59.80 A1.2,1.2 0 0 1 61.00,63.04 V63.04 A1.2,1.2 0 0 1 59.80,64.24 H48.20 A1.2,1.2 0 0 1 47.00,63.04 V63.04 A1.2,1.2 0 0 1 48.20,61.84 Z" />
+    </group>
 </vector>

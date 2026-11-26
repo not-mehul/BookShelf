@@ -145,24 +145,9 @@ export async function listTombstones(): Promise<Tombstone[]> {
   return db.tombstones.toArray();
 }
 
-/**
- * Quotes linked to an entry, oldest first.
- */
-export async function listQuotesFor(entryId: string) {
-  const quotes = await db.entries.where('linkedEntryId').equals(entryId).toArray();
-  return quotes.sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''));
-}
 export async function findBySource(type: string, sourceId: string | number | null | undefined) {
   if (!sourceId) return null;
   return db.entries.where({ type, sourceId: String(sourceId) }).first();
-}
-
-/** All distinct tags across the catalog, sorted, for the filter chips. */
-export async function listAllTags() {
-  const set: Set<string> = new Set();
-  const entries = await db.entries.toArray();
-  for (const e of entries) for (const t of e.tags || []) set.add(t);
-  return [...set].sort((a, b) => a.localeCompare(b));
 }
 
 // Prefer the locally-stored cover blob (fully offline) over the remote URL.

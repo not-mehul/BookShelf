@@ -1553,6 +1553,29 @@ label.add-result-row {
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
+/* A secret field: the eye to show it sits at the end of the box. */
+.field-secret {
+  position: relative;
+}
+.field-secret .input {
+  padding-right: 48px;
+}
+.field-eye {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  translate: 0 -50%;
+  color: var(--text-dim);
+}
+.field-eye[aria-pressed='true'] {
+  color: var(--accent-amber);
+}
+.field-hint-ok {
+  color: var(--accent-sage);
+}
+.field-hint-err {
+  color: var(--danger);
+}
 .settings-notice {
   margin-top: 0.9rem;
   font-size: 0.875rem;

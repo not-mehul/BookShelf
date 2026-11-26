@@ -55,8 +55,3 @@ export async function setTheme(choice: ThemeChoice): Promise<void> {
   paint();
   await setSetting(KEY, choice);
 }
-
-/** The header switch: picks the side opposite to the one on screen. */
-export function toggleTheme(): Promise<void> {
-  return setTheme(theme.shown === 'dark' ? 'light' : 'dark');
-}
