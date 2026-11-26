@@ -94,6 +94,22 @@ test('text shared from another app opens a prefilled quote', async ({ page }) =>
   await expect(page.locator('#q-source')).toHaveValue('Dune');
 });
 
+test('"Save as quote" (share sheet or text selection) goes straight to a filled-in quote', async ({
+  page
+}) => {
+  await boot(page, {
+    pendingEvents: [
+      ['shared', { text: '“So it goes.”\n— Kurt Vonnegut, Slaughterhouse-Five', subject: '', as: 'quote' }]
+    ]
+  });
+  // No "what is it?" step: the quote form, filled in.
+  await expect(page.locator('#q-text')).toHaveValue('So it goes.');
+  await expect(page.locator('#q-author')).toHaveValue('Kurt Vonnegut');
+  await expect(page.locator('#q-source')).toHaveValue('Slaughterhouse-Five');
+  await page.locator('.add-form button[type=submit]').click();
+  await expect(page.locator('dialog[open] .modal-quote-text')).toContainText('So it goes.');
+});
+
 test('text shared while the app was starting is not lost', async ({ page }) => {
   // Emitted before the page subscribes (a cold start from the share sheet);
   // the shell keeps it until the listener is added.

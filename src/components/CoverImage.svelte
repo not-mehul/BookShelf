@@ -12,15 +12,12 @@
   let failed = $state(false);
   let loaded = $state(false);
 
-  // A blob: URL (a locally cached cover) is revoked once decoded: the bitmap
-  // survives, and object URLs don't pile up across re-renders.
+  // A new picture starts over (thumbnailUrl keeps a cached cover's URL the
+  // same across re-renders, so only a real change gets here).
   $effect(() => {
-    const url = src;
+    void src;
     failed = false;
     loaded = false;
-    return () => {
-      if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
-    };
   });
 </script>
 
@@ -32,10 +29,7 @@
     decoding="async"
     class="cover-img"
     class:is-loaded={loaded}
-    onload={() => {
-      loaded = true;
-      if (src?.startsWith('blob:')) URL.revokeObjectURL(src);
-    }}
+    onload={() => (loaded = true)}
     onerror={() => (failed = true)}
   />
 {:else}

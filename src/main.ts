@@ -28,8 +28,10 @@ const inShell = installNativeBridge();
 // Android Back closes an open Select menu before anything else.
 claimBackForMenus(dismissOverlay);
 
+/** Text shared in: "Save as quote" opens the quote form; "Add to BookShelf" asks what it is. */
 function openShared(shared: SharedInput) {
-  ui.openAdd({ prefill: parseSharedText(shared) });
+  const prefill = parseSharedText(shared);
+  ui.openAdd(shared.as === 'quote' ? { prefill, startWith: 'quote' } : { prefill });
 }
 
 /** A bookshelf:// link from another app (style.md §14.1). `open` just shows the shelf. */

@@ -94,6 +94,30 @@ test('phone layout: filter and sort share a row; settings has backup and no brow
   ]);
 });
 
+test('an open sheet holds the page still behind it, and closing puts it back', async ({ page }) => {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('input[type=file][accept*="json"]').setInputFiles('e2e/fixtures/visual-shelf.json');
+  await expect(page.getByText(/^Imported \d+ entries/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toHaveCount(0);
+  const card = page.locator('.entry-card').nth(4);
+  await card.scrollIntoViewIfNeeded();
+  const before = await page.evaluate(() => window.scrollY);
+  expect(before).toBeGreaterThan(100);
+  await card.click();
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  expect(await page.evaluate(() => getComputedStyle(document.body).position)).toBe('fixed');
+  // A finger on the page behind the sheet moves nothing.
+  await page.mouse.move(200, 40);
+  await page.mouse.wheel(0, 800);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  expect(await page.evaluate(() => getComputedStyle(document.body).position)).toBe('static');
+  // The floating tab bar didn't take the pinning for scrolling.
+  await expect(page.locator('.floating-bar')).not.toHaveClass(/is-shown/);
+});
+
 test('hides easter eggs, counts them once, and lists the count in Settings', async ({ page }) => {
   for (const key of [
     'ArrowUp',

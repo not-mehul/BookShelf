@@ -97,15 +97,28 @@ class BookShelfPlugin : Plugin() {
             intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
                 val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT).orEmpty()
-                if (text.isNotBlank() || subject.isNotBlank()) {
-                    emit("shared", JSObject().put("text", text.take(MAX_SHARED_CHARS)).put("subject", subject))
-                }
+                if (text.isNotBlank() || subject.isNotBlank()) emitShared(text, subject, asQuote(intent))
+            }
+            // Text selected in another app, then "Save as quote" from its menu.
+            intent.action == Intent.ACTION_PROCESS_TEXT -> {
+                val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString().orEmpty()
+                if (text.isNotBlank()) emitShared(text, "", true)
             }
             intent.getStringExtra(MainActivity.EXTRA_ACTION) == MainActivity.ACTION_ADD -> emit("openAdd", JSObject())
             intent.hasExtra(MainActivity.EXTRA_OPEN_ENTRY) ->
                 emit("openEntry", JSObject().put("id", intent.getStringExtra(MainActivity.EXTRA_OPEN_ENTRY)))
         }
     }
+
+    /** Shared text for the page; `as: "quote"` opens the quote form directly. */
+    private fun emitShared(text: String, subject: String, quote: Boolean) {
+        val data = JSObject().put("text", text.take(MAX_SHARED_CHARS)).put("subject", subject)
+        if (quote) data.put("as", "quote")
+        emit("shared", data)
+    }
+
+    /** Whether the intent came through the "Save as quote" target (the ShareQuote alias). */
+    private fun asQuote(intent: Intent) = intent.component?.className?.endsWith(".ShareQuote") == true
 
     private fun emit(name: String, data: JSObject) = notifyListeners(name, data, true)
 

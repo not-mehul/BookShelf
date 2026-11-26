@@ -17,7 +17,9 @@
   import QuoteDetails from './QuoteDetails.svelte';
 
   let { id }: { id: string } = $props();
-  let entry = $state.raw<CatalogEntry | null>(null);
+  // Shown at once from the shelf in memory, so the sheet rises with its
+  // contents; the stored copy replaces it a moment later.
+  let entry = $state.raw<CatalogEntry | null>(untrack(() => shelf.entries.find((e) => e.id === id) ?? null));
   let editing = $state(false);
   let matching = $state(false);
   const settleFocus = useModalFocus();

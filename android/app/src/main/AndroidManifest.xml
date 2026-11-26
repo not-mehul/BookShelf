@@ -50,6 +50,26 @@
             </intent-filter>
         </activity>
 
+        <!-- "Save as quote": a second share target, and the same words in the
+             text-selection menu of any app (PROCESS_TEXT), that open the quote
+             form already filled in. The page tells them apart by this name. -->
+        <activity-alias
+            android:name=".ShareQuote"
+            android:targetActivity=".MainActivity"
+            android:label="@string/share_quote_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Ask Play services to fetch the Code Scanner module at install time, so
              the first scan doesn't wait for a download. -->
         <meta-data
