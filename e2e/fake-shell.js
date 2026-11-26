@@ -8,7 +8,7 @@
 //   { type: 'http', url, method, … }   native HTTP
 //   { type: 'backHandler', enabled }   claiming Android Back
 //   { type: 'theme', mode }            SystemBars.setStyle
-//   { type: 'export', filename, text } Markdown / JSON exports
+//   { type: 'export', filename, text } an entry shared as text
 //   { type: 'listen', event }          the page subscribing to an event
 // Events emitted before the page subscribes are kept and delivered on
 // subscribe, as Capacitor does for BookShelfPlugin's events.

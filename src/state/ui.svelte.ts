@@ -30,6 +30,7 @@ export type Modal =
   | { kind: 'entry'; id: string }
   | { kind: 'add'; options: AddOptions }
   | { kind: 'settings' }
+  | { kind: 'refresh' }
   | { kind: 'stats' }
   | { kind: 'queue' }
   | { kind: 'bulk'; ids: string[] }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ui } from '../state/ui.svelte';
+  import HeaderActions from './HeaderActions.svelte';
   import Icon from './Icon.svelte';
   import IdleCat from './IdleCat.svelte';
   import IdleDock from './IdleDock.svelte';
@@ -21,15 +22,19 @@
       hatch('konami', 'Every cover, turned face out.');
     })
   );
+  // Whole-height sheets: these load or change as they're used, and a sheet that
+  // grew under the finger would jump. Short dialogs fit their content.
+  const FULL_HEIGHT = new Set(['entry', 'add', 'settings', 'refresh', 'queue', 'stats']);
+
   function hush() {
     play(titleWord, 'wiggle');
     hatch('title', 'Shh. This is a library.');
   }
 </script>
 
-<!-- The theme is set in Settings; the header is just the name. As the shelf
-     scrolls, a compact bar with the name, the tabs and Settings comes back on
-     the way up (FloatingBar). -->
+<!-- The name, then Stats, Queue and Settings. As the shelf scrolls, a compact
+     bar with the name, those three and the tabs comes back on the way up
+     (FloatingBar). -->
 <header class="site-header">
   <div class="title-block">
     <h1 class="t-page-title" use:secretTaps={{ count: 7, onunlock: hush }}>
@@ -37,17 +42,7 @@
     </h1>
     <p class="t-tagline">Books, films, shows and the lines worth keeping</p>
   </div>
-  <div class="header-controls">
-    <button
-      type="button"
-      class="btn-icon"
-      aria-label="Settings"
-      title="Settings"
-      onclick={() => ui.open({ kind: 'settings' })}
-    >
-      <Icon name="settings" />
-    </button>
-  </div>
+  <HeaderActions />
 </header>
 
 <div id="screen">
@@ -76,7 +71,7 @@
 {#if ui.modal}
   <Modal
     contentKey={ui.modalKey}
-    size={ui.modal.kind === 'entry' || ui.modal.kind === 'add' ? 'full' : 'auto'}
+    size={FULL_HEIGHT.has(ui.modal.kind) ? 'full' : 'auto'}
     onclose={() => ui.close()}
   >
     {#key ui.modalKey}

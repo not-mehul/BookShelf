@@ -242,13 +242,7 @@ class BookShelfPlugin : Plugin() {
 
     // ── Exports and share cards ─────────────────────────────────────
 
-    /** The weekly backup, written to Documents/BookShelf/Backups. Resolves with where it went. */
-    @PluginMethod
-    fun writeBackup(call: PluginCall) = respond(call) {
-        Backups.write(context, call.require("name"), call.require("text"), call.getInt("keep", 5) ?: 5)
-    }
-
-    /** Markdown / JSON exports (UTF-8 text). */
+    /** Text shared from the page (an entry, as text). */
     @PluginMethod
     fun export(call: PluginCall) = share(call) {
         call.require("filename") to call.require("text").toByteArray(Charsets.UTF_8)

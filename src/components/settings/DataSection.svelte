@@ -1,58 +1,34 @@
 <script lang="ts">
-  import { importMarkdown } from '../../export/import';
-  import { importJson, saveAndShareJson } from '../../export/json';
+  import { importJson } from '../../export/json';
   import { importCatalogExport, type CatalogSource } from '../../export/catalog-import';
   import { shelf } from '../../state/shelf.svelte';
-  import { backupToDocuments, lastBackupAt } from '../../sync/auto-backup';
   import { messageOf } from '../../util/errors';
-  import { autoMatchAll, lacksMatch } from '../../api/match';
+  import { refreshTodo } from '../../api/refresh';
   import { findDuplicates, markNotDuplicates, mergeDuplicate } from '../../util/duplicates';
   import { plural, TYPE_NOUN } from '../../util/labels';
   import { ui } from '../../state/ui.svelte';
 
-  // Back up, restore and import: one settings row each (style.md §8.17).
+  // Restore, import, refresh and tidy: one settings row each (style.md §8.17).
   let notice = $state<{ text: string; kind: 'ok' | 'err' } | null>(null);
-  let busy = $state<'backup' | 'json' | 'md' | 'catalog' | 'weekly' | 'match' | null>(null);
+  let busy = $state<'json' | 'catalog' | null>(null);
   let catalogInput = $state<HTMLInputElement>();
-  let lastWeekly = $state(lastBackupAt());
   let jsonInput = $state<HTMLInputElement>();
-  let mdInput = $state<HTMLInputElement>();
 
   // Inline status line (the Android WebView has no window.alert).
   const say = (text: string, kind: 'ok' | 'err' = 'ok') => (notice = { text, kind });
 
-  async function backup() {
-    busy = 'backup';
-    try {
-      await saveAndShareJson();
-      say('Backup shared.');
-    } catch (err) {
-      say('Backup failed: ' + messageOf(err), 'err');
-    } finally {
-      busy = null;
-    }
-  }
-
   // Read a chosen file and import it.
-  async function importFile(input: HTMLInputElement, kind: 'json' | 'md') {
+  async function restore(input: HTMLInputElement) {
     const file = input.files?.[0];
     if (!file) return;
-    busy = kind;
+    busy = 'json';
     try {
-      const text = await file.text();
-      if (kind === 'json') {
-        const { imported, skippedExisting, skippedInvalid } = await importJson(text);
-        const skipped = [
-          skippedExisting ? `skipped ${skippedExisting} existing` : '',
-          skippedInvalid ? `left out ${skippedInvalid} that couldn’t be read` : ''
-        ].filter(Boolean);
-        say(`Imported ${imported} entries${skipped.length ? `, ${skipped.join(', ')}` : ''}.`);
-      } else {
-        const { imported, skipped } = await importMarkdown(text);
-        say(
-          `Imported ${imported} entries from Markdown${skipped ? `, skipped ${skipped} already on the shelf` : ''}.`
-        );
-      }
+      const { imported, skippedExisting, skippedInvalid } = await importJson(await file.text());
+      const skipped = [
+        skippedExisting ? `skipped ${skippedExisting} existing` : '',
+        skippedInvalid ? `left out ${skippedInvalid} that couldn’t be read` : ''
+      ].filter(Boolean);
+      say(`Imported ${imported} entries${skipped.length ? `, ${skipped.join(', ')}` : ''}.`);
       shelf.changed();
     } catch (err) {
       say('Import failed: ' + messageOf(err), 'err');
@@ -78,7 +54,7 @@
       const parts = [r.added === 1 ? '1 new entry' : `${r.added} new entries`];
       if (r.updated) parts.push(`${r.updated} already here filled in`);
       if (r.unchanged) parts.push(`${r.unchanged} already here as they were`);
-      const covers = r.added ? ' Find covers and details below fills in their covers.' : '';
+      const covers = r.added ? ' Library refresh, below, finds their covers and details.' : '';
       say(`From ${SOURCE_NAME[r.source]}: ${parts.join(', ')}.${covers}`);
       shelf.changed();
     } catch (err) {
@@ -89,27 +65,8 @@
     }
   }
 
-  // Covers and details for entries from imports or the manual form.
-  const lacking = $derived(shelf.entries.filter(lacksMatch).length);
-  async function matchAll() {
-    busy = 'match';
-    say('Looking for matches…');
-    try {
-      const r = await autoMatchAll((done, total) => say(`Looking for matches: ${done} of ${total}…`));
-      const parts = [`Matched ${plural(r.matched, 'entry', 'entries')}.`];
-      if (r.left.length)
-        parts.push(
-          `${plural(r.left.length, 'entry', 'entries')} had no sure match: open each and use Find a match.`
-        );
-      if (r.stopped) parts.push(`Stopped early: ${r.stopped}`);
-      say(parts.join(' '), r.stopped ? 'err' : 'ok');
-      shelf.changed();
-    } catch (err) {
-      say('Matching failed: ' + messageOf(err), 'err');
-    } finally {
-      busy = null;
-    }
-  }
+  // Covers, synopses and details missing anywhere on the shelf.
+  const lacking = $derived(refreshTodo(shelf.entries).length);
 
   // Likely copies of one thing, to merge or keep apart.
   let reviewing = $state(false);
@@ -132,29 +89,6 @@
     [TYPE_NOUN[e.type], e.creators?.[0], e.year, e.sourceId && !e.needsMatch ? 'matched' : 'not matched']
       .filter(Boolean)
       .join(' · ');
-
-  async function weeklyNow() {
-    busy = 'weekly';
-    try {
-      const where = await backupToDocuments();
-      lastWeekly = lastBackupAt();
-      say(`Backed up to ${where}.`);
-    } catch (err) {
-      say('Backup failed: ' + messageOf(err), 'err');
-    } finally {
-      busy = null;
-    }
-  }
-
-  const lastWeeklyText = $derived(
-    lastWeekly
-      ? new Date(lastWeekly).toLocaleDateString(undefined, {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short'
-        })
-      : 'not yet'
-  );
 </script>
 
 {#snippet row(label: string, hint: string, action: string, run: () => void)}
@@ -174,14 +108,7 @@
   type="file"
   accept=".json,application/json"
   hidden
-  onchange={(ev) => importFile(ev.currentTarget, 'json')}
-/>
-<input
-  bind:this={mdInput}
-  type="file"
-  accept=".md,text/markdown"
-  hidden
-  onchange={(ev) => importFile(ev.currentTarget, 'md')}
+  onchange={(ev) => restore(ev.currentTarget)}
 />
 <input
   bind:this={catalogInput}
@@ -194,28 +121,11 @@
 <!-- Settings rows (style.md §8.17): what it is and a hint, the action on the right. -->
 <div class="settings-rows">
   {@render row(
-    'Back up',
-    'One file with everything, covers included.',
-    busy === 'backup' ? 'Backing up…' : 'Back up',
-    backup
-  )}
-  {@render row(
     'Restore a backup',
-    'Restoring the same file again never duplicates entries.',
+    'A BookShelf backup file. Restoring the same file again never duplicates entries.',
     busy === 'json' ? 'Restoring…' : 'Restore',
     () => jsonInput?.click()
   )}
-  <div class="settings-row" id="weeklyBackup">
-    <div class="settings-row-text">
-      <div class="settings-row-label">Weekly backup</div>
-      <div class="field-hint">
-        To Documents/BookShelf/Backups, keeping the last five. Last: {lastWeeklyText}.
-      </div>
-    </div>
-    <button type="button" class="btn btn-muted btn-sm" disabled={busy !== null} onclick={weeklyNow}>
-      {busy === 'weekly' ? 'Backing up…' : 'Now'}
-    </button>
-  </div>
   {@render row(
     'Import from Goodreads, StoryGraph or Letterboxd',
     'Pick the CSV, or Letterboxd’s zip as it is. Anything already here only gains what it was missing.',
@@ -223,22 +133,16 @@
     () => catalogInput?.click()
   )}
   {@render row(
-    'Import a Markdown export',
-    'From an older BookShelf; the backup file keeps more.',
-    busy === 'md' ? 'Importing…' : 'Import',
-    () => mdInput?.click()
-  )}
-  {@render row(
-    'Find covers and details',
+    'Library refresh',
     lacking
-      ? `${plural(lacking, 'entry has', 'entries have')} no catalog match yet. Matches the sure ones; nothing you wrote changes.`
-      : 'Everything on the shelf is matched to the catalog.',
-    busy === 'match' ? 'Matching…' : 'Match',
-    () => void matchAll()
+      ? `${plural(lacking, 'entry is', 'entries are')} missing a cover, synopsis or details. Find matches and choose what to fill in.`
+      : 'Everything on the shelf has its cover, synopsis and details.',
+    'Refresh',
+    () => ui.open({ kind: 'refresh' })
   )}
   <div class="settings-row">
     <div class="settings-row-text">
-      <div class="settings-row-label">Possible duplicates</div>
+      <div class="settings-row-label">Duplicate check</div>
       <div class="field-hint">
         {pairs.length
           ? `${plural(pairs.length, 'pair looks', 'pairs look')} like the same thing twice.`
@@ -254,7 +158,7 @@
     >
   </div>
   {#if reviewing && pairs.length}
-    <ul class="dup-list" aria-label="Possible duplicates">
+    <ul class="dup-list" aria-label="Likely duplicates">
       {#each pairs as [keep, drop] (keep.id + drop.id)}
         <li class="dup-pair">
           <div class="dup-title">{keep.title}</div>
@@ -287,31 +191,6 @@
 </div>
 
 <style>
-  .settings-rows {
-    border-top: 1px solid var(--border-faint);
-  }
-  .settings-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-    min-height: 56px;
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--border-faint);
-  }
-  .settings-row-text {
-    flex: 1;
-    min-width: 0;
-  }
-  .settings-row-label {
-    font-size: 0.9375rem;
-    color: var(--text-heading);
-  }
-  .settings-row-text :global(.field-hint) {
-    margin: var(--space-1) 0 0;
-  }
-  .settings-row .btn {
-    flex: none;
-  }
   .dup-list {
     list-style: none;
     margin: 0;

@@ -21,6 +21,7 @@ async function importGoodreads(page) {
   await page.locator('input[type=file][accept*="csv"]').setInputFiles('e2e/fixtures/goodreads.csv');
   await expect(page.getByText(/From Goodreads: 3 new entries/)).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(page.locator('dialog')).toHaveCount(0);
 }
 
 async function choose(page, combobox, option) {

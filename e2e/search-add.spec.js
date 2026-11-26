@@ -74,7 +74,9 @@ test('a tapped result shows it is loading, and quick repeat taps add it once', a
 
   covers.release();
   // The new entry opens (its rating, not the search results).
-  await expect(page.locator('dialog[open]').getByRole('slider', { name: 'Rating' })).toBeVisible();
+  await expect(
+    page.locator('dialog[open]').getByRole('slider', { name: 'Rating', exact: true })
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(cards(page)).toHaveCount(1);
   await expect(cards(page).first()).toContainText('Dune');
@@ -114,7 +116,9 @@ test('a result already on the shelf cannot be picked again, and Cancel leaves se
   covers.release();
   await searchBooksFor(page, 'dune');
   await page.getByRole('button', { name: 'Add Dune Messiah' }).click();
-  await expect(page.locator('dialog[open]').getByRole('slider', { name: 'Rating' })).toBeVisible();
+  await expect(
+    page.locator('dialog[open]').getByRole('slider', { name: 'Rating', exact: true })
+  ).toBeVisible();
   await page.keyboard.press('Escape');
 
   await searchBooksFor(page, 'dune');
@@ -127,5 +131,7 @@ test('a result already on the shelf cannot be picked again, and Cancel leaves se
   await expect(page.locator('.add-results-label')).toContainText('3 books found');
   // The one already on the shelf is a tick that opens it.
   await page.getByRole('button', { name: 'Open Dune Messiah' }).click();
-  await expect(page.locator('dialog[open]').getByRole('slider', { name: 'Rating' })).toBeVisible();
+  await expect(
+    page.locator('dialog[open]').getByRole('slider', { name: 'Rating', exact: true })
+  ).toBeVisible();
 });

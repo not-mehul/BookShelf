@@ -12,11 +12,10 @@ import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
 import { moveToTmdb } from './api/tmdb-move';
 import { applyWidgetWatched } from './platform/widget';
-import { dropTvdbSettings } from './util/settings';
+import { dropTvdbSettings, getSetting, SECRET_KEYS } from './util/settings';
 import { claimBackForMenus, installNativeBridge, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
-import { startAutoBackup } from './sync/auto-backup';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
 import { readBookShelfLink } from './util/link-intake';
@@ -72,10 +71,11 @@ async function boot(): Promise<void> {
     if (document.visibilityState === 'visible') widgetMarks();
   });
 
-  // Encrypted folder sync (Android app, once configured): pull now, push after changes.
-  shelf.startSync();
-  // The weekly backup to Documents/BookShelf/Backups (Android app).
-  startAutoBackup();
+  // Read the Keystore once now, so Settings opens whole rather than filling in.
+  void Promise.all([...SECRET_KEYS].map((key) => getSetting(key))).catch(() => {});
+  // The encrypted backup (Android app, once set up): daily, weekly or monthly,
+  // checked on start and whenever the app comes back.
+  shelf.startBackup();
   // Films and shows still on TheTVDB ids move to TMDB once there is a key,
   // then guides of shows being followed refresh (quietly; both need TMDB).
   void dropTvdbSettings()

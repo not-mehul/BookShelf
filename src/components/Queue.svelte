@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Select } from 'dusk-dawn';
-  import { tick } from 'svelte';
-  import { listEntries, patchEntry, thumbnailUrl } from '../db/database';
+  import { tick, untrack } from 'svelte';
+  import { patchEntry, thumbnailUrl } from '../db/database';
   import { shelf } from '../state/shelf.svelte';
   import { ui } from '../state/ui.svelte';
   import { applyStatus } from '../util/apply-status';
@@ -24,10 +24,10 @@
     { value: 'tv', label: 'TV' }
   ];
 
-  let all = $state.raw<CatalogEntry[]>([]);
-  let loaded = $state(false);
+  // Drawn at once from the shelf already in memory (copies, so a move can set a
+  // rank before it is saved), then ranks are tidied in the database.
+  let all = $state.raw<CatalogEntry[]>(shelf.entries.map((e) => ({ ...e })));
   let type = $state<TypeFilter>('all');
-  let short = $state(false);
   let genre = $state('');
   let pick = $state.raw<CatalogEntry | null | undefined>(undefined);
   let lastPickId: string | undefined;
@@ -52,14 +52,21 @@
     for (const e of changed) await patchEntry(e.id, (d) => void (d.queueRank = e.queueRank));
   }
 
-  async function load() {
-    all = await listEntries();
-    // First visit (or crowded ranks): give everything queued a stable rank.
-    await saveRanks(normalizeRanks(queueOrder(all)));
+  // First visit (or crowded ranks): give everything queued a stable rank.
+  async function tidyRanks() {
+    const changed = normalizeRanks(queueOrder(all));
+    if (!changed.length) return;
+    await saveRanks(changed);
     all = [...all];
-    loaded = true;
   }
-  $effect(() => void load());
+  $effect(() => void untrack(tidyRanks));
+  // Follow the shelf as it changes (a move saved, something started), except mid-drag.
+  $effect(() => {
+    const fresh = shelf.entries;
+    untrack(() => {
+      if (!drag) all = fresh.map((e) => ({ ...e }));
+    });
+  });
 
   // Keep a still-offered genre selected when the list changes.
   $effect(() => {
@@ -113,7 +120,7 @@
   }
 
   function showPick() {
-    const p = pickFromQueue(items, { type, short, genre }, Math.random, lastPickId);
+    const p = pickFromQueue(items, { type, genre }, Math.random, lastPickId);
     pick = p;
     if (p) lastPickId = p.id;
   }
@@ -124,80 +131,70 @@
     ui.openEntry(entry.id);
   }
 
-  const sub = (e: CatalogEntry, pages = true) =>
-    [TYPE_SHORT[e.type], e.creators?.[0], pages && e.pageCount ? `${e.pageCount} pp.` : '']
-      .filter(Boolean)
-      .join(' · ');
+  const sub = (e: CatalogEntry) => [TYPE_SHORT[e.type], e.creators?.[0]].filter(Boolean).join(' · ');
+  const cover = (e: CatalogEntry) => thumbnailUrl(e) || e.thumbnailUrl;
 </script>
+
+{#snippet thumb(entry: CatalogEntry)}
+  <div class="queue-thumb">
+    <CoverImage src={cover(entry)}>
+      {#snippet fallback()}<PlaceholderCover {entry} compact />{/snippet}
+    </CoverImage>
+  </div>
+{/snippet}
 
 <ModalHead eyebrow="Wishlist" title="Your queue" />
 
 <div class="queue-body">
   <div class="visually-hidden" role="status" aria-live="polite">{announcement}</div>
-  <div class="queue-filters">
-    <Segmented options={TYPE_OPTS} bind:value={type} label="Show" />
-  </div>
+  <Segmented options={TYPE_OPTS} bind:value={type} label="Show" full />
 
-  <div class="queue-pick">
-    <div class="queue-pick-controls">
-      <button type="button" class="btn btn-primary" disabled={loaded && !items.length} onclick={showPick}>
-        <Icon name="shuffle" /> <span>Pick something for me</span>
-      </button>
-      <button type="button" class="chip" aria-pressed={short} onclick={() => (short = !short)}
-        >Short books</button
-      >
-      <div class="select-wrap select-wrap-sm">
+  <!-- Let the app choose: a genre, if any, then one tap. -->
+  <section class="queue-pick" aria-label="Pick something">
+    <div class="queue-pick-row">
+      <div class="select-wrap">
         <Select
-          class="select-sm"
           label="Genre"
           bind:value={genre}
           options={[{ value: '', label: 'Any genre' }, ...genres.map((g) => ({ value: g, label: g }))]}
         />
       </div>
+      <button type="button" class="btn btn-primary" disabled={!items.length} onclick={showPick}>
+        <Icon name="shuffle" /> <span>Pick for me</span>
+      </button>
     </div>
-    <div class="queue-pick-result" aria-live="polite">
+    <div aria-live="polite">
       {#if pick === null}
-        <p class="field-hint">Nothing in your queue matches those filters.</p>
+        <p class="field-hint queue-pick-none">Nothing in your queue matches that genre.</p>
       {:else if pick}
         {@const p = pick}
         <div class="queue-pick-card">
-          <div class="queue-pick-label">How about…</div>
-          <div class="queue-pick-title">{p.title}</div>
-          <div class="queue-sub">{sub(p, false)}</div>
+          {@render thumb(p)}
+          <div class="queue-pick-text">
+            <div class="queue-pick-label">How about…</div>
+            <div class="queue-pick-title">{p.title}</div>
+            <div class="queue-sub">{sub(p)}</div>
+          </div>
           <div class="queue-pick-actions">
+            <button type="button" class="btn btn-muted btn-sm" onclick={showPick}>Pick again</button>
             <button type="button" class="btn btn-primary btn-sm" onclick={() => startNow(p)}>Start now</button
             >
-            <button type="button" class="btn btn-muted btn-sm" onclick={showPick}>Pick again</button>
           </div>
         </div>
       {/if}
     </div>
-  </div>
+  </section>
 
+  {#if items.length}
+    <div class="queue-count">
+      <span>{items.length} lined up</span><span aria-hidden="true">Drag to reorder</span>
+    </div>
+  {/if}
   <ol class="queue-list" aria-label="Queue, in order" bind:this={list}>
     {#each shown as entry, index (entry.id)}
-      {@const src = thumbnailUrl(entry) || entry.thumbnailUrl}
       <li class="queue-item" class:dragging={drag?.id === entry.id} data-id={entry.id}>
-        <button
-          type="button"
-          class="queue-handle"
-          aria-label="Reorder {entry.title}, position {index +
-            1} of {items.length}. Use the up and down arrow keys to move it."
-          onpointerdown={(ev) => startDrag(ev, entry, index)}
-          onkeydown={(ev) => {
-            if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
-            ev.preventDefault();
-            void move(index, index + (ev.key === 'ArrowUp' ? -1 : 1), '.queue-handle');
-          }}
-        >
-          <Icon name="grip" />
-        </button>
         <span class="queue-pos" aria-hidden="true">{index + 1}</span>
-        <div class="queue-thumb">
-          <CoverImage {src}>
-            {#snippet fallback()}<PlaceholderCover {entry} compact />{/snippet}
-          </CoverImage>
-        </div>
+        {@render thumb(entry)}
         <button type="button" class="queue-main" onclick={() => ui.openEntry(entry.id)}>
           <span class="queue-title">{entry.title}</span>
           <span class="queue-sub">{sub(entry)}</span>
@@ -222,15 +219,27 @@
             <Icon name="arrowDown" />
           </button>
         </div>
+        <button
+          type="button"
+          class="queue-handle"
+          aria-label="Reorder {entry.title}, position {index +
+            1} of {items.length}. Use the up and down arrow keys to move it."
+          onpointerdown={(ev) => startDrag(ev, entry, index)}
+          onkeydown={(ev) => {
+            if (ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown') return;
+            ev.preventDefault();
+            void move(index, index + (ev.key === 'ArrowUp' ? -1 : 1), '.queue-handle');
+          }}
+        >
+          <Icon name="grip" />
+        </button>
       </li>
     {:else}
-      {#if loaded}
-        <li class="queue-empty">
-          {type === 'all'
-            ? 'Your queue is empty. Set something to “Wishlist” and it lines up here.'
-            : 'Nothing of this type in your queue.'}
-        </li>
-      {/if}
+      <li class="queue-empty">
+        {type === 'all'
+          ? 'Your queue is empty. Set something to “Wishlist” and it lines up here.'
+          : 'Nothing of this type in your queue.'}
+      </li>
     {/each}
   </ol>
 </div>

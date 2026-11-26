@@ -71,9 +71,8 @@ describe('pickFromQueue', () => {
     want('hobbit', 2, { pageCount: 290, genres: ['Fantasy'] }),
     want('alien', 3, { type: 'movie', genres: ['Sci-Fi'] })
   ];
-  it('respects type, length and genre filters', () => {
+  it('respects type and genre filters', () => {
     expect(pickFromQueue(q, { type: 'movie' })?.id).toBe('alien');
-    expect(pickFromQueue(q, { short: true })?.id).toBe('hobbit');
     expect(pickFromQueue(q, { genre: 'Fantasy' })?.id).toBe('hobbit');
     expect(pickFromQueue(q, { type: 'tv' })).toBeNull();
   });

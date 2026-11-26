@@ -65,13 +65,6 @@ export function ratingLabel(rating: number | null | undefined, on: RatingScale =
   return r == null ? '' : `${ratingValue(r, on)}/${on}`;
 }
 
-/** "4.5/5" or "7.5/10" read back from text (Markdown, a pasted label) into a stored rating. */
-export function parseRatingLabel(text: string): number | null {
-  const m = /(\d+(?:\.\d+)?)\s*\/\s*(5|10)\b/.exec(text);
-  if (!m) return null;
-  return normalizeRating(Number(m[1]) / (Number(m[2]) / 5));
-}
-
 /**
  * Rating histogram, highest first. Whole-point bins unless any rating falls
  * between them, then half-point bins. Out of 5 that is 5…1 or 5, 4.5…0.5;

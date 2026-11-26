@@ -1,8 +1,7 @@
 <script lang="ts" generics="V extends string">
   import { IconTabs } from 'dusk-dawn';
   import type { ComponentProps } from 'svelte';
-  import { ui } from '../state/ui.svelte';
-  import Icon from './Icon.svelte';
+  import HeaderActions from './HeaderActions.svelte';
 
   // The library's tabs, floated in at the top once the page's own tabs have
   // scrolled away and the reader scrolls back up a little; it slides away again
@@ -68,7 +67,7 @@
 
 <div class="floating-bar" class:is-shown={shown} inert={!shown} aria-hidden={!shown}>
   <div class="floating-bar-inner">
-    <!-- The page header, collapsed: the name (back to the top) and Settings. -->
+    <!-- The page header, collapsed: the name (back to the top), Stats, Queue and Settings. -->
     <div class="floating-bar-head">
       <button
         type="button"
@@ -81,15 +80,7 @@
       >
         Book<em>Shelf</em><span class="visually-hidden">, back to the top</span>
       </button>
-      <button
-        type="button"
-        class="btn-icon"
-        aria-label="Settings"
-        title="Settings"
-        onclick={() => ui.open({ kind: 'settings' })}
-      >
-        <Icon name="settings" />
-      </button>
+      <HeaderActions />
     </div>
     <IconTabs {tabs} {value} label="Show" labels="selected" onselect={choose} />
   </div>

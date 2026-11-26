@@ -61,7 +61,7 @@ export async function encryptPayload(
   passphrase: string,
   { iterations = DEFAULT_ITERATIONS, reuseSalt }: { iterations?: number; reuseSalt?: string } = {}
 ): Promise<string> {
-  if (!passphrase) throw new Error('A sync passphrase is required.');
+  if (!passphrase) throw new Error('A backup passphrase is required.');
   const salt = reuseSalt ? fromBase64(reuseSalt) : crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const header: Omit<Envelope, 'iv' | 'data'> = {
@@ -87,12 +87,11 @@ export async function decryptPayload(
   try {
     env = JSON.parse(envelopeJson);
   } catch {
-    throw new Error('The sync file is not readable (corrupted?).');
+    throw new Error('The backup file can’t be read (is it damaged?).');
   }
-  if (env?.format !== FORMAT) throw new Error('Not a BookShelf sync file.');
-  if (env.v > FORMAT_VERSION)
-    throw new Error('The sync file was written by a newer BookShelf. Update the app.');
-  const unreadable = () => new Error('The sync file is not readable (corrupted?).');
+  if (env?.format !== FORMAT) throw new Error('Not a BookShelf backup file.');
+  if (env.v > FORMAT_VERSION) throw new Error('The backup was written by a newer BookShelf. Update the app.');
+  const unreadable = () => new Error('The backup file can’t be read (is it damaged?).');
   const iterations = env.kdf?.iterations;
   if (
     env.kdf?.alg !== 'PBKDF2-SHA256' ||
@@ -122,7 +121,7 @@ export async function decryptPayload(
       data
     );
   } catch {
-    throw new Error('Wrong sync passphrase, or the sync file is corrupted.');
+    throw new Error('Wrong backup passphrase, or the backup file is damaged.');
   }
   try {
     return { plaintext: dec.decode(await gunzip(new Uint8Array(compressed))), salt: env.kdf.salt };

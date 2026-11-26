@@ -7,7 +7,6 @@ export interface LibraryView {
   type?: string;
   sort?: string;
   layout?: string;
-  shelf?: string;
 }
 
 export function loadView(): LibraryView {

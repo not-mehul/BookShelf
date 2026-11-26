@@ -1,6 +1,6 @@
 // Find a match fills in an imported book's cover and details from the
-// catalog, one at a time from its menu or all the sure ones from Settings;
-// copies of one book are merged from Settings.
+// catalog, one at a time from its menu or the whole shelf from Library
+// refresh; copies of one book are merged from Settings' Duplicate check.
 import { test, expect } from './app-test.js';
 
 // A 1×1 PNG.
@@ -104,12 +104,65 @@ test('Find a match fills in an imported book and keeps what was there', async ({
   expect(book.creators).toEqual(['James S.A. Corey']);
 });
 
-test('Settings matches the sure ones in one go', async ({ page }) => {
+test('Library refresh finds matches, lets you choose, and fills in only what was missing', async ({
+  page
+}) => {
+  // Les Misérables gets two editions to choose between; Piranesi is not found.
+  await page.route('https://www.googleapis.com/books/v1/volumes**', (route) => {
+    const q = (new URL(route.request().url()).searchParams.get('q') || '')
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase();
+    if (q.includes('leviathan')) return route.fulfill({ json: { items: [VOLUMES.leviathan] } });
+    if (q.includes('miserables'))
+      return route.fulfill({
+        json: {
+          items: [
+            { id: 'lm1', volumeInfo: { title: 'Les Misérables, Volume 1', authors: ['Hugo'] } },
+            {
+              id: 'lm2',
+              volumeInfo: { title: 'The Wretched', authors: ['V. Hugo'], description: 'Valjean.' }
+            }
+          ]
+        }
+      });
+    return route.fulfill({ json: { items: [] } });
+  });
   await importGoodreads(page);
-  await expect(page.getByText('3 entries have no catalog match yet.', { exact: false })).toBeVisible();
-  await page.getByRole('button', { name: 'Match', exact: true }).click();
-  await expect(page.getByText('Matched 3 entries.')).toBeVisible({ timeout: 15000 });
-  expect((await stored(page, 'Piranesi'))[0].sourceId).toBe('pi');
+  await expect(
+    page.getByText('3 entries are missing a cover, synopsis or details.', { exact: false })
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.locator('#modal-title')).toHaveText('Library refresh');
+  await expect(page.getByText('Checked 3 entries.')).toBeVisible({ timeout: 15000 });
+
+  const sure = page.locator('section', { has: page.getByRole('heading', { name: /Ready to update/ }) });
+  await expect(sure.locator('.refresh-title')).toHaveText(['Leviathan Wakes']);
+  await expect(sure.getByRole('checkbox', { name: 'Update Leviathan Wakes' })).toBeChecked();
+  await expect(sure).toContainText('Fills in cover, synopsis, genres');
+
+  const choose = page.locator('section', { has: page.getByRole('heading', { name: /Pick the right one/ }) });
+  await choose.getByRole('radio', { name: /The Wretched/ }).click();
+  await expect(choose.getByRole('checkbox', { name: 'Update Les Misérables' })).toBeChecked();
+
+  const none = page.locator('section', { has: page.getByRole('heading', { name: /Not found/ }) });
+  await expect(none.locator('.refresh-title')).toHaveText(['Piranesi']);
+  await none.getByRole('button', { name: 'Leave as is' }).click();
+  await expect(none).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Update 2 entries' }).click();
+  await expect(page.getByText(/^Updated 2 entries\./)).toBeVisible({ timeout: 15000 });
+  const [book] = await stored(page, 'Leviathan Wakes');
+  expect(book).toMatchObject({
+    sourceId: 'lw',
+    rating: 4,
+    summary: 'Humanity has colonized the solar system.'
+  });
+  expect((await stored(page, 'Les Misérables'))[0]).toMatchObject({ sourceId: 'lm2', summary: 'Valjean.' });
+
+  // Back in Settings, nothing is left to refresh: Piranesi was left as it is.
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByText('Everything on the shelf has its cover, synopsis and details.')).toBeVisible();
 });
 
 test('two copies of a book merge into one from Settings', async ({ page }) => {

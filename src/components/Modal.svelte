@@ -62,6 +62,7 @@
 
 <script lang="ts">
   import { setContext, tick } from 'svelte';
+  import { cubicIn } from 'svelte/easing';
   import { pushBackHandler } from '../platform/native';
   import Icon from './Icon.svelte';
 
@@ -94,10 +95,12 @@
     void tick().then(() => {
       const active = document.activeElement;
       if (card && (!card.contains(active) || active === card || active === closeBtn)) {
+        // Without scrolling: while the sheet is still rising, reaching for
+        // the title would scroll the dialog and jolt the sheet.
         (
           card.querySelector<HTMLElement>('#modal-title') ??
           card.querySelector<HTMLElement>('input, textarea, select, button:not(.modal-close)')
-        )?.focus();
+        )?.focus({ preventScroll: true });
       }
     });
   }
@@ -117,6 +120,29 @@
     };
   });
 
+  // Closing: the sheet slides back down (a centred modal sinks and fades) as
+  // the backdrop clears. The dialog stays open until both have finished.
+  const CLOSE_MS = 280;
+  const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function leaveBackdrop(_node: Element) {
+    return {
+      duration: calm() ? 0 : CLOSE_MS,
+      css: (t: number) =>
+        `background-color: color-mix(in srgb, var(--modal-backdrop) ${(t * 100).toFixed(1)}%, transparent)`
+    };
+  }
+  function leaveCard(_node: Element) {
+    const sheet = matchMedia('(max-width: 899px)').matches;
+    return {
+      duration: calm() ? 0 : CLOSE_MS,
+      easing: cubicIn,
+      css: (t: number, u: number) =>
+        sheet
+          ? `transform: translateY(${(u * 100).toFixed(2)}%)`
+          : `opacity: ${t}; transform: translateY(${(u * 12).toFixed(2)}px) scale(${1 - u * 0.02})`
+    };
+  }
+
   $effect(() => {
     void contentKey;
     card.scrollTop = 0;
@@ -130,6 +156,7 @@
   class="modal-dialog is-sheet"
   class:is-full={size === 'full'}
   aria-labelledby="modal-title"
+  out:leaveBackdrop
   onclick={(ev) => {
     // The dialog box fills the viewport; a click on it outside the card dismisses.
     if (ev.target === dialog) onclose();
@@ -139,7 +166,7 @@
     onclose();
   }}
 >
-  <div class="modal-card" bind:this={card} onscroll={() => (scrolled = card.scrollTop > 4)}>
+  <div class="modal-card" bind:this={card} out:leaveCard onscroll={() => (scrolled = card.scrollTop > 4)}>
     <div class="sheet-bar" class:is-scrolled={scrolled} class:is-titled={bar.titleShown}>
       <div class="sheet-handle" aria-hidden="true"></div>
       {#if bar.back}

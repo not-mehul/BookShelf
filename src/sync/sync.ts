@@ -57,8 +57,8 @@ export function syncNow(options: { iterations?: number } = {}): Promise<SyncRepo
 }
 async function runSync({ iterations }: { iterations?: number }): Promise<SyncReport> {
   const passphrase = await getSetting('sync_passphrase');
-  if (!passphrase) throw new Error('Set a sync passphrase first.');
-  if (!(await getSyncStatus())) throw new Error('Choose a sync folder first.');
+  if (!passphrase) throw new Error('Set a backup passphrase first.');
+  if (!(await getSyncStatus())) throw new Error('Choose a backup folder first.');
 
   try {
     // 1. Pull.
@@ -137,7 +137,7 @@ async function runSync({ iterations }: { iterations?: number }): Promise<SyncRep
 function parseSnapshot(plaintext: string): Snapshot {
   const data = JSON.parse(plaintext);
   if ((data.version ?? 0) > SNAPSHOT_VERSION)
-    throw new Error('The sync file was written by a newer BookShelf. Update the app.');
+    throw new Error('The backup was written by a newer BookShelf. Update the app.');
   return {
     entries: Array.isArray(data.entries) ? data.entries : [],
     tombstones: Array.isArray(data.tombstones) ? data.tombstones : []
@@ -177,54 +177,64 @@ export async function forgetSyncFolder() {
   await callNative('syncForget');
 }
 
-// ── Automatic sync ─────────────────────────────────────────────
+// ── Automatic backup ───────────────────────────────────────────
 
-const DEBOUNCE_MS = 15_000;
-const MIN_INTERVAL_MS = 60_000;
-let debounce: ReturnType<typeof setTimeout> | undefined;
-let lastRun = 0;
+export type BackupEvery = 'daily' | 'weekly' | 'monthly' | 'off';
+export const BACKUP_EVERY_KEY = 'sync_every';
+export const BACKUP_EVERY: BackupEvery[] = ['daily', 'weekly', 'monthly', 'off'];
+
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+/** How long after the last backup another is due: an hour of slack, so a
+ *  backup made each morning doesn't drift later day by day. */
+const INTERVAL: Record<Exclude<BackupEvery, 'off'>, number> = {
+  daily: DAY - HOUR,
+  weekly: 7 * DAY - HOUR,
+  monthly: 30 * DAY - HOUR
+};
+
+/** The chosen frequency; daily unless changed. */
+export function readBackupEvery(): BackupEvery {
+  try {
+    const v = localStorage.getItem(`bookshelf:${BACKUP_EVERY_KEY}`);
+    return BACKUP_EVERY.includes(v as BackupEvery) ? (v as BackupEvery) : 'daily';
+  } catch {
+    return 'daily';
+  }
+}
+
+/** Whether a backup is due, `last` being the ISO time of the last one. */
+export function backupDue(every: BackupEvery, last: string, now = Date.now()): boolean {
+  if (every === 'off') return false;
+  const at = Date.parse(last);
+  return !Number.isFinite(at) || now - at >= INTERVAL[every];
+}
 
 /**
- * Run a sync in the background if configured, swallowing errors (they are
- * recorded in `sync_last_error` and shown in Settings).
- * @param [onApplied] Called if the sync changed local data.
+ * Back up now if set up and due, swallowing errors (they are recorded in
+ * `sync_last_error` and shown in Settings).
+ * @param [onApplied] Called if the backup brought in changes from another device.
  */
-export async function backgroundSync(onApplied?: () => void) {
+export async function backupIfDue(onApplied?: () => void, now = Date.now()) {
+  if (!backupDue(readBackupEvery(), await getSetting('sync_last'), now)) return;
   if (!(await isSyncConfigured())) return;
-  lastRun = Date.now();
   try {
     const report = await syncNow();
     if (report.pulled || report.removed) onApplied?.();
   } catch (err) {
-    console.warn('Sync failed:', err);
+    console.warn('Backup failed:', err);
   }
 }
 
 /**
- * Wire automatic sync: on start, shortly after local changes, when the app is
- * backgrounded (push before the user leaves), and when it returns (pull).
+ * Back up on the chosen schedule: checked when the app starts and whenever
+ * it comes back to the front.
  * @param onApplied Refresh the UI after incoming changes.
- * @returns Call after every local change to schedule a sync.
  */
-export function startAutoSync(onApplied?: () => void): () => void {
-  if (!syncSupported()) return () => {};
-  void backgroundSync(onApplied);
+export function startAutoBackup(onApplied?: () => void): void {
+  if (!syncSupported()) return;
+  void backupIfDue(onApplied);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      if (debounce !== undefined) {
-        clearTimeout(debounce);
-        debounce = undefined;
-        void backgroundSync(onApplied);
-      }
-    } else if (Date.now() - lastRun > MIN_INTERVAL_MS) {
-      void backgroundSync(onApplied);
-    }
+    if (document.visibilityState === 'visible') void backupIfDue(onApplied);
   });
-  return () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      debounce = undefined;
-      void backgroundSync(onApplied);
-    }, DEBOUNCE_MS);
-  };
 }

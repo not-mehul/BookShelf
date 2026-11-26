@@ -68,17 +68,20 @@ shell.
 
 ```
 src/
-  main.ts            Boot: theme, shelf, mount, share/widget events, auto-sync (outside the app: a notice)
+  main.ts            Boot: theme, shelf, mount, share/widget events, scheduled backup (outside the app: a notice)
   components/        Svelte 5 UI (runes)
-    App.svelte       Header, library, add button, the one dialog
-    Library.svelte   Grid or list: type tabs, filter, sort, tag chips, the overflow menu, selection mode
+    App.svelte       Header (Stats, Queue, Settings), library, add button, the one dialog
+    Library.svelte   Grid or list: type tabs, filter, sort, tag chips, the overflow menu, selection mode;
+                     a tab draws its first entries at once and the rest a batch a frame
     HomeStrip.svelte Up next for TV seasons and the day's quote, one card each, above the shelf
     EntryCard.svelte, Stars.svelte, PlaceholderCover.svelte, OverflowMenu.svelte, RatingControl.svelte, …
     Modal.svelte     The native <dialog> every view opens in: a bottom sheet below 900px with a sticky
-                     title bar (handle, back, title once scrolled, actions, close); focus, Escape, Android Back
+                     title bar (handle, back, title once scrolled, actions, close); focus, Escape, Android Back;
+                     rises on open and slides back down on close
     entry/           Entry detail, edit form, series, quotes, tags, episodes, alerts
     add/             Add flow: medium → search / manual / quote
-    settings/        Preferences: appearance (theme, rating scale), sync, your data, search keys
+    settings/        Preferences: appearance (theme, rating scale), backup, your data (restore, import,
+                     Library refresh, duplicate check), search keys
     stats/           Statistics parts: the month chart, bar lists
     Queue.svelte, BulkEdit.svelte, Stats.svelte, ShareCard.svelte
   state/
@@ -90,6 +93,7 @@ src/
     tmdb.ts          TMDB v3 client (search, details with credits, seasons, find by TheTVDB id)
     tmdb-move.ts     One-time move of films and shows from TheTVDB ids to TMDB
     match.ts         Find a match: catalog candidates, the sure pick, filling only empty fields
+    refresh.ts       Library refresh: what each entry is missing, a proposal for each, what was left as is
     normalize.ts     API responses → unified CatalogEntry shape
     episode-sync.ts  Episode-guide refresh + Android reminder schedule
   db/
@@ -99,8 +103,6 @@ src/
     layout.ts        Text wrapping / fit-to-box (pure)
     share-image.ts   Share cards to the Android share sheet
   export/
-    markdown.ts      DB → Markdown serializer
-    import.ts        Markdown parser (round-trips the export; skips what is already on the shelf)
     json.ts          Lossless JSON backup / restore
     share.ts         Single-entry share
   platform/
@@ -111,7 +113,7 @@ src/
     crypto.ts        gzip + PBKDF2 / AES-256-GCM envelope (WebCrypto)
     fields.ts        Field-level change times (fieldTimes) and the per-group merge of two copies
     merge.ts         Snapshot merge: entries field by field, deletion tombstones (pure)
-    sync.ts          Pull → merge → push orchestration, auto-sync
+    sync.ts          Pull → merge → push orchestration; the backup schedule (daily, weekly, monthly, off)
   util/              Pure helpers: settings, share intake, barcode, stars, series, duplicates,
                      queue ranks, episodes, bulk edits, entry matching, icons, covers
   styles/
@@ -135,16 +137,18 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
 ## Testing & CI
 
 - **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
-  detection, Markdown parsing, share intake, the native bridge protocol and
+  detection, share intake, the native bridge protocol and
   back-handler stack, Keystore routing, sync encryption and merge (plus an
   end-to-end sync between two simulated devices), the widget summary, half-star
   ratings, series detection, queue ranking and picks, episode progress,
-  share-card text layout, bulk tag edits, and the move from TheTVDB to TMDB.
+  share-card text layout, bulk tag edits, the move from TheTVDB to TMDB, what
+  Library refresh looks for, and the backup schedule.
 - **E2E (Playwright)** — the built app at phone size, in a
   simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf
   (`e2e/fixtures/shelf.json`) imported through Settings: modals and focus, adding
-  entries, share-into, Back, insets, Keystore, barcode scan, widget, sync, half
-  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards.
+  entries, share-into, Back, insets, Keystore, barcode scan, widget, backup, half
+  stars, quote links, series, queue, bulk edit, TV episodes, alerts, share cards,
+  Library refresh, and a big shelf drawn in batches.
 - **Screenshots (Playwright)** — `e2e/visual.spec.js` takes the library (grid, list,
   menu), a book, a show, a quote, adding, Settings, Statistics and the queue in Dusk
   and Dawn at phone size, and the library and a book at tablet width, from

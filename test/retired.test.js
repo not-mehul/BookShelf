@@ -11,9 +11,10 @@ describe('retired fields', () => {
     expect(dropRetired({ ...show })).toEqual(show);
   });
 
-  it('removes saved reading goals and nothing else', () => {
+  it('removes saved reading goals and the weekly backup date, and nothing else', () => {
     const data = new Map([
       ['bookshelf:reading_goal_2025', '24'],
+      ['bookshelf:last_backup_at', '1764000000000'],
       ['bookshelf:reading_goal_2026', '30'],
       ['bookshelf:theme', 'light']
     ]);

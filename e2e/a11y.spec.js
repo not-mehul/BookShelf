@@ -94,7 +94,7 @@ test('ratings out of 10 take half points', async ({ page }) => {
   await close(page);
   await expect(card(page, "Rocannon's World").locator('.stars-number')).toHaveText('6/10');
   await card(page, "Rocannon's World").click();
-  const slider = page.getByRole('slider', { name: 'Rating' });
+  const slider = page.getByRole('slider', { name: 'Rating', exact: true });
   await expect(slider).toHaveAttribute('aria-valuemax', '10');
   await slider.focus();
   await page.keyboard.press('ArrowRight');

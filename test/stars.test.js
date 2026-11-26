@@ -1,12 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  normalizeRating,
-  starString,
-  ratingLabel,
-  ratingDistribution,
-  parseRatingLabel,
-  ratingBrief
-} from '../src/util/stars';
+import { normalizeRating, starString, ratingLabel, ratingDistribution, ratingBrief } from '../src/util/stars';
 
 describe('star ratings', () => {
   it('snaps to quarter-star steps (half points out of 10) within 0.25–5', () => {
@@ -54,10 +47,6 @@ describe('star ratings', () => {
     expect(ratingLabel(3.75, 5)).toBe('3.75/5');
     expect(ratingBrief(3.75, 10)).toBe('7.5/10');
     expect(ratingBrief(3.5, 5)).toBe('★★★½☆');
-    expect(parseRatingLabel('★★★½☆ **3.5/5**')).toBe(3.5);
-    expect(parseRatingLabel('7.5/10')).toBe(3.75);
-    expect(parseRatingLabel('3.75/5')).toBe(3.75);
-    expect(parseRatingLabel('no rating')).toBeNull();
   });
 
   it('bins out of 10 on the ten-point scale', () => {

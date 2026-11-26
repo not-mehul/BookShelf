@@ -27,7 +27,7 @@ test.describe('on the shelf', () => {
 
   test('half-star rating via keyboard shows on the card', async ({ page }) => {
     await card(page, "Rocannon's World").click();
-    const slider = page.getByRole('slider', { name: 'Rating' });
+    const slider = page.getByRole('slider', { name: 'Rating', exact: true });
     await expect(slider).toHaveAttribute('aria-valuenow', '3');
     await slider.focus();
     await page.keyboard.press('ArrowRight');
@@ -112,7 +112,7 @@ test.describe('on the shelf', () => {
     const openQueue = () => page.getByRole('button', { name: 'Queue', exact: true }).click();
     const order = () => page.locator('dialog[open] .queue-title').allTextContents();
     await openQueue();
-    await expect.poll(order).toEqual(['The Hobbit', 'The Dispossessed', 'Arrival']); // loads async
+    await expect.poll(order).toEqual(['The Hobbit', 'The Dispossessed', 'Arrival']);
     // The move buttons are for the keyboard: they show once focused.
     await page.getByRole('button', { name: 'Move The Hobbit down' }).focus();
     await page.keyboard.press('Enter');
@@ -125,8 +125,8 @@ test.describe('on the shelf', () => {
     await openQueue();
     await expect.poll(order).toEqual(['The Dispossessed', 'Arrival', 'The Hobbit']);
 
-    await page.locator('dialog[open] .queue-filters button', { hasText: 'Movies' }).click();
-    await page.getByRole('button', { name: 'Pick something for me' }).click();
+    await page.locator('dialog[open]').getByRole('radio', { name: 'Movies' }).click();
+    await page.getByRole('button', { name: 'Pick for me' }).click();
     await expect(page.locator('.queue-pick-title')).toHaveText('Arrival');
   });
 

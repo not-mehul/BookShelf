@@ -57,10 +57,18 @@ test('adding a quote puts it on the shelf', async ({ page }) => {
   await expect(page.locator('.lib-count')).toHaveText('1 entry');
 });
 
-test('phone layout: filter gets its own row; settings has sync and no browser options', async ({ page }) => {
+test('phone layout: filter and sort share a row; settings has backup and no browser options', async ({
+  page
+}) => {
   const filter = await page.locator('.filter-input').boundingBox();
-  const shell = await page.locator('.lib-tools-row').boundingBox();
-  expect(filter.width).toBeGreaterThan(shell.width * 0.9);
+  const sort = await page.getByRole('combobox', { name: 'Sort by' }).boundingBox();
+  expect(Math.abs(filter.y + filter.height / 2 - (sort.y + sort.height / 2))).toBeLessThan(4);
+  // Stats and Queue sit with Settings in the header, not by the filter.
+  const header = page.locator('.site-header');
+  await expect(header.getByRole('button')).toHaveCount(3);
+  for (const [i, name] of ['Stats', 'Queue', 'Settings'].entries())
+    await expect(header.getByRole('button').nth(i)).toHaveAccessibleName(name);
+  await expect(page.locator('.lib-tools-row').getByRole('button', { name: /Stats|Queue/ })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Settings' }).click();
   expect(await dialogName(page)).toBe('Preferences');
@@ -73,7 +81,17 @@ test('phone layout: filter gets its own row; settings has sync and no browser op
   await expect(
     page.getByText('This product uses the TMDB API but is not endorsed or certified by TMDB.')
   ).toBeVisible();
-  await expect(page.locator('#weeklyBackup')).toBeVisible();
+  // One backup (the folder, on a schedule): no separate Back up, weekly copy or Markdown.
+  await expect(page.getByRole('heading', { name: 'Backup' })).toBeVisible();
+  for (const gone of ['Weekly backup', 'Back up', 'Import a Markdown export', 'Possible duplicates'])
+    await expect(page.locator('.settings-row-label', { hasText: new RegExp(`^${gone}$`) })).toHaveCount(0);
+  await expect(page.locator('.settings-row-label')).toContainText([
+    'Folder',
+    'Restore a backup',
+    'Import from Goodreads, StoryGraph or Letterboxd',
+    'Library refresh',
+    'Duplicate check'
+  ]);
 });
 
 test('hides easter eggs, counts them once, and lists the count in Settings', async ({ page }) => {

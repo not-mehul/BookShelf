@@ -5,13 +5,15 @@
     value: V;
     label: string;
     onchange?: (value: V) => void;
+    /** Stretch across the row, the options sharing it evenly. */
+    full?: boolean;
   }
 
-  let { options, value = $bindable(), label, onchange }: Props = $props();
+  let { options, value = $bindable(), label, onchange, full = false }: Props = $props();
 </script>
 
 <!-- Scrolls sideways so wide controls don't overflow on narrow screens. -->
-<div class="seg-scroll">
+<div class="seg-scroll" class:seg-full={full}>
   <div class="segmented" role="radiogroup" aria-label={label}>
     {#each options as opt (opt.value)}
       <button

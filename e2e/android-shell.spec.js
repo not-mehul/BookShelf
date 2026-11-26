@@ -179,21 +179,27 @@ test('the widget receives a summary after changes', async ({ page }) => {
   expect(summary.theme).toBe('dark');
 });
 
-test('sync settings: choose a folder, then Sync now writes an encrypted file', async ({ page }) => {
+test('backup settings: choose a folder, then Back up now writes an encrypted file', async ({ page }) => {
   await boot(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const section = page.locator('.sync-section');
-  await expect(section).toContainText('Folder: not chosen');
-  await section.getByRole('button', { name: 'Choose folder' }).click();
-  await expect(section).toContainText('Folder: Drive/BookShelf');
+  await expect(section).toContainText('Not chosen yet');
+  // Stop and Back up now come once there is a folder.
+  await expect(section.getByRole('button', { name: 'Back up now' })).toHaveCount(0);
+  await section.getByRole('button', { name: 'Choose' }).click();
+  await expect(section).toContainText('Drive/BookShelf');
 
-  await section.getByLabel('Sync passphrase').fill('correct horse battery');
+  await section.getByLabel('Backup passphrase').fill('correct horse battery');
   await expect
     .poll(() => page.evaluate(() => window.__keystore.sync_passphrase))
     .toBe('correct horse battery');
+  // Daily unless chosen; the choice is kept.
+  await expect(section.getByRole('radio', { name: 'Daily' })).toHaveAttribute('aria-checked', 'true');
+  await section.getByRole('radio', { name: 'Weekly' }).click();
+  expect(await page.evaluate(() => localStorage.getItem('bookshelf:sync_every'))).toBe('weekly');
   await page.keyboard.press('Escape');
 
-  // Something to sync.
+  // Something to back up.
   await page.locator('.fab').click();
   await page.locator('.medium-choice', { hasText: 'Quote' }).click();
   await page.fill('#q-text', 'A secret only this shelf knows.');
@@ -201,11 +207,30 @@ test('sync settings: choose a folder, then Sync now writes an encrypted file', a
   await expect(page.locator('dialog[open] .modal-quote-text')).toBeVisible(); // saved
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog')).toHaveCount(0);
+  // Edits no longer back up on their own: only on the schedule, or by hand.
+  expect(await page.evaluate(() => window.__syncFile ?? null)).toBeNull();
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.locator('.sync-section').getByRole('button', { name: 'Sync now' }).click();
-  await expect(page.locator('.sync-section .settings-notice')).toContainText('Synced', { timeout: 15_000 });
+  await page.locator('.sync-section').getByRole('button', { name: 'Back up now' }).click();
+  await expect(page.locator('.sync-section .settings-notice')).toHaveText('Backed up.', { timeout: 15_000 });
   const file = await page.evaluate(() => window.__syncFile);
   expect(JSON.parse(file)).toMatchObject({ format: 'bookshelf-sync', cipher: 'AES-256-GCM' });
   expect(file).not.toContain('secret only this shelf');
+});
+
+test('a backup runs when the app opens only once it is due', async ({ page }) => {
+  const reads = async () =>
+    (await sent(page)).filter((m) => m.type === 'call' && m.method === 'syncRead').length;
+  const opened = (last) => page.addInitScript((at) => localStorage.setItem('bookshelf:sync_last', at), last);
+  await opened(new Date().toISOString());
+  await boot(page, { syncFolder: 'Drive/BookShelf', secrets: { sync_passphrase: 'pw' } });
+  await page.waitForTimeout(500);
+  expect(await reads()).toBe(0);
+
+  await opened('2020-01-01T00:00:00.000Z');
+  await page.reload();
+  await expect.poll(reads, { timeout: 15_000 }).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('bookshelf:sync_last')), { timeout: 15_000 })
+    .not.toMatch(/^2020/);
 });
