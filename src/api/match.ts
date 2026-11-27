@@ -1,18 +1,40 @@
 // Find a match: linking an entry that came from outside search (an import, the
-// manual form, a film TheTVDB→TMDB couldn't place) to the catalog, for its
+// manual form) to the catalog, for its
 // cover and details. Only catalog fields are filled in, and only where empty;
 // the user's title, status, rating, dates, notes and tags are never touched.
 
 import { patchEntry } from '../db/database';
 import { foldText } from '../util/fold';
 import { fetchThumbBlob } from '../util/thumbs';
-import type { CatalogEntry, SearchHit } from '../types';
+import type { CatalogEntry, Episode, SearchHit } from '../types';
 import { searchAllBooks } from './books';
-import { carryWatched, pickFilm } from './tmdb-move';
-import { getEpisodeGuide, searchTmdb } from './tmdb';
+import { getEpisodeGuide, searchTmdb, tmdbNumber } from './tmdb';
 
-/** An entry with no catalog record behind it: no id, or a TheTVDB one TMDB couldn't place. */
-export const lacksMatch = (e: CatalogEntry) => e.type !== 'quote' && (!e.sourceId || Boolean(e.needsMatch));
+const sameTitle = (a: string | null | undefined, b: string | null | undefined) =>
+  Boolean(a && b) && foldText(a!).trim() === foldText(b!).trim();
+
+/** The one film among `hits` that is this entry, or null when none or several fit. */
+export function pickFilm(entry: Pick<CatalogEntry, 'title' | 'originalTitle' | 'year'>, hits: SearchHit[]) {
+  const titled = hits.filter(
+    (h) =>
+      sameTitle(h.title, entry.title) ||
+      sameTitle(h.originalTitle, entry.title) ||
+      sameTitle(h.title, entry.originalTitle) ||
+      sameTitle(h.originalTitle, entry.originalTitle)
+  );
+  const fits = entry.year ? titled.filter((h) => h.year === entry.year) : titled;
+  return fits.length === 1 ? fits[0]! : null;
+}
+
+/** Ticked episodes, by season and episode number, as ids in the new guide. */
+export function carryWatched(old: Episode[], watched: number[], next: Episode[]): number[] {
+  const seen = new Set(old.filter((ep) => watched.includes(ep.id)).map((ep) => `${ep.s}:${ep.e}`));
+  return next.filter((ep) => seen.has(`${ep.s}:${ep.e}`)).map((ep) => ep.id);
+}
+
+/** An entry with no catalog record behind it: no id, or a film or show without a TMDB one. */
+export const lacksMatch = (e: CatalogEntry) =>
+  e.type !== 'quote' && (!e.sourceId || ((e.type === 'movie' || e.type === 'tv') && !tmdbNumber(e.sourceId)));
 
 /** What a search for this entry starts from: the ISBN, else the title (and author, for a book). */
 export function defaultQuery(e: CatalogEntry): string {
@@ -68,12 +90,11 @@ export function confidentPick(e: CatalogEntry, hits: SearchHit[]): SearchHit | n
 }
 
 const empty = (v: unknown) => v == null || v === '' || (Array.isArray(v) && v.length === 0);
-const isTvdbArtwork = (url: string | null | undefined) => /(^|\.)thetvdb\.com\//.test(url ?? '');
 
 /** The parts of an entry a match would fill in, by name, for the preview. */
 export function matchFills(e: CatalogEntry, hit: SearchHit): string[] {
   const fills: string[] = [];
-  if (hit.thumbnailUrl && (empty(e.thumbnailUrl) || isTvdbArtwork(e.thumbnailUrl))) fills.push('Cover');
+  if (hit.thumbnailUrl && empty(e.thumbnailUrl)) fills.push('Cover');
   if (hit.summary && empty(e.summary)) fills.push('Synopsis');
   if (hit.genres.length && empty(e.genres)) fills.push('Genres');
   if (hit.creators.length && empty(e.creators)) fills.push(e.type === 'book' ? 'Author' : 'Creators');
@@ -89,7 +110,7 @@ export function matchFills(e: CatalogEntry, hit: SearchHit): string[] {
 export function applyMatch(draft: CatalogEntry, hit: SearchHit, cover: Blob | null = null): void {
   draft.sourceId = hit.sourceId;
   if (hit.detailUrl) draft.detailUrl = hit.detailUrl;
-  if (hit.thumbnailUrl && (empty(draft.thumbnailUrl) || isTvdbArtwork(draft.thumbnailUrl))) {
+  if (hit.thumbnailUrl && empty(draft.thumbnailUrl)) {
     draft.thumbnailUrl = hit.thumbnailUrl;
     draft.thumbnailBlob = cover;
   }
@@ -100,7 +121,6 @@ export function applyMatch(draft: CatalogEntry, hit: SearchHit, cover: Blob | nu
   if (empty(draft.pageCount) && hit.pageCount) draft.pageCount = hit.pageCount;
   if (empty(draft.isbn) && hit.isbn) draft.isbn = hit.isbn;
   if (empty(draft.originalTitle) && hit.originalTitle) draft.originalTitle = hit.originalTitle;
-  delete draft.needsMatch;
   // Films and shows load their credits (and a show its seasons) when opened.
   if (draft.type === 'movie' || draft.type === 'tv') draft.enriched = false;
 }

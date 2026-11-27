@@ -1,8 +1,5 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { isLegacy, moveToTmdb } from '../../api/tmdb-move';
-  import { plural } from '../../util/labels';
-  import { shelf } from '../../state/shelf.svelte';
   import type { KeyCheck } from '../../api/key-check';
   import SettingField from './SettingField.svelte';
   import { GOOGLE, TMDB } from './search-keys';
@@ -21,24 +18,8 @@
     rejected: 'Key not accepted'
   };
 
-  // Films and shows still on TheTVDB move over once a key is saved.
-  const waiting = $derived(shelf.entries.filter(isLegacy).length);
-  const unmatched = $derived(shelf.entries.filter((e) => e.needsMatch).length);
-  // Opened at first when films are waiting on a key; after that it stays as the user leaves it.
-  const startOpen = untrack(() => tmdb === 'none' && waiting > 0);
-  let moving = $state<{ done: number; total: number } | null>(null);
-  let moved = $state<string>('');
-
-  // Once TMDB takes the key (or it can't be asked), films and shows still on
-  // TheTVDB move over.
-  async function tmdbChecked(result: KeyCheck) {
+  function tmdbChecked(result: KeyCheck) {
     tmdb = result.kind === 'rejected' ? 'rejected' : 'saved';
-    if (result.kind === 'rejected' || !waiting) return;
-    moving = { done: 0, total: waiting };
-    const report = await moveToTmdb((done, total) => (moving = { done, total }));
-    moving = null;
-    await shelf.refresh();
-    moved = report.moved ? `Moved ${plural(report.moved, 'film or show', 'films and shows')} to TMDB.` : '';
   }
 </script>
 
@@ -47,12 +28,7 @@
   Book search works as it is. Films and shows come from TMDB, which needs a free key of your own.
 </p>
 
-<details
-  class="settings-fold"
-  {@attach (el: HTMLDetailsElement) => {
-    el.open = startOpen;
-  }}
->
+<details class="settings-fold">
   <summary>
     <span class="settings-fold-name">Films and TV <span class="settings-fold-via">TMDB</span></span>
     <span class="settings-fold-state" class:is-ready={tmdb === 'saved'} class:is-error={tmdb === 'rejected'}
@@ -66,23 +42,6 @@
       onsaved={(v) => (tmdb = v ? 'saved' : 'none')}
       onchecked={tmdbChecked}
     />
-    <div class="tmdb-status" role="status">
-      {#if moving}
-        <p class="field-hint">Moving films and shows to TMDB: {moving.done} of {moving.total}…</p>
-      {:else}
-        {#if moved}<p class="field-hint">{moved}</p>{/if}
-        {#if waiting}
-          <p class="field-hint">
-            {plural(waiting, 'film or show', 'films and shows')} from TheTVDB will move to TMDB once a key is saved.
-          </p>
-        {/if}
-        {#if unmatched}
-          <p class="field-hint">
-            {plural(unmatched, 'film or show', 'films and shows')} need a match: open one and use Find a match.
-          </p>
-        {/if}
-      {/if}
-    </div>
   </div>
 </details>
 

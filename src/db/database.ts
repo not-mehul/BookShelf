@@ -1,6 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { CatalogEntry, Tombstone } from '../types';
-import { dropRetired } from '../util/retired';
 import { stampFields } from '../sync/fields';
 
 export const db = new Dexie('bookshelf') as Dexie & {
@@ -38,16 +37,9 @@ db.version(4).stores({
   entries: 'id, type, title, rating, year, status, dateAdded, dateRated, sourceId, *tags, linkedEntryId'
 });
 
-// v5 — a book's page progress is no longer kept: drop it (a show's progress,
-// from its episodes, stays).
-db.version(5)
-  .stores({})
-  .upgrade((tx) =>
-    tx
-      .table('entries')
-      .toCollection()
-      .modify((e: CatalogEntry) => void dropRetired(e))
-  );
+// v5 — a book's page progress was dropped (its upgrade has run everywhere;
+// the version stays so Dexie opens databases at v5).
+db.version(5).stores({});
 
 export function newEntryId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);

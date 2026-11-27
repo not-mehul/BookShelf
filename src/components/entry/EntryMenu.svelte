@@ -2,6 +2,7 @@
   // An entry's actions, in its sheet's bar: Edit, Find a match, Share and
   // Delete. Deleting can
   // be undone for a few seconds instead of being confirmed (style.md §8.12).
+  import { lacksMatch } from '../../api/match';
   import { shelf } from '../../state/shelf.svelte';
   import { ui } from '../../state/ui.svelte';
   import type { CatalogEntry } from '../../types';
@@ -37,7 +38,7 @@
     ...(onmatch
       ? [
           {
-            label: entry.sourceId && !entry.needsMatch ? 'Match again' : 'Find a match',
+            label: lacksMatch(entry) ? 'Find a match' : 'Match again',
             icon: 'search' as const,
             onselect: onmatch
           }

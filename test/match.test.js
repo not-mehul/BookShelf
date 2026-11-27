@@ -73,6 +73,48 @@ describe('a sure match', () => {
     ];
     expect(match.confidentPick(film, hits)?.sourceId).toBe('tmdb:2');
   });
+
+  it('for a film, folds accents and reads original titles, and stays unsure with two that fit', () => {
+    const amelie = { title: 'Amélie', originalTitle: null, year: 2001 };
+    const film = (id, title, year, more = {}) =>
+      hit({ type: 'movie', sourceId: `tmdb:${id}`, title, year, ...more });
+    expect(match.pickFilm(amelie, [film(1, 'Amelie', 2001), film(2, 'Amélie', 1990)])?.sourceId).toBe(
+      'tmdb:1'
+    );
+    expect(match.pickFilm(amelie, [film(1, 'Amelie', 2001), film(3, 'Amélie', 2001)])).toBeNull();
+    expect(match.pickFilm(amelie, [film(4, 'Amélie: Behind the Scenes', 2001)])).toBeNull();
+    expect(
+      match.pickFilm({ title: 'Spirited Away', year: 2001 }, [
+        film(5, 'Sen to Chihiro', 2001, { originalTitle: 'Spirited Away' })
+      ])?.sourceId
+    ).toBe('tmdb:5');
+  });
+});
+
+describe('what lacks a match', () => {
+  it('is anything without an id, and a film or show without a TMDB one', () => {
+    expect(match.lacksMatch(entry({ sourceId: null }))).toBe(true);
+    expect(match.lacksMatch(entry({ sourceId: 'gb:1' }))).toBe(false);
+    expect(match.lacksMatch(entry({ type: 'movie', sourceId: '12345' }))).toBe(true);
+    expect(match.lacksMatch(entry({ type: 'tv', sourceId: 'tmdb:95396' }))).toBe(false);
+    expect(match.lacksMatch(entry({ type: 'quote', sourceId: null }))).toBe(false);
+  });
+});
+
+describe('ticked episodes on a show matched again', () => {
+  it('carry over by season and episode number', () => {
+    const old = [
+      { id: 11, s: 1, e: 1 },
+      { id: 12, s: 1, e: 2 },
+      { id: 21, s: 2, e: 1 }
+    ];
+    const next = [
+      { id: 901, s: 1, e: 1 },
+      { id: 902, s: 1, e: 2 },
+      { id: 903, s: 2, e: 1 }
+    ];
+    expect(match.carryWatched(old, [11, 21], next)).toEqual([901, 903]);
+  });
 });
 
 describe('applying a match', () => {
@@ -83,8 +125,7 @@ describe('applying a match', () => {
       rating: 4,
       status: 'finished',
       notes: 'Loved it',
-      tags: ['sci-fi'],
-      needsMatch: true
+      tags: ['sci-fi']
     });
     const h = hit({
       sourceId: 'g9',
@@ -110,7 +151,6 @@ describe('applying a match', () => {
       pageCount: 592,
       thumbnailUrl: 'https://covers.test/x.jpg'
     });
-    expect(d.needsMatch).toBeUndefined();
   });
 });
 

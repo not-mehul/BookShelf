@@ -51,9 +51,9 @@ describe('missingParts', () => {
     ]);
     expect(missingParts(entry({ creators: [] }))).toEqual(['details']);
   });
-  it('counts a stored cover, and a film TMDB could not place', () => {
+  it('counts a stored cover, and a film without a TMDB id', () => {
     expect(missingParts(entry({ thumbnailUrl: null, thumbnailBlob: {} }))).toEqual([]);
-    expect(missingParts(entry({ type: 'movie', needsMatch: true }))).toEqual(['match']);
+    expect(missingParts(entry({ type: 'movie', sourceId: '777' }))).toEqual(['match']);
   });
   it('leaves quotes alone', () => {
     expect(missingParts(entry({ type: 'quote', sourceId: null, summary: '' }))).toEqual([]);
@@ -77,7 +77,7 @@ describe('refreshFills', () => {
     expect(refreshFills(entry(), hit())).toEqual([]);
   });
   it('adds credits only for a film not yet matched', () => {
-    const film = entry({ type: 'movie', summary: '' });
+    const film = entry({ type: 'movie', sourceId: 'tmdb:1', summary: '' });
     expect(refreshFills(film, hit({ type: 'movie' }))).toEqual(['Synopsis']);
     expect(refreshFills({ ...film, sourceId: null }, hit({ type: 'movie' }))).toContain(
       'Director and details'

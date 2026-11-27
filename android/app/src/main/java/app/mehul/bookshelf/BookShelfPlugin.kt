@@ -158,7 +158,7 @@ class BookShelfPlugin : Plugin() {
         }
     }
 
-    // ── Secure settings (API keys, sync passphrase) ─────────────────
+    // ── Secure settings (API keys) ───────────────────────────────────
 
     @PluginMethod
     fun secureGet(call: PluginCall) = respond(call) { withContext(Dispatchers.IO) { secureStore.get(call.require("key")) } }

@@ -91,8 +91,7 @@ src/
     books.ts         Google Books client
     key-check.ts     Trying a pasted API key against its service
     openlibrary.ts   Open Library client + ISBN detection
-    tmdb.ts          TMDB v3 client (search, details with credits, seasons, find by TheTVDB id)
-    tmdb-move.ts     One-time move of films and shows from TheTVDB ids to TMDB
+    tmdb.ts          TMDB v3 client (search, details with credits, seasons)
     match.ts         Find a match: catalog candidates, the sure pick, filling only empty fields
     refresh.ts       Library refresh: what each entry is missing, a proposal for each, what was left as is
     normalize.ts     API responses → unified CatalogEntry shape
@@ -111,7 +110,6 @@ src/
     theme.svelte.ts  System / Dusk / Dawn: saved choice, else the OS setting, applied before first paint
     widget.ts        Builds the home-screen widget's summary; applies episodes ticked on it
   sync/
-    legacy-crypto.ts Reading a pre-3.1 backup, encrypted with a passphrase, once (WebCrypto)
     fields.ts        Field-level change times (fieldTimes) and the per-group merge of two copies
     merge.ts         Snapshot merge: entries field by field, deletion tombstones (pure)
     sync.ts          Pull → merge → push orchestration; the backup schedule (daily, weekly, monthly, off)
@@ -132,7 +130,7 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
 
 ## Notes on the APIs
 
-**TMDB v3** takes the user's own key: a v3 API key goes in the `api_key` parameter, a v4 read access token (a JWT) as a bearer token. Films and shows are searched separately (`/search/movie`, `/search/tv`) in English, with genre names from `/genre/*/list`; opening a saved entry fills in the director or creators and genres from `/movie/{id}` or `/tv/{id}` with credits. A show's guide is every season from `/tv/{id}/season/{n}`. Shelf ids are `tmdb:<id>`; a bare number on a film or show is a TheTVDB id from before the move, which `tmdb-move.ts` resolves (`/find/{tvdb id}?external_source=tvdb_id` for shows, a single title-and-year match for films). About carries the attribution TMDB's terms require.
+**TMDB v3** takes the user's own key: a v3 API key goes in the `api_key` parameter, a v4 read access token (a JWT) as a bearer token. Films and shows are searched separately (`/search/movie`, `/search/tv`) in English, with genre names from `/genre/*/list`; opening a saved entry fills in the director or creators and genres from `/movie/{id}` or `/tv/{id}` with credits. A show's guide is every season from `/tv/{id}/season/{n}`. Shelf ids are `tmdb:<id>`; a film or show without one has no match yet, and Library refresh or Find a match links it. About carries the attribution TMDB's terms require.
 
 **Google Books** requires no auth for basic use; an API key raises the daily quota. **Open Library** is keyless and used as a fallback and for ISBN lookups.
 
@@ -140,10 +138,10 @@ android/             Capacitor Android project (BookShelfPlugin and native featu
 
 - **Unit (Vitest)** — API normalization (incl. paginated episode guides), ISBN
   detection, share intake, the native bridge protocol and
-  back-handler stack, Keystore routing, sync encryption and merge (plus an
-  end-to-end sync between two simulated devices), the widget summary, half-star
+  back-handler stack, Keystore routing, the backup merge (plus an
+  end-to-end backup between two simulated devices), the widget summary, half-star
   ratings, series detection, queue ranking and picks, episode progress,
-  share-card text layout, bulk tag edits, the move from TheTVDB to TMDB, what
+  share-card text layout, bulk tag edits, what
   Library refresh looks for, and the backup schedule.
 - **E2E (Playwright)** — the built app at phone size, in a
   simulated Android shell (`e2e/fake-shell.js`, standing in for Capacitor's native layer), with a fixture shelf

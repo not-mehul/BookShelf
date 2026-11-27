@@ -5,7 +5,6 @@
 
 import { saveEntry, getEntry, db } from '../db/database';
 import type { CatalogEntry, EntryStatus, EntryType } from '../types';
-import { dropRetired } from '../util/retired';
 
 /** A CatalogEntry as written to JSON: the cover blob becomes a data URL. */
 export type SerializedEntry = Omit<CatalogEntry, 'thumbnailBlob'> & { thumbnailData?: string | null };
@@ -20,7 +19,7 @@ async function dataUrlToBlob(dataUrl: string) {
 }
 export async function deserializeEntry(raw: SerializedEntry): Promise<CatalogEntry> {
   const { thumbnailData, ...rest } = raw;
-  return dropRetired({ ...rest, thumbnailBlob: thumbnailData ? await dataUrlToBlob(thumbnailData) : null });
+  return { ...rest, thumbnailBlob: thumbnailData ? await dataUrlToBlob(thumbnailData) : null };
 }
 
 const TYPES: readonly EntryType[] = ['book', 'movie', 'tv', 'quote'];

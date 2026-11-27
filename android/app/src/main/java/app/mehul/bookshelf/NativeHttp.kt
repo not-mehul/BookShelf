@@ -19,11 +19,9 @@ object NativeHttp {
     private const val TIMEOUT_MS = 30_000
 
     // Keep in sync with NATIVE_HOST_SUFFIXES in src/platform/native.ts.
-    // thetvdb.com stays only for covers of entries added before TMDB.
     private val ALLOWED_HOST_SUFFIXES = listOf(
         "themoviedb.org",
         "tmdb.org",
-        "thetvdb.com",
         "googleapis.com",
         "google.com",
         "gstatic.com",

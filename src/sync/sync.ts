@@ -5,15 +5,11 @@
 //   2. merges it with the local catalog (see merge.ts) and applies the result,
 //   3. writes the merged snapshot back, only if the file is out of date.
 // Cover images are not in it; each device re-fetches them from their URL.
-// A file from before 3.1 is encrypted: it is read once with the passphrase
-// still in the Keystore, then rewritten plain (see legacy-crypto.ts).
 
-import { dropRetired } from '../util/retired';
 import { callNative, isNativeShell } from '../platform/native';
-import { getSetting, removeSetting, setSetting } from '../util/settings';
+import { getSetting, setSetting } from '../util/settings';
 import { listEntries, listTombstones, db, patchEntry, withEntryLock } from '../db/database';
 import { fetchThumbBlob } from '../util/thumbs';
-import { decryptLegacyBackup, isEncryptedBackup } from './legacy-crypto';
 import { entryTime, mergeSnapshots } from './merge';
 import type { Snapshot, SyncEntry } from './merge';
 
@@ -55,25 +51,15 @@ export function syncNow(): Promise<SyncReport> {
   return inFlight;
 }
 
-/** The passphrase the backup was once encrypted with (pre-3.1), kept only to read an old file. */
-const OLD_PASSPHRASE = 'sync_passphrase';
-
-/** The backup file's snapshot: plain JSON, or (once) an old encrypted file. */
-async function readBackup(text: string): Promise<{ snapshot: Snapshot; encrypted: boolean }> {
+/** The backup file's snapshot. */
+function readBackup(text: string): Snapshot {
   let data: unknown;
   try {
     data = JSON.parse(text);
   } catch {
     throw new Error('The backup file can’t be read (is it damaged?).');
   }
-  if (!isEncryptedBackup(data)) return { snapshot: parseSnapshot(data), encrypted: false };
-  const passphrase = await getSetting(OLD_PASSPHRASE);
-  if (!passphrase)
-    throw new Error(
-      'This folder holds an encrypted backup from an earlier BookShelf, and its passphrase isn’t on this phone.'
-    );
-  const plain = await decryptLegacyBackup(data, passphrase);
-  return { snapshot: parseSnapshot(JSON.parse(plain)), encrypted: true };
+  return parseSnapshot(data);
 }
 
 async function runSync(): Promise<SyncReport> {
@@ -82,9 +68,8 @@ async function runSync(): Promise<SyncReport> {
   try {
     // 1. Pull.
     let remote: Snapshot = { entries: [], tombstones: [] };
-    let encrypted = false;
     const remoteText = await callNative<string | null>('syncRead');
-    if (remoteText) ({ snapshot: remote, encrypted } = await readBackup(remoteText));
+    if (remoteText) remote = readBackup(remoteText);
 
     // 2. Merge + apply locally.
     const local = { entries: (await listEntries()).map(toSyncEntry), tombstones: await listTombstones() };
@@ -103,7 +88,7 @@ async function runSync(): Promise<SyncReport> {
         const keepBlob =
           existing && existing.thumbnailUrl === incoming.thumbnailUrl ? existing.thumbnailBlob : null;
         // An older install may still send a book's page progress: not kept.
-        const entry = dropRetired({ ...incoming, thumbnailBlob: keepBlob });
+        const entry = { ...incoming, thumbnailBlob: keepBlob };
         await db.transaction('rw', db.entries, db.tombstones, async () => {
           await db.entries.put(entry);
           await db.tombstones.delete(entry.id);
@@ -130,9 +115,8 @@ async function runSync(): Promise<SyncReport> {
     }
     if (result.newTombstones.length) await db.tombstones.bulkPut(result.newTombstones);
 
-    // 3. Push, only when the file is behind (or still encrypted).
-    const push = result.pushNeeded || encrypted;
-    if (push) {
+    // 3. Push, only when the file is behind.
+    if (result.pushNeeded) {
       const snapshot = {
         format: BACKUP_FORMAT,
         version: SNAPSHOT_VERSION,
@@ -140,14 +124,12 @@ async function runSync(): Promise<SyncReport> {
         ...result.merged
       };
       await callNative('syncWrite', { text: JSON.stringify(snapshot) });
-      // The old file is gone: so is the need for its passphrase.
-      if (encrypted) await removeSetting(OLD_PASSPHRASE);
     }
 
     await setSetting('sync_last', new Date().toISOString());
     await setSetting('sync_last_error', '');
     void refetchCovers(needCovers);
-    return { pulled, removed, pushed: push };
+    return { pulled, removed, pushed: result.pushNeeded };
   } catch (err) {
     await setSetting('sync_last_error', err instanceof Error ? err.message : String(err));
     throw err;

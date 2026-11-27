@@ -10,16 +10,14 @@ import { mount } from 'svelte';
 import { dismissOverlay } from 'dusk-dawn';
 import App from './components/App.svelte';
 import { refreshFollowedGuides } from './api/episode-sync';
-import { moveToTmdb } from './api/tmdb-move';
 import { applyWidgetWatched } from './platform/widget';
-import { dropTvdbSettings, getSetting, SECRET_KEYS } from './util/settings';
+import { getSetting, SECRET_KEYS } from './util/settings';
 import { claimBackForMenus, installNativeBridge, onNativeEvent } from './platform/native';
 import { initTheme } from './platform/theme.svelte';
 import { shelf } from './state/shelf.svelte';
 import { ui } from './state/ui.svelte';
 import { messageOf } from './util/errors';
 import { readBookShelfLink } from './util/link-intake';
-import { dropRetiredSettings } from './util/retired';
 import { parseSharedText, type SharedInput } from './util/share-intake';
 
 // Must run before anything fetches: routes cross-origin calls through the
@@ -41,7 +39,6 @@ function openLink(url: string) {
 }
 
 async function boot(): Promise<void> {
-  dropRetiredSettings();
   // The home-screen widget follows the theme, so it re-skins on a change.
   await initTheme(() => void shelf.refresh());
   await shelf.refresh();
@@ -78,15 +75,10 @@ async function boot(): Promise<void> {
   // The backup (Android app, once a folder is chosen): daily, weekly or monthly,
   // checked on start and whenever the app comes back.
   shelf.startBackup();
-  // Films and shows still on TheTVDB ids move to TMDB once there is a key,
-  // then guides of shows being followed refresh (quietly; both need TMDB).
-  void dropTvdbSettings()
-    .then(() => moveToTmdb())
-    .then(async (r) => {
-      if (r.moved + r.needMatch) await shelf.refresh();
-    })
-    .then(() => refreshFollowedGuides(() => void shelf.refresh()))
-    .catch((err) => console.warn('TMDB catch-up failed:', err));
+  // Guides of shows being followed refresh, quietly (needs a TMDB key).
+  void refreshFollowedGuides(() => void shelf.refresh()).catch((err) =>
+    console.warn('Episode guide refresh failed:', err)
+  );
 }
 
 /** Shown when the page is opened outside the Android app. */
