@@ -195,7 +195,9 @@ test('the widget receives a summary after changes', async ({ page }) => {
   expect(summary.theme).toBe('dark');
 });
 
-test('backup settings: choose a folder, then Back up now writes an encrypted file', async ({ page }) => {
+test('backup settings: choose a folder, then Back up now writes the shelf there, with no passphrase', async ({
+  page
+}) => {
   await boot(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const section = page.locator('.sync-section');
@@ -205,10 +207,7 @@ test('backup settings: choose a folder, then Back up now writes an encrypted fil
   await section.getByRole('button', { name: 'Choose' }).click();
   await expect(section).toContainText('Drive/BookShelf');
 
-  await section.getByLabel('Backup passphrase').fill('correct horse battery');
-  await expect
-    .poll(() => page.evaluate(() => window.__keystore.sync_passphrase))
-    .toBe('correct horse battery');
+  await expect(section.getByLabel(/passphrase/i)).toHaveCount(0);
   // Daily unless chosen; the choice is kept.
   await expect(section.getByRole('radio', { name: 'Daily' })).toHaveAttribute('aria-checked', 'true');
   await section.getByRole('radio', { name: 'Weekly' }).click();
@@ -230,8 +229,8 @@ test('backup settings: choose a folder, then Back up now writes an encrypted fil
   await page.locator('.sync-section').getByRole('button', { name: 'Back up now' }).click();
   await expect(page.locator('.sync-section .settings-notice')).toHaveText('Backed up.', { timeout: 15_000 });
   const file = await page.evaluate(() => window.__syncFile);
-  expect(JSON.parse(file)).toMatchObject({ format: 'bookshelf-sync', cipher: 'AES-256-GCM' });
-  expect(file).not.toContain('secret only this shelf');
+  expect(JSON.parse(file)).toMatchObject({ format: 'bookshelf-backup', version: 2 });
+  expect(file).toContain('A secret only this shelf knows.');
 });
 
 test('a backup runs when the app opens only once it is due', async ({ page }) => {
@@ -239,7 +238,7 @@ test('a backup runs when the app opens only once it is due', async ({ page }) =>
     (await sent(page)).filter((m) => m.type === 'call' && m.method === 'syncRead').length;
   const opened = (last) => page.addInitScript((at) => localStorage.setItem('bookshelf:sync_last', at), last);
   await opened(new Date().toISOString());
-  await boot(page, { syncFolder: 'Drive/BookShelf', secrets: { sync_passphrase: 'pw' } });
+  await boot(page, { syncFolder: 'Drive/BookShelf' });
   await page.waitForTimeout(500);
   expect(await reads()).toBe(0);
 

@@ -76,7 +76,7 @@ Keep these unchanged in any later change, or an update will open an empty shelf.
 | **Share into BookShelf** | `BookShelfPlugin.handleIntent` | `ACTION_SEND` `text/plain` filter ("Add to BookShelf"); `singleTask`, so shares reach the running app via `onNewIntent`. |
 | **Barcode scanning** | `BarcodeScanner.kt` | Google Code Scanner (Play services): full camera UI, **no CAMERA permission**, EAN/UPC only. The module is fetched at install time. |
 | **Secrets in the Keystore** | `SecureStore.kt` | AES-256-GCM key generated in the Android Keystore; prefs hold only `iv‖ciphertext`, with the setting name as associated data. Excluded from backup (the key never leaves the device). |
-| **Encrypted backup folder** | `FolderSync.kt` | Storage Access Framework folder picker with a persisted permission; reads/writes `bookshelf-sync.json` via a temp-file swap. Encryption, merging and the schedule (daily, weekly, monthly) live in the page; this class only moves ciphertext. |
+| **Backup folder** | `FolderSync.kt` | Storage Access Framework folder picker with a persisted permission; reads/writes `bookshelf-sync.json` via a temp-file swap. Merging and the schedule (daily, weekly, monthly) live in the page; this class only moves the text. |
 | **New-episode alerts** | `reminders/` | The page sends upcoming episodes of shows with alerts on; a WorkManager job (every 12 h) posts a notification on air day, works with the app closed. `POST_NOTIFICATIONS` is requested only when alerts are turned on; tapping opens the show. |
 | **Sharing** | `Exports.kt` | An entry as text and share-card PNGs are written to the cache and handed to the share sheet via `FileProvider`. |
 | **Home-screen widget** | `widget/` | Jetpack Glance, `SizeMode.Responsive` (small / medium / large), Dusk/Dawn colours, "+" opens the add flow. The page pushes a summary (`widgetUpdate`) after every change. |
@@ -101,5 +101,5 @@ Keep these unchanged in any later change, or an update will open an empty shelf.
 API keys (TMDB, optional Google Books) are entered in the app's **Settings**
 and stored encrypted in the Android Keystore, never compiled into the build.
 Android Auto Backup includes the catalog (but not the Keystore-encrypted
-secrets), so a reinstall or new phone restores the shelf; re-enter keys and the
-backup passphrase afterwards.
+secrets), so a reinstall or new phone restores the shelf; re-enter the keys
+afterwards.

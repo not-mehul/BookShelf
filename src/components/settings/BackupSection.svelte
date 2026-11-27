@@ -13,16 +13,10 @@
   import { messageOf } from '../../util/errors';
   import { getSetting, setSetting } from '../../util/settings';
   import Segmented from '../Segmented.svelte';
-  import SettingField from './SettingField.svelte';
 
-  // The encrypted backup: one file in a folder that a cloud drive keeps, merged
-  // with every device that backs up there. Its folder, passphrase, schedule and
-  // a button to back up now.
-  interface Props {
-    /** Read before the sheet opened, so the section is whole from the start. */
-    passphrase: string;
-  }
-  let { passphrase }: Props = $props();
+  // The backup: one file in a folder that a cloud drive keeps, merged with
+  // every device that backs up there. Its folder, schedule and a button to
+  // back up now.
 
   // undefined until the shell answers; null when no folder is chosen.
   let status = $state.raw<SyncStatus | undefined>(undefined);
@@ -100,8 +94,8 @@
 <div class="sync-section">
   <h3 class="settings-section-heading" id="set-backup">Backup</h3>
   <p class="field-hint">
-    An encrypted copy of your shelf in a folder that Google Drive, Nextcloud or Syncthing keeps. Every device
-    that backs up to the same folder stays in step.
+    A copy of your shelf in a folder that Google Drive, Nextcloud or Syncthing keeps. Every device that backs
+    up to the same folder stays in step. It’s a plain file: anyone who can open that folder can read it.
   </p>
   <div class="settings-rows">
     <div class="settings-row">
@@ -116,13 +110,6 @@
       </button>
     </div>
   </div>
-  <SettingField
-    key="sync_passphrase"
-    label="Backup passphrase"
-    hint="Use the same passphrase on every device. It encrypts the backup and cannot be recovered if lost."
-    type="password"
-    initial={passphrase}
-  />
   <div class="settings-stack">
     <div class="settings-row-label" id="backupEveryLabel">Back up automatically</div>
     <Segmented options={EVERY} value={every} label="Back up automatically" onchange={schedule} full />

@@ -12,15 +12,15 @@
   import { chooseRatingScale, ratingView } from '../../state/rating-scale.svelte';
   import type { RatingScale } from '../../util/stars';
 
-  // Appearance, Backup, Your data, Search, About. The saved keys and passphrase
-  // load first (from the Keystore, read once at start-up, so at once), and
-  // focus settles once the sheet is whole.
+  // Appearance, Backup, Your data, Search, About. The saved keys load first
+  // (from the Keystore, read once at start-up, so at once), and focus settles
+  // once the sheet is whole.
   let values = $state<Record<string, string> | null>(null);
   const settleFocus = useModalFocus();
 
   $effect(() => {
     void (async () => {
-      const keys = [TMDB.key, GOOGLE.key, 'sync_passphrase'];
+      const keys = [TMDB.key, GOOGLE.key];
       const loaded = await Promise.all(keys.map((k) => getSetting(k, '')));
       values = Object.fromEntries(keys.map((k, i) => [k, loaded[i] ?? '']));
       settleFocus();
@@ -74,7 +74,7 @@
 
   {#if values}
     <section class="settings-group" aria-labelledby="set-backup">
-      <BackupSection passphrase={values.sync_passphrase ?? ''} />
+      <BackupSection />
     </section>
 
     <section class="settings-group" aria-labelledby="set-data">
