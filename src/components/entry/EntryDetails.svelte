@@ -44,13 +44,6 @@
 
 <Hero {entry} />
 
-{#if entry.needsMatch && onmatch}
-  <p class="field-hint needs-match">
-    Not matched to the catalog, so it has no cover or details from it.
-    <button type="button" class="link-button" onclick={onmatch}>Find a match</button>
-  </p>
-{/if}
-
 <section class="modal-section entry-take" aria-label="Your take">
   <div class="take-group">
     <div class="modal-section-label">Status</div>
@@ -104,9 +97,6 @@
 {/if}
 
 <style>
-  .needs-match {
-    margin: 0 0 var(--space-4);
-  }
   .entry-take {
     display: flex;
     flex-direction: column;

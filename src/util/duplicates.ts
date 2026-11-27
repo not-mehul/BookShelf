@@ -3,6 +3,7 @@
 // search can each bring one in. Found pairs can be merged, or marked as not
 // the same.
 
+import { lacksMatch } from '../api/match';
 import { db, deleteEntry, listEntries, patchEntry } from '../db/database';
 import { matchKeys, mergeInto } from '../export/catalog-import';
 import type { CatalogEntry } from '../types';
@@ -59,7 +60,7 @@ export function findDuplicates(entries: readonly CatalogEntry[]): [CatalogEntry,
 }
 
 function keepFirst(a: CatalogEntry, b: CatalogEntry): [CatalogEntry, CatalogEntry] {
-  const linked = (e: CatalogEntry) => Boolean(e.sourceId && !e.needsMatch);
+  const linked = (e: CatalogEntry) => !lacksMatch(e);
   if (linked(a) !== linked(b)) return linked(a) ? [a, b] : [b, a];
   return (a.dateAdded || '') <= (b.dateAdded || '') ? [a, b] : [b, a];
 }
@@ -85,7 +86,6 @@ export async function mergeDuplicate(keepId: string, dropId: string): Promise<Ca
     }
     if (d.notes && drop.notes && !d.notes.includes(drop.notes)) d.notes = `${d.notes}\n\n${drop.notes}`;
     if (!d.dateStarted && drop.dateStarted) d.dateStarted = drop.dateStarted;
-    if (d.sourceId && !drop.needsMatch) delete d.needsMatch;
   });
   if (!kept) return null;
   for (const q of (await listEntries()).filter((e) => e.linkedEntryId === dropId)) {

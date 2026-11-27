@@ -8,7 +8,7 @@ export type EntryStatus = 'want' | 'in-progress' | 'finished' | 'abandoned';
 export interface CatalogEntry {
   id: string;
   type: EntryType;
-  /** External id: Google Books, `ol:` Open Library, `tmdb:` TMDB; null for manual entries. A bare number on a film or show is a TheTVDB id from before the move to TMDB. */
+  /** External id: Google Books, `ol:` Open Library, `tmdb:` TMDB; null for manual entries. */
   sourceId: string | null;
   title: string;
   /** The title in its own language, when `title` is the English one. */
@@ -46,8 +46,6 @@ export interface CatalogEntry {
   progress?: { current: number; total: number } | null;
   quoteText?: string;
   source?: string;
-  /** A film or show from TheTVDB that TMDB couldn't match on its own: Find a match links it. */
-  needsMatch?: boolean;
   /** Set once the catalog's full details (TMDB credits and genres) have been merged in. */
   enriched?: boolean;
   /** Optional per-aspect scores (e.g. story, writing), same scale as rating. */

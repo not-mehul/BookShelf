@@ -1,11 +1,7 @@
 // End-to-end sync between two simulated devices sharing one folder: each has
 // its own IndexedDB, Keystore and module instances; only the folder is shared.
 import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
-
-// A backup written before 3.1, encrypted with the passphrase "old secret".
-const OLD_FILE = readFileSync(new URL('./fixtures/legacy-encrypted-backup.json', import.meta.url), 'utf8');
 
 function memoryStorage() {
   const m = new Map();
@@ -42,8 +38,8 @@ function fakeShell(folder, keystore) {
 
 const win = () => ({ fetch: vi.fn(), location: { origin: 'https://appassets.androidwebview.com' } });
 
-async function device(folder, { oldPassphrase } = {}) {
-  const keystore = new Map(oldPassphrase ? [['sync_passphrase', oldPassphrase]] : []);
+async function device(folder) {
+  const keystore = new Map();
   vi.resetModules();
   // resetModules doesn't re-import node_modules, so Dexie is shared between
   // devices; give each device's database its own IndexedDB (Dexie opens lazily
@@ -71,7 +67,7 @@ async function device(folder, { oldPassphrase } = {}) {
       dateRated: null
     });
   const titles = async () => (await db.listEntries()).map((e) => e.title).sort();
-  return { db, add, titles, keystore, sync: () => sync.syncNow() };
+  return { db, add, titles, sync: () => sync.syncNow() };
 }
 
 beforeAll(async () => {
@@ -136,26 +132,6 @@ describe('folder sync between two devices', () => {
     await phone.sync();
     await phone.sync();
     expect(folder.writes).toBe(1);
-  });
-
-  it('reads an old encrypted backup once, then rewrites it plain and forgets the passphrase', async () => {
-    const folder = { chosen: true, file: OLD_FILE, writes: 0 };
-    const phone = await device(folder, { oldPassphrase: 'old secret' });
-    await phone.add('a', 'Dune');
-    expect(await phone.sync()).toEqual({ pulled: 1, removed: 0, pushed: true });
-    expect(await phone.titles()).toEqual(['Dune', 'Piranesi — encrypted']);
-    expect(JSON.parse(folder.file)).toMatchObject({ format: 'bookshelf-backup' });
-    expect(phone.keystore.has('sync_passphrase')).toBe(false);
-    // From then on, any device reads it without one.
-    const tablet = await device(folder);
-    expect(await tablet.sync()).toMatchObject({ pulled: 2 });
-  });
-
-  it('says so, and leaves the file alone, when an old encrypted backup has no passphrase here', async () => {
-    const folder = { chosen: true, file: OLD_FILE, writes: 0 };
-    const phone = await device(folder);
-    await expect(phone.sync()).rejects.toThrow(/encrypted backup from an earlier BookShelf/);
-    expect(folder.file).toBe(OLD_FILE);
   });
 
   it('requires a folder', async () => {

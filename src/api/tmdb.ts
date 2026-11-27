@@ -3,8 +3,7 @@
 // The key is either a v3 API key (sent as `api_key`) or a v4 read access
 // token (sent as a bearer token); both come from themoviedb.org's API page.
 //
-// Ids on the shelf are `tmdb:<number>`, so a film or show added before the
-// move from TheTVDB (a bare number) is told apart until it is matched.
+// Ids on the shelf are `tmdb:<number>`.
 
 import { checkKey, type KeyCheck } from './key-check';
 import { getSetting } from '../util/settings';
@@ -21,9 +20,7 @@ const BASE = 'https://api.themoviedb.org/3';
 export const TMDB_KEY = 'tmdb_api_key';
 const PREFIX = 'tmdb:';
 
-/** A shelf id for a TMDB record. */
-export const tmdbSourceId = (id: number | string) => `${PREFIX}${id}`;
-/** The TMDB number in a shelf id, or null for anything else (a TheTVDB id from before). */
+/** The TMDB number in a shelf id, or null for anything else. */
 export function tmdbNumber(sourceId: string | null | undefined): string | null {
   return sourceId?.startsWith(PREFIX) ? sourceId.slice(PREFIX.length) : null;
 }
@@ -132,14 +129,6 @@ async function collectionPosition(collectionId: number, filmId: number): Promise
 export async function getEnglishTitle(entry: Pick<CatalogEntry, 'type' | 'sourceId'>): Promise<string> {
   const detail = await fetchDetail(entry);
   return String(detail?.title || detail?.name || '').trim();
-}
-
-/** The TMDB show a TheTVDB series id points to, or null. */
-export async function findShowByTvdbId(tvdbId: string): Promise<number | null> {
-  const json = await tmdbFetch<{ tv_results?: { id: number }[] }>(`/find/${encodeURIComponent(tvdbId)}`, {
-    external_source: 'tvdb_id'
-  });
-  return json.tv_results?.[0]?.id ?? null;
 }
 
 /** Every season of a TMDB show, specials included (aired order). */

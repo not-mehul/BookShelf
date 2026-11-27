@@ -1,8 +1,6 @@
 // Films and TV through TMDB, straight from the phone with the user's own key:
-// search and add, the notice without a key, the one-time move of a film
-// still on a TheTVDB id once a key is saved, and checking a key as it's entered.
+// search and add, the notice without a key, and checking a key as it's entered.
 import { test, expect } from './app-test.js';
-import { readFileSync } from 'node:fs';
 
 async function stubTmdb(page) {
   const asked = [];
@@ -74,43 +72,6 @@ test.describe('with a key', () => {
         })
     );
     expect(stored).toMatchObject({ sourceId: 'tmdb:329865', runtime: 116, creators: ['Denis Villeneuve'] });
-  });
-});
-
-test.describe('moving from TheTVDB', () => {
-  test.use({ shell: { http: 'fetch', secrets: { tmdb_api_key: 'abc123' } } });
-
-  test('a film on a TheTVDB id moves to TMDB at start', async ({ page }) => {
-    await stubTmdb(page);
-    const shelf = JSON.parse(readFileSync('e2e/fixtures/shelf.json', 'utf8'));
-    Object.assign(
-      shelf.entries.find((e) => e.id === 'arrival'),
-      { sourceId: '12345', enriched: true }
-    );
-    await page.goto('/index.html');
-    await page.getByRole('button', { name: 'Settings' }).first().click();
-    await page.locator('input[type=file][accept*="json"]').setInputFiles({
-      name: 'shelf.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(shelf))
-    });
-    await expect(page.getByText(/^Imported \d+ entries/)).toBeVisible();
-    // The move runs at start; a reload starts the app again.
-    await page.reload();
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            new Promise((resolve) => {
-              const open = indexedDB.open('bookshelf');
-              open.onsuccess = () => {
-                const get = open.result.transaction('entries').objectStore('entries').get('arrival');
-                get.onsuccess = () => resolve(get.result?.sourceId);
-              };
-            })
-        )
-      )
-      .toBe('tmdb:329865');
   });
 });
 

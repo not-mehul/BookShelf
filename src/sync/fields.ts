@@ -24,7 +24,6 @@ const GROUPS: Record<string, string> = {
   aspectRatings: 'rating',
   sourceId: 'catalog',
   detailUrl: 'catalog',
-  needsMatch: 'catalog',
   enriched: 'catalog'
 };
 

@@ -3,6 +3,7 @@
   import { importCatalogExport, type CatalogSource } from '../../export/catalog-import';
   import { shelf } from '../../state/shelf.svelte';
   import { messageOf } from '../../util/errors';
+  import { lacksMatch } from '../../api/match';
   import { refreshTodo } from '../../api/refresh';
   import { findDuplicates, markNotDuplicates, mergeDuplicate } from '../../util/duplicates';
   import { plural, TYPE_NOUN } from '../../util/labels';
@@ -83,7 +84,7 @@
     dismissedNow++;
   }
   const describe = (e: import('../../types').CatalogEntry) =>
-    [TYPE_NOUN[e.type], e.creators?.[0], e.year, e.sourceId && !e.needsMatch ? 'matched' : 'not matched']
+    [TYPE_NOUN[e.type], e.creators?.[0], e.year, lacksMatch(e) ? 'not matched' : 'matched']
       .filter(Boolean)
       .join(' · ');
 </script>

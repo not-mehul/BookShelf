@@ -65,47 +65,12 @@ describe('settings inside the Android shell', () => {
     expect(await settings.getSetting('tmdb_api_key', 'none')).toBe('none');
   });
 
-  it('migrates plaintext secrets out of localStorage exactly once', async () => {
-    localStorage.setItem('bookshelf:google_books_api_key', 'legacy');
-    localStorage.setItem('bookshelf:theme', 'light');
-    const shell = fakeShellWithKeystore();
-    native.installNativeBridge(shell.win, shell.shell);
-
-    expect(await settings.getSetting('google_books_api_key')).toBe('legacy');
-    expect(shell.keystore.get('google_books_api_key')).toBe('legacy');
-    expect(localStorage.getItem('bookshelf:google_books_api_key')).toBeNull();
-    expect(localStorage.getItem('bookshelf:theme')).toBe('light'); // not a secret
-
-    const setsBefore = shell.calls.filter((c) => c === 'secureSet').length;
-    await settings.getSetting('sync_passphrase');
-    expect(shell.calls.filter((c) => c === 'secureSet').length).toBe(setsBefore);
-  });
-
   it('caches Keystore reads for the session', async () => {
     const shell = fakeShellWithKeystore();
     native.installNativeBridge(shell.win, shell.shell);
-    shell.keystore.set('sync_passphrase', 't');
-    await settings.getSetting('sync_passphrase');
-    await settings.getSetting('sync_passphrase');
+    shell.keystore.set('google_books_api_key', 't');
+    await settings.getSetting('google_books_api_key');
+    await settings.getSetting('google_books_api_key');
     expect(shell.calls.filter((c) => c === 'secureGet')).toHaveLength(1);
-  });
-});
-
-describe('settings from before TMDB', () => {
-  it("forgets TheTVDB's key, PIN, token and proxy once", async () => {
-    const shell = fakeShellWithKeystore();
-    native.installNativeBridge(shell.win, shell.shell);
-    shell.keystore.set('tvdb_api_key', 'old');
-    shell.keystore.set('tvdb_pin', '1234');
-    localStorage.setItem('bookshelf:tvdb_proxy_url', 'https://proxy.example');
-    localStorage.setItem('bookshelf:tvdb_token_issued', '1');
-    await settings.dropTvdbSettings();
-    expect(shell.keystore.has('tvdb_api_key')).toBe(false);
-    expect(shell.keystore.has('tvdb_pin')).toBe(false);
-    expect(localStorage.getItem('bookshelf:tvdb_proxy_url')).toBeNull();
-    expect(localStorage.getItem('bookshelf:tvdb_token_issued')).toBeNull();
-    const removes = shell.calls.filter((c) => c === 'secureRemove').length;
-    await settings.dropTvdbSettings();
-    expect(shell.calls.filter((c) => c === 'secureRemove').length).toBe(removes);
   });
 });

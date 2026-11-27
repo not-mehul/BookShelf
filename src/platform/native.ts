@@ -55,12 +55,10 @@ function capacitorShell(): NativeShell | null {
 
 // Hosts the shell's native HTTP will fetch (keep in sync with
 // ALLOWED_HOST_SUFFIXES in NativeHttp.kt). Everything else uses the
-// WebView's own, CORS-checked fetch. thetvdb.com stays only for the covers of
-// films and shows added before the move to TMDB.
+// WebView's own, CORS-checked fetch.
 const NATIVE_HOST_SUFFIXES = [
   'themoviedb.org',
   'tmdb.org',
-  'thetvdb.com',
   'googleapis.com',
   'google.com',
   'gstatic.com',
